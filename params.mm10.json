@@ -1,0 +1,13 @@
+{
+	"input": "samples.csv",
+    "outdir": "/hpc/temp/_SR/Genomics/users/fwu/project/dgranadi/240705_VH00319_531_AAFYY7FM5/Analysis/",
+    "star": "/shared/biodata/reference/iGenomes/Mus_musculus/UCSC/mm10/Sequence/STAR2Index/",
+    "gtf": "/fh/fast/_SR/Genomics/proj/fwu/reference/mm10/genes/gencode.vM23.annotation.proteinCoding_lncRNA.gtf",
+    "gtfQC": "/fh/fast/_SR/Genomics/proj/fwu/reference/mm10/genes/gencode.vM23.annotation.collapsed.gtf",
+    "rseqcBed": "/fh/fast/_SR/Genomics/proj/fwu/reference/mm10/genes/gencode.vM23.annotation.chr19.bed",
+    "geneBed":"/fh/fast/_SR/Genomics/proj/fwu/reference/mm10/genes/gencode.vM23.annotation.gene.txt",
+    "txBed": "/fh/fast/_SR/Genomics/proj/fwu/reference/mm10/genes/gencode.vM23.annotation.tx.bed",
+    "strand": "-1",
+    "readType": "PE"
+
+}
