@@ -7,7 +7,7 @@ process RSEQC {
 
     tag "RSeQC on ${sample_id}"
 
-    publishDir "${params.outdir}/RSeQC/", pattern: "${sample_id}.*.{txt,pdf,r,bed,log,xls,xlsx}", mode: 'copy'
+    publishDir "${params.outdir}/QC/rseqc/", pattern: "${sample_id}.*.{txt,pdf,r,bed,log,xls,xlsx}", mode: 'copy'
 
     input:
     tuple val(sample_id), path("*.{bam,bai}", stageAs: "input/*")

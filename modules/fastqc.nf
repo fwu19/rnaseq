@@ -7,7 +7,7 @@ process FASTQC {
 
     tag "FASTQC on $sample_id"
 
-    publishDir "${params.outdir}/FastQC/", pattern: '*.{html,zip}', mode: 'copy'
+    publishDir "${params.outdir}/QC/fastqc/", pattern: '*.{html,zip}', mode: 'copy'
 
     input:
     tuple val(sample_id), path("*.fastq.gz", stageAs: "input/*")

@@ -7,13 +7,13 @@ process RNASEQC {
 
     tag "RNA-SeQC on ${sample_id}"
 
-    publishDir "${params.outdir}/RNA-SeQC/", pattern: "*.gct", mode: 'copy'
+    publishDir "${params.outdir}/QC/rnaseqc/", pattern: "*.{tsv,gct}", mode: 'copy'
 
     input:
     tuple val(sample_id), path("*.{bam,bai}", stageAs: "input/*")
 
     output:
-    tuple path("*.gct"), emit: qc
+    tuple path("*"), emit: qc
 
     script:
     """
