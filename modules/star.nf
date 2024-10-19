@@ -1,7 +1,3 @@
-params.reads = "fastq/*_S[0-9]*_{R1,R2}*fastq.gz"
-star = "/shared/biodata/reference/iGenomes/Homo_sapiens/UCSC/hg38/Sequence/STAR2Index"
-gtf = "/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v38.annotation.proteinCoding_lncRNA.gtf"
-params.outdir = 'Analysis'
 
 process STAR {
     time = '1d'
@@ -12,19 +8,17 @@ process STAR {
 
     tag "STAR on $sample_id"
 
-    publishDir "${outdir}/STAR/", mode: 'copy'
+    publishDir "${params.outdir}/STAR/", mode: 'copy'
 
     input:
-    tuple val(sample_id), path(reads1), path(reads2)
-    path(star)
-    path(gtf)
-    path(outdir)
+    tuple val(sample_id), path("*.fastq.gz", stageAs: "fastq/*")
     
     output:
-    tuple val(sample_id), path("${sample_id}")
-
+    tuple path("${sample_id}/"), emit: star
+    tuple val(sample_id), path("${sample_id}/${sample_id}.{bam,bam.bai}"), emit: bam 
+    
     script:
     """
-    star.sh ${sample_id} ${star} ${gtf} $task.cpus ${reads1} ${reads2} 
+    star.sh ${sample_id} ${params.star} ${params.gtf} ${task.cpus} 
     """
 }

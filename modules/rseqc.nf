@@ -1,5 +1,3 @@
-params.outdir = 'Analysis/'
-
 process RSEQC {
     time = '1d'
     cpus = 6
@@ -7,23 +5,19 @@ process RSEQC {
     module = ['R/4.1.2-foss-2020b', 'SAMtools/1.11-GCC-10.2.0']
 
 
-    tag "RSeQC on ${bam_path.baseName}"
+    tag "RSeQC on ${sample_id}"
 
-    publishDir "${outdir}/RSeQC/", mode: 'copy'
+    publishDir "${params.outdir}/RSeQC/", pattern: "${sample_id}.*.{txt,pdf,r,bed,log,xls,xlsx}", mode: 'copy'
 
-   input:
-    tuple val(sample_id), path(bam_path) 
-    path(rseqcBed) 
-    path(txBed) 
-    path(geneBed) 
-    path(outdir) 
+    input:
+    tuple val(sample_id), path("*.{bam,bai}", stageAs: "input/*")
 
     output:
-    tuple path("*")
+    tuple path("${sample_id}.*"), emit: qc
 
     script:
     """
-    rseqc.sh $sample_id $bam_path $rseqcBed $txBed $geneBed 
+    rseqc.sh $sample_id ${params.rseqcBed} ${params.txBed} ${params.geneBed} input/*.bam 
 
     """
 }

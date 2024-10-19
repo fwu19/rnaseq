@@ -1,5 +1,3 @@
-params.outdir = 'Analysis/'
-
 process MULTIQC {
     time = '1d'
     cpus = 6
@@ -9,21 +7,21 @@ process MULTIQC {
 
     tag "MultiQC on all samples"
 
-    publishDir "${outdir}/MultiQC/", mode: 'copy'
+    publishDir "${params.outdir}/MultiQC/", mode: 'copy'
 
-   input:
-    tuple val(sample_id), path(bam, stageAs: 'STAR/*')
-    path fastqc, stageAs: 'FastQC/*'
-    path rseqc, stageAs: 'RSeQC/*'
-    path rnaseqc, stageAs: 'RNA-SeQC/*'
-    path outdir
+    input:
+    tuple path ("*", stageAs: 'STAR/*')
+    tuple path ("*", stageAs: 'FastQC/*')
+    tuple path ("*", stageAs: 'RSeQC/*')
+    tuple path ("*", stageAs: 'RNA-SeQC/*')
 
     output:
-    path '*'
+    path ('multiqc_data/*')
+    path ('multiqc_report.html')
 
     script:
     """
-    multiqc ./ -o . --ignore _STARpass1/ -f 
+    multiqc */ -o . --ignore _STARpass1/ -f 
 
     """
 }

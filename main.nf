@@ -2,6 +2,7 @@
 
 //include { CHECK_INPUT  } from './modules/check_input.nf'
 include { FASTQC  } from './modules/fastqc.nf'
+include { CAT_FASTQ  } from './modules/cat_fastq.nf'
 include { STAR  } from './modules/star.nf'
 //include { CAT_STAR_COUNTS  } from './modules/cat_star_counts.nf'
 include { RNASEQC  } from './modules/rnaseqc.nf'
@@ -21,34 +22,101 @@ Channel
         // row is a list object
         //.view { row -> "${row.sample_id}, ${row.fastq_1}, ${row.fastq_2}" }
         //.take (3)
-        .set {samples_ch}
+        .set {ch_samples}
 
 
 workflow {
     //CHECK_INPUT(params.input)
-    
-    fastqc = FASTQC(samples_ch, params.outdir)
-    
-    star = STAR(samples_ch, params.star, params.gtf, params.outdir)
-    
-    //CAT_STAR_COUNTS()
-    
-    if (params.gtfQC){
-        rnaseqc = RNASEQC(star, params.gtfQC, params.strand, params.readType, params.outdir)
+
+    ch_samples
+        .map {
+            row -> [row.sample_id, [row.fastq_1, row.fastq_2]]
+        }
+        .groupTuple (by: [0])
+        .map {
+            sample_id,fastq -> 
+                [sample_id, fastq.flatten()]
+        }
+        .set {ch_fastq}
+
+    //ch_fastq.view()
+    /*
+    * cat fastq files if required
+    */
+    if (params.cat_fastq){
+        CAT_FASTQ(ch_fastq)
+        ch_reads = CAT_FASTQ.out.reads
     }else{
+        ch_reads = ch_fastq
+    }
+
+    /*
+    * run STAR alignment
+    */
+    if (params.run_alignment){
+        STAR(ch_reads)
+        ch_bam = STAR.out.bam
+        ch_star = STAR.out.star
+    }
+
+    /*
+    * run QC
+    */    
+    if (params.run_qc){
+        /*
+        * FastQC
+        */
+        ch_samples
+        .map {
+            row -> [row.sample_id, [row.fastq_1, row.fastq_2]]
+        }
+        .map {
+            sample_id,fastq -> 
+                [sample_id, fastq.flatten()]
+        }
+        .set {ch_fastqc}
+
+        fastqc = Channel.empty()
+        if (params.run_fastqc){
+            FASTQC(ch_fastqc)
+            ch_fastqc = FASTQC.out.qc
+        }
+
+        /*
+        * RNASeQC
+        */
         rnaseqc = Channel.empty()
-    }
-    
-    if (params.rseqcBed){
-        rseqc = RSEQC(star, params.rseqcBed, params.txBed, params.geneBed, params.outdir)
-    }else{
+        if (params.run_rnaseqc){
+            RNASEQC(ch_bam)
+            ch_rnaseqc = RNASEQC.out.qc
+        }
+
+        /*
+        * RSeQC
+        */
         rseqc = Channel.empty()
+        if (params.run_rseqc){
+            RSEQC(ch_bam)
+            ch_rseqc = RSEQC.out.qc
+        }
     }
+
+
+    /*
+    * MultiQC
+    */
+    if (params.run_multiqc){
+        MULTIQC(
+            ch_star.collect(), 
+            ch_fastqc.collect(), 
+            ch_rseqc.collect(), 
+            ch_rnaseqc.collect()
+        )
     
-    
-    MULTIQC(star, fastqc, rseqc, rnaseqc, params.outdir)
+    }
     //TEST(fastqc_path, params.outdir)
 
     /* Report params used for the workflow */
-    OUTPUT_PARAMS( params.outdir )
+    //OUTPUT_PARAMS( params.outdir )
+
 }

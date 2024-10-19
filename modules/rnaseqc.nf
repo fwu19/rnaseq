@@ -1,6 +1,3 @@
-params.outdir = 'Analysis/'
-params.gtfQC = '/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v38.annotation.collapsed.gtf'
-
 process RNASEQC {
     time = '1d'
     cpus = 6
@@ -8,23 +5,19 @@ process RNASEQC {
     module = ['RNA-SeQC/2.3.4-foss-2019b', 'SAMtools/1.11-GCC-10.2.0']
 
 
-    tag "RNA-SeQC on ${bam_path.baseName}"
+    tag "RNA-SeQC on ${sample_id}"
 
-    publishDir "${outdir}/RNA-SeQC/", mode: 'copy'
+    publishDir "${params.outdir}/RNA-SeQC/", pattern: "*.gct", mode: 'copy'
 
-   input:
-    tuple val(sample_id), path(bam_path)
-    path(gtfQC)
-    val(strand)
-    val(readType)
-    path(outdir)
+    input:
+    tuple val(sample_id), path("*.{bam,bai}", stageAs: "input/*")
 
     output:
-    tuple path("*")
+    tuple path("*.gct"), emit: qc
 
     script:
     """
-    rnaseqc.sh $sample_id $bam_path $gtfQC $strand $readType
+    rnaseqc.sh $sample_id ${params.gtfQC} ${params.strand} ${params.readType} input/*.bam 
 
     """
 }

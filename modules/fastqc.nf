@@ -1,5 +1,3 @@
-params.outdir = "Analysis"
-
 process FASTQC {
     time = '1d'
     cpus = 1
@@ -9,17 +7,17 @@ process FASTQC {
 
     tag "FASTQC on $sample_id"
 
-    publishDir "${outdir}/FastQC/", pattern: '*.{html,zip}', mode: 'copy'
+    publishDir "${params.outdir}/FastQC/", pattern: '*.{html,zip}', mode: 'copy'
 
     input:
-    tuple val(sample_id), path(reads1), path(reads2)
-    path(outdir)
+    tuple val(sample_id), path("*.fastq.gz", stageAs: "input/*")
+    
 
     output:
-    tuple path("*.{html,zip}")
+    tuple path("*.{html,zip}"), emit: qc
 
     script:
     """
-    fastqc -o ./ --casava ${reads1} ${reads2}
-     """
+    fastqc.sh ${sample_id} input/
+    """
 }

@@ -10,18 +10,19 @@ reads - <path/to/read1.fastq.gz> [path/to/reads2.fastq.gz]
 RG - define read group
 END_COMMENT
 
-sample=$1; shift
-STARref=$(realpath $1); shift
-GTFfile=$(realpath $1); shift
+sampleId=$1; shift
+STARref=$1; shift
+GTFfile=$1; shift
 nthread=$1; shift
-reads="$@"
 
-[[ -d $sample ]] || mkdir $sample
-RG="ID:$sample LB:$sample SM:$sample PL:illumina PU:$sample CN:FredHutch"
+fq1=$(find fastq/ | egrep "merged_R1.fastq.gz|S[0-9]+(_L[0-9]+)?_R1_.*fastq.gz" )
+fq2=$(find fastq/ | egrep "merged_R2.fastq.gz|S[0-9]+(_L[0-9]+)?_R2_.*fastq.gz" )
+[[ -d $sampleId ]] || mkdir $sampleId
+RG="ID:$sampleId LB:$sampleId SM:$sampleId PL:illumina PU:$sampleId CN:FredHutch"
 STAR \
-    --outFileNamePrefix "$sample/" \
+    --outFileNamePrefix "$sampleId/" \
 	--genomeDir "${STARref}" \
-	--readFilesIn ${reads} \
+	--readFilesIn ${fq1} ${fq2} \
 	--readFilesCommand zcat \
 	--runThreadN ${nthread} \
 	--outFilterMultimapScoreRange 1 \
@@ -46,10 +47,10 @@ STAR \
 	--sjdbGTFfile "${GTFfile}" \
 	--outReadsUnmapped None # Could use "within", compatible with outSAMunmapped
 
- 
-samtools sort -T . -@ 6 -o $sample/Aligned.sortedByCoord.out.bam $sample/Aligned.out.bam
-rm $sample/Aligned.out.bam
- 
-mv $sample/Aligned.sortedByCoord.out.bam $sample/${sample}.bam
-samtools index $sample/${sample}.bam
+
+samtools sort -T . -@ 6 -o $sampleId/Aligned.sortedByCoord.out.bam $sampleId/Aligned.out.bam
+rm $sampleId/Aligned.out.bam
+
+mv $sampleId/Aligned.sortedByCoord.out.bam $sampleId/${sampleId}.bam
+samtools index $sampleId/${sampleId}.bam
 
