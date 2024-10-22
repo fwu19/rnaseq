@@ -17,7 +17,7 @@ process RNASEQC {
 
     script:
     """
-    rnaseqc.sh $sample_id ${params.gtfQC} ${params.strand} ${params.readType} input/*.bam 
+    rnaseqc.sh $sample_id ${params.rnaseqc_gtf} ${params.strand} ${params.read_type} input/*.bam 
 
     """
 }

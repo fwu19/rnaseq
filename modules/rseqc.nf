@@ -17,7 +17,7 @@ process RSEQC {
 
     script:
     """
-    rseqc.sh $sample_id ${params.rseqcBed} ${params.txBed} ${params.geneBed} input/*.bam 
+    rseqc.sh $sample_id ${params.rseqc_bed} ${params.tx_bed} ${params.gene_bed} input/*.bam 
 
     """
 }
