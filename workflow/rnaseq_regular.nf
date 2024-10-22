@@ -9,7 +9,6 @@ include { RNASEQC  } from './modules/rnaseqc.nf'
 include { RSEQC  } from './modules/rseqc.nf'
 include { MULTIQC  } from './modules/multiqc.nf'
 include { FEATURECOUNTS } from './modules/featureCounts.nf'
-include { DIFFERENTIAL_EXPRESSION } from './modules/differential_expression.nf'
 include { OUTPUT_PARAMS  } from './modules/output_params.nf'
 //include { TEST  } from './modules/test.nf'
 
@@ -66,16 +65,7 @@ workflow {
     */
     if (params.run_alignment & params.run_featurecounts){
         FEATURECOUNTS(ch_bam, params.gtf)
-        ch_counts = FEATURECOUNTS.out.counts.collect()
-        // [path/to/all/counts.txt]
-    }
-
-    /*
-    * differential expression
-    */
-    if (params.run_de){
-        DIFFERENTIAL_EXPRESSION(ch_counts)
-
+        ch_counts = FEATURECOUNTS.out.counts // [sample_id, path/to/counts.txt]
     }
 
     /*
@@ -134,6 +124,13 @@ workflow {
     
     }
     
+    /*
+    * MultiQC
+    */
+    if (params.run_de){
+        DIFFERENTIAL_EXPRESSION()
+
+    }
     /* 
     * Report params used for the workflow 
     */

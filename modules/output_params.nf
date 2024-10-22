@@ -4,18 +4,17 @@
 import groovy.json.JsonOutput
 
 process OUTPUT_PARAMS {
-
-    publishDir "${params.outdir}/pipeline_info/", pattern: '*', mode: 'copy'
+    label "process_single"
     
     input:
-        path (out.dir)
-        
+        path (outdir)
+
     output:
         path ('params.json')
 
     script:
     """
-        "echo '${JsonOutput.toJson(params)}' > params.json"
+        echo '${JsonOutput.toJson(params)}' > params.json
     """
 }
 

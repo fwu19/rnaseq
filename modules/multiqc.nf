@@ -21,7 +21,7 @@ process MULTIQC {
 
     script:
     """
-    multiqc */ -o . --ignore _STARpass1/ -f 
+    multiqc -o . --ignore _STARpass1/ -f STAR/ FastQC/ RSeQC/ RNA-SeQC/
 
     """
 }
