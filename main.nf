@@ -74,7 +74,7 @@ workflow {
     * differential expression
     */
     if (params.run_de){
-        DIFFERENTIAL_EXPRESSION(ch_counts)
+        DIFFERENTIAL_EXPRESSION(params.input, params.comparison, ch_counts, params.gene_txt)
 
     }
 

@@ -94,82 +94,6 @@ count2dgelist <- function(counts.tsv=NULL, return.counts = T, pattern2remove="^X
 }
 
 ## for all
-pca_log2rpkm <- function(y, out.dir, prefix, var.genes = NULL, color = NULL, plot.title = '', sample.label = T, feature.length = 'gene_length'){
-    options(stringsAsFactors = F)
-    require(ggrepel)
-    
-    if('chrom' %in% colnames(y$genes)){
-        y <- y[!y$chrom %in% c('chrX', 'chrY', 'chrM'), ]
-    }
-    
-    log2rpkm <- rpkm(y, gene.length = feature.length, normalized.lib.sizes = T, log = T)
-    
-    if (!is.null(var.genes)){
-        keep <- rank(-apply(log2rpkm, 1, var)) < var.genes
-        log2rpkm <- log2rpkm[keep,]
-    }
-    
-    ## Run PCA
-    pca <- prcomp(t(log2rpkm), center = T, scale = T)
-    
-    ## Create outdir if needed
-    if(!dir.exists(out.dir)){dir.create(out.dir,recursive = T)}
-    
-    ## Scree plot
-    pca.variance.prop <- (pca$sdev^2)/sum(pca$sdev^2)*100
-    
-    pdf(paste(out.dir,'pca.scree.plot.pdf',sep = '/'))
-    barplot(
-        pca.variance.prop[1:50],
-        cex.names = 1,
-        xlab = 'Principal component (PC), 1-50',
-        ylab = 'Proportion of variance (%)',
-        main = 'Scree plot',
-        ylim = c(0,80)
-    )
-    
-    points(
-        cumsum(pca.variance.prop)[1:50], col = 'red', type = 'l'
-    )
-    dev.off()
-    
-    ## PC1 vs PC2
-    df <- cbind(pca$x[,1:2],data.frame(label=rownames(pca$x)))
-    if(is.null(color)){
-        df$color <- y$samples$group
-    }else{
-        df$color <- color
-    }
-    
-    if(length(unique(df$color))>1){
-        p <- ggplot(df,aes(x=PC1,y=PC2,label=label,color=color))
-    }else{
-        p <- ggplot(df,aes(x=PC1,y=PC2,label=label))
-    }
-    p <- p +
-        geom_point(shape = 1)
-    
-    if(sample.label){
-        p <- p +
-            geom_text_repel(size = 2.4, color = 'black', position = 'jitter',max.overlaps = 80)
-    }
-    
-    p +
-        labs(
-            title = plot.title,
-            color = '', 
-            x = paste0('PC1 (',round(pca.variance.prop[1],1),'%)'),
-            y = paste0('PC2 (',round(pca.variance.prop[2],1),'%)')
-        )+
-        theme_bw()
-    ggsave(paste(out.dir,paste(prefix,'PCA.pdf',sep='.'),sep = '/'),width = 6,height = 5)
-    
-    ## return data
-    return(pca)
-    
-}
-
-## for all
 run_da <- function(
     y0, out.prefix, 
     control.group, test.group, group=NULL, 
@@ -300,7 +224,7 @@ plot_pca <- function(y, out.prefix, var.genes = NULL, color = NULL, plot.title =
     if(!dir.exists(out.dir)){dir.create(out.dir,recursive = T)}
     
     if('chrom' %in% colnames(y$genes)){
-        y <- y[!y$chrom %in% c('chrX', 'chrY', 'chrM'), ]
+        y <- y[!y$genes$chrom %in% c('chrX', 'chrY', 'chrM'), ]
     }
     
     log2rpkm <- rpkm(y, gene.length = feature.length, normalized.lib.sizes = T, log = T)
@@ -505,7 +429,7 @@ for (x in lst){
     assign(x[1],x[2])
 } # read arguments: ss, comparison, count.dir, gene.txt, length.col, strand, fdr, fc, fdr2, fc2
 
-ss <- ss %>% 
+ss <- read.csv(input) %>% 
     mutate(sample_group = gsub('-','_', sample_group)) %>% 
     dplyr::select(-c(fastq_1, fastq_2)) %>% 
     unique.data.frame() # sample sheet
@@ -528,7 +452,7 @@ fc2 <- as.numeric(fc2)
 count.files <- list.files(count.dir, full.names = T)
 if (grepl('ReadsPerGene.out.tab', count.files[1])){
     cts <- generate_count_matrix_star(gene.txt,length.col,ss,count.files,count.col)
-}else if (grepl('exonic.*.txt', flist[1])){
+}else if (grepl('exonic.*.txt', count.files[1])){
     cts <- generate_count_matrix_featurecounts(gene.txt,length.col,ss,count.files)
 }else {
     stop (paste("Cannot parse files in", count.dir, "!"))

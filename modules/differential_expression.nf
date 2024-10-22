@@ -11,13 +11,17 @@ process DIFFERENTIAL_EXPRESSION {
     publishDir "${params.outdir}/differential_expression/", mode: 'copy'
     
     input:
+    path (input)
+    path (comparison)
     path ("*.txt", stageAs: "counts/")
+    path (gene_txt)
 
     output:
     tuple path ("*")
     
     script:
     """
-    Rscript differential_expression.r ss=${params.input} comparison=${params.comparison} count.dir=counts gene.txt=${params.geneTxt} length.col=${params.lengthCol} strand=${params.strand} fdr=${params.fdr} fc=${params.fc} fdr2=${params.fdr2} fc2=${params.fc2}
+    differential_expression.r input=$input comparison=$comparison count.dir=counts gene.txt=$gene_txt length.col=${params.length_col} strand=${params.strand} fdr=${params.fdr} fc=${params.fc} fdr2=${params.fdr2} fc2=${params.fc2}
+    rm -r counts/
     """
 }
