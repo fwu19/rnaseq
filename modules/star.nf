@@ -8,10 +8,13 @@ process STAR {
 
     tag "STAR on $sample_id"
 
-    publishDir "${params.outdir}/STAR/", mode: 'copy'
+    publishDir "${params.outdir}/STAR/$genome", mode: 'copy'
 
     input:
     tuple val(sample_id), path("*.fastq.gz", stageAs: "fastq/*")
+    val (genome)
+    path (star)
+    path (gtf)
     
     output:
     tuple path("${sample_id}/"), emit: star
@@ -19,6 +22,6 @@ process STAR {
     
     script:
     """
-    star.sh ${sample_id} ${params.star} ${params.gtf} ${task.cpus} 
+    star.sh ${sample_id} ${star} ${gtf} ${task.cpus} 
     """
 }

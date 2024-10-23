@@ -1,26 +1,33 @@
 #!/usr/bin/env nextflow 
 
 //include { CHECK_INPUT  } from './modules/check_input.nf'
-include { FASTQC  } from './modules/fastqc.nf'
-include { CAT_FASTQ  } from './modules/cat_fastq.nf'
-include { STAR } from './modules/star.nf'
-include { STAR  as  STAR_HOST } from './modules/star.nf'
-include { XENOFILTER } from './modules/xenofilter.nf'
-include { RNASEQC  } from './modules/rnaseqc.nf'
-include { RSEQC  } from './modules/rseqc.nf'
-include { MULTIQC  } from './modules/multiqc.nf'
-include { FEATURECOUNTS } from './modules/featureCounts.nf'
-include { OUTPUT_PARAMS  } from './modules/output_params.nf'
+include { FASTQC  } from '../modules/fastqc.nf'
+include { CAT_FASTQ  } from '../modules/cat_fastq.nf'
+include { STAR  } from '../modules/star.nf'
+//include { CAT_STAR_COUNTS  } from '../modules/cat_star_counts.nf'
+include { RNASEQC  } from '../modules/rnaseqc.nf'
+include { RSEQC  } from '../modules/rseqc.nf'
+include { MULTIQC  } from '../modules/multiqc.nf'
+include { FEATURECOUNTS } from '../modules/featureCounts.nf'
+include { DIFFERENTIAL_EXPRESSION } from '../modules/differential_expression.nf'
+include { OUTPUT_PARAMS  } from '../modules/output_params.nf'
 //include { TEST  } from './modules/test.nf'
 
+/*
+how to parse output to input of the next process
+how to implement dependency?
+*/
 
 Channel
         .fromPath(params.input, checkIfExists: true)
         .splitCsv(header: true)
-        .set {ch_samples} // all fields in sample sheet
+        // row is a list object
+        //.view { row -> "${row.sample_id}, ${row.fastq_1}, ${row.fastq_2}" }
+        //.take (3)
+        .set {ch_samples}
 
 
-workflow {
+workflow RNASEQ_REGULAR {
     //CHECK_INPUT(params.input)
 
     ch_samples
@@ -33,9 +40,8 @@ workflow {
                 [sample_id, fastq.flatten()]
         }
         .set {ch_fastq}
-    //ch_fastq.view() 
-    // [ sample_id, path/to/*.fastq.gz ]
 
+    //ch_fastq.view()
     /*
     * cat fastq files if required
     */
@@ -47,32 +53,29 @@ workflow {
     }
 
     /*
-    * run STAR alignment to graft and host genomes
-    * run XenofilteR to remove reads with host origin
+    * run STAR alignment
     */
     if (params.run_alignment){
-        STAR(ch_reads, params.genome)
-        ch_bam_graft = STAR.out.bam
-        ch_star_graft = STAR.out.star
-
-        STAR_HOST(ch_reads, params.genome_host)
-        ch_bam_host = STAR_HOST.out.bam
-        ch_star_host = STAR_HOST.out.star
-
-        ch_bam_graft
-            .cross(ch_bam_host)
-            .set(ch_bam_paired)
-        XENOFILTER(ch_bam_paired)
-        ch_bam = XENOFILTER.out.bam // [ sample_id, path/to/filtered.bam ]
+        STAR(ch_reads, params.genome, params.star, params.gtf)
+        ch_bam = STAR.out.bam
+        ch_star = STAR.out.star
     }
-
 
     /*
     * run featureCounts
     */
     if (params.run_alignment & params.run_featurecounts){
         FEATURECOUNTS(ch_bam, params.gtf)
-        ch_counts = FEATURECOUNTS.out.counts // [ sample_id, path/to/counts.txt ]
+        ch_counts = FEATURECOUNTS.out.counts.collect()
+        // [path/to/all/counts.txt]
+    }
+
+    /*
+    * differential expression
+    */
+    if (params.run_de){
+        DIFFERENTIAL_EXPRESSION(params.input, params.comparison, ch_counts, params.gene_txt)
+
     }
 
     /*
@@ -123,21 +126,14 @@ workflow {
     */
     if (params.run_multiqc){
         MULTIQC(
-            ch_star.collect(), 
-            ch_fastqc.collect(), 
-            ch_rseqc.collect(), 
-            ch_rnaseqc.collect()
+            ch_star.flatten().collect(), 
+            ch_fastqc.flatten().collect(), 
+            ch_rseqc.flatten().collect(), 
+            ch_rnaseqc.flatten().collect()
         )
     
     }
     
-    /*
-    * MultiQC
-    */
-    if (params.run_de){
-        DIFFERENTIAL_EXPRESSION()
-
-    }
     /* 
     * Report params used for the workflow 
     */
