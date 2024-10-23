@@ -29,22 +29,20 @@ Channel
 
 workflow RNASEQ_REGULAR {
     //CHECK_INPUT(params.input)
-
+    ch_fastq = Channel.empty()
     ch_samples
         .map {
-            row -> [row.sample_id, [row.fastq_1, row.fastq_2]]
+            row -> [row.sample_id, row.fastq_1, row.fastq_2]
         }
         .groupTuple (by: [0])
-        .map {
-            sample_id,fastq -> 
-                [sample_id, fastq.flatten()]
-        }
         .set {ch_fastq}
+    //ch_fastq.view() 
+    // [ sample_id, [paths/to/R1.fastq.gz], [paths/to/R2.fastq.gz] ]
 
-    //ch_fastq.view()
     /*
     * cat fastq files if required
     */
+    ch_reads = Channel.empty()
     if (params.cat_fastq){
         CAT_FASTQ(ch_fastq)
         ch_reads = CAT_FASTQ.out.reads
@@ -55,19 +53,23 @@ workflow RNASEQ_REGULAR {
     /*
     * run STAR alignment
     */
+    ch_bam = Channel.empty()
+    ch_star = Channel.empty()
+    ch_counts = Channel.empty()
     if (params.run_alignment){
         STAR(ch_reads, params.genome, params.star, params.gtf)
         ch_bam = STAR.out.bam
         ch_star = STAR.out.star
+        ch_counts = STAR.out.counts.collect() // [paths/to/all/counts.txt]
     }
 
     /*
     * run featureCounts
     */
-    if (params.run_alignment & params.run_featurecounts){
+    if (params.run_featurecounts){
         FEATURECOUNTS(ch_bam, params.gtf)
         ch_counts = FEATURECOUNTS.out.counts.collect()
-        // [path/to/all/counts.txt]
+        // [paths/to/all/counts.txt]
     }
 
     /*
@@ -85,15 +87,13 @@ workflow RNASEQ_REGULAR {
         /*
         * FastQC
         */
+        ch_fastqc = Channel.empty()
         ch_samples
         .map {
-            row -> [row.sample_id, [row.fastq_1, row.fastq_2]]
-        }
-        .map {
-            sample_id,fastq -> 
-                [sample_id, fastq.flatten()]
+            row -> [row.sample_id, row.fastq_1, row.fastq_2]
         }
         .set {ch_fastqc}
+        //ch_fastqc.view()
 
         fastqc = Channel.empty()
         if (params.run_fastqc){

@@ -10,13 +10,15 @@ process CAT_FASTQ {
     //publishDir "${params.outdir}/merged_fastq/", pattern: '*.fastq.gz', mode: 'copy'
 
     input:
-    tuple val(sample_id), path("*.fastq.gz", stageAs: "input/*")
+    tuple val(sample_id), path(fastq1), path(fastq2)
     
     output:
-    tuple val(sample_id), path("*.fastq.gz"), emit: reads
+    tuple val(sample_id), path("${sample_id}_merged_R1.fastq.gz"), path("${sample_id}_merged_R2.fastq.gz"), emit: reads
 
     script:
     """
-    cat_fastq.sh $sample_id input/
+    cat_fastq.sh $sample_id
+
     """
+
 }

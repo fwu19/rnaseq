@@ -13,7 +13,7 @@ process DIFFERENTIAL_EXPRESSION {
     input:
     path (input)
     path (comparison)
-    path ("*.txt", stageAs: "counts/")
+    path ("*.txt", stageAs: "counts/*")
     path (gene_txt)
 
     output:

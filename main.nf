@@ -13,10 +13,10 @@ workflow RNASEQ {
     /*
     * Call named workflow
     */
-    if (params.workflow_regular) {
+    if (params.workflow == "regular" ) {
         RNASEQ_REGULAR()
     }
-    else if (params.workflow_pdx) {
+    else if (params.workflow == "pdx" ) {
         RNASEQ_PDX()
     }
     else {

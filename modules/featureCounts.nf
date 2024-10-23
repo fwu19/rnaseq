@@ -19,6 +19,6 @@ process FEATURECOUNTS {
 
     script:
     """
-    featureCounts.sh $sample_id $gtf ${sample_id}.bam ${params.read_type} ${params.strand} ${task.cpus}
+    featureCounts.sh $sample_id $gtf ${sample_id}*.bam ${params.read_type} ${params.strand} ${task.cpus}
     """
 }
