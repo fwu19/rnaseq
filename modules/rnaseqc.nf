@@ -5,19 +5,22 @@ process RNASEQC {
     module = ['RNA-SeQC/2.3.4-foss-2019b', 'SAMtools/1.11-GCC-10.2.0']
 
 
-    tag "RNA-SeQC on ${sample_id}"
+    tag "RNA-SeQC on ${meta.id}"
 
     publishDir "${params.outdir}/QC/rnaseqc/", pattern: "*.{tsv,gct}", mode: 'copy'
 
     input:
-    tuple val(sample_id), path("*.{bam,bai}", stageAs: "input/*")
+    tuple val(meta), path("*.{bam,bai}", stageAs: "input/*")
+    path(gtf)
+    val(strand)
+    val(read_type)
 
     output:
-    tuple path("*"), emit: qc
+    tuple val(meta), path("*"), emit: qc
 
     script:
     """
-    rnaseqc.sh $sample_id ${params.rnaseqc_gtf} ${params.strand} ${params.read_type} input/*.bam 
+    rnaseqc.sh ${meta.id} ${gtf} ${strand} ${read_type} input/*.bam 
 
     """
 }

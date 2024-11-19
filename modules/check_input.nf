@@ -1,29 +1,29 @@
 process CHECK_INPUT {
+    module = ['fhR/4.1.2-foss-2021b']
+
+    label 'process_single'
+
+    tag "Generate $samplesheet"
+
     input:
-    path (file)
-    
-    output
-    
+    path ( samplesheet )
+    path ( metadata )
+
+    output:
+    path 'samplesheet.valid.csv', emit: csv
+    path 'samplesheet.byFastq.csv', emit: fq
+    path  "versions.yml", emit: versions
+
+    when:
+    task.ext.when == null || task.ext.when
+
     script:
-    /*
-    if (params.input == 'samples.csv')
-        """
-        echo "gzip -c $file > ${file}.gz"
-        """
-    else if (params.compress == 'bzip2')
-        """
-        echo "bzip2 -c $file > ${file}.bz2"
-        """
-    else
-        throw new IllegalArgumentException("Unknown compressor $params.compress")
-    */
-    
-    Channel
-        .fromPath(params.input, checkIfExists: true)
-        .splitCsv(header: true)
-        // row is a list object
-        .view { row -> "${row.sample_id}, ${row.fastq_1}, ${row.fastq_2}" }
-        .set{reads_ch}
+    """
+    check_input.r $samplesheet $metadata
 
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        R: \$(R --version | head -n 1)
+    END_VERSIONS
+    """
 }
-

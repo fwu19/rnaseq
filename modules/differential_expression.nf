@@ -11,7 +11,7 @@ process DIFFERENTIAL_EXPRESSION {
     publishDir "${params.outdir}/differential_expression/", mode: 'copy'
     
     input:
-    path (input)
+    path (samplesheet)
     path (comparison)
     path ("*.txt", stageAs: "counts/*")
     path (gene_txt)

@@ -6,24 +6,24 @@ process STAR {
     module = ['STAR/2.7.7a-GCC-10.2.0', 'SAMtools/1.11-GCC-10.2.0']
 
 
-    tag "STAR on $sample_id"
+    tag "STAR on ${meta.id}"
 
-    publishDir "${params.outdir}/STAR/$genome/$sample_id", mode: 'copy'
+    publishDir "${params.outdir}/STAR/$genome/${meta.id}", mode: 'copy'
 
     input:
-    tuple val(sample_id), path(read1), path(read2)
+    tuple val(meta), path(read1), path(read2)
     val (genome)
     path (star)
     path (gtf)
     
     output:
-    tuple path( "$sample_id/Log.final.out" ), emit: log
-    tuple val(sample_id), path("${sample_id}/*.{bam,bam.bai}"), emit: bam 
-    tuple path("${sample_id}/ReadsPerGene.out.tab"), emit: counts
-    tuple path("$sample_id/")
+    tuple val(meta), path( "${meta.id}/Log.final.out" ), emit: log
+    tuple val(meta), path("${meta.id}/Aligned.sortedByCoord.out.{bam,bam.bai}"), emit: bam 
+    tuple val(meta), path("${meta.id}/ReadsPerGene.out.tab"), emit: counts
+    path("${meta.id}/*")
 
     script:
     """
-    star.sh ${sample_id} ${star} ${gtf} ${task.cpus} $read1 $read2
+    star.sh ${meta.id} ${star} ${gtf} ${task.cpus} $read1 $read2
     """
 }

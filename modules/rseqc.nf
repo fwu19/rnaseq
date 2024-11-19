@@ -5,19 +5,23 @@ process RSEQC {
     module = ['R/4.1.2-foss-2020b', 'SAMtools/1.11-GCC-10.2.0']
 
 
-    tag "RSeQC on ${sample_id}"
+    tag "RSeQC on ${meta.id}"
 
-    publishDir "${params.outdir}/QC/rseqc/", pattern: "${sample_id}.*.{txt,pdf,r,bed,log,xls,xlsx}", mode: 'copy'
+    publishDir "${params.outdir}/QC/rseqc/", pattern: "*.{txt,pdf,r,bed,log,xls,xlsx}", mode: 'copy'
 
     input:
-    tuple val(sample_id), path("*.{bam,bai}", stageAs: "input/*")
+    tuple val(meta), path("*.{bam,bai}", stageAs: "input/*")
+    path(rseqc_bed)
+    path(tx_bed)
+    path(gene_bed)
 
     output:
-    tuple path("${sample_id}.*"), emit: qc
+    tuple val(meta), path("*.{txt,pdf,r,bed,log,xls,xlsx}"), emit: qc
+    path("*.{txt,pdf,r,bed,log,xls,xlsx}")
 
     script:
     """
-    rseqc.sh $sample_id ${params.rseqc_bed} ${params.tx_bed} ${params.gene_bed} input/*.bam 
+    rseqc.sh ${meta.id} ${rseqc_bed} ${tx_bed} ${gene_bed} input/*.bam 
 
     """
 }

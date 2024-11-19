@@ -1,10 +1,9 @@
 #!/usr/bin/env nextflow 
 
-//include { CHECK_INPUT  } from './modules/check_input.nf'
+include { CHECK_INPUT  } from '../modules/check_input.nf'
 include { FASTQC  } from '../modules/fastqc'
 include { CAT_FASTQ  } from '../modules/cat_fastq'
 include { STAR  } from '../modules/star'
-//include { CAT_STAR_COUNTS  } from '../modules/cat_star_counts.nf'
 include { RNASEQC  } from '../modules/rnaseqc'
 include { RSEQC  } from '../modules/rseqc'
 include { HS_METRICS  } from '../modules/hs_metrics'
@@ -14,31 +13,45 @@ include { DIFFERENTIAL_EXPRESSION } from '../modules/differential_expression'
 include { OUTPUT_PARAMS  } from '../modules/output_params'
 //include { TEST  } from './modules/test.nf'
 
-if(!params.input){ exit 1, "Provide params.input!" }
-Channel
-        .fromPath(params.input, checkIfExists: true)
-        .splitCsv(header: true)
-        .set {ch_samples}
+ch_dummy_csv = Channel.fromPath("$projectDir/assets/dummy_file.csv", checkIfExists: true)
+
+if(!params.input){ exit 1, "Provide params.input!" }else{ ch_input = Channel.fromPath( params.input, checkIfExists:true ) }
+ch_metadata = params.metadata ? Channel.fromPath( params.metadata, checkIfExists: true ) : Channel.empty()
+
 
 
 workflow RNASEQ_EXOME {
-    //CHECK_INPUT(params.input)
+    /*
+    * Run input check
+    */
+    samplesheet = ch_input
+    if (params.run_input_check){
+        CHECK_INPUT(
+            ch_input,
+            ch_metadata
+        )
+        samplesheet = CHECK_INPUT.out.csv
 
-    ch_samples
+        CHECK_INPUT.out.fq
+        .splitCsv(header: true)
         .map {
-            row -> [row.sample_id, row.fastq_1, row.fastq_2]
+            row -> [ row.id, row, row.fastq_1, row.fastq_2]
         }
         .groupTuple (by: [0])
         .set {ch_fastq}
-    //ch_fastq.view() 
-    // [ sample_id, [paths/to/R1.fastq.gz], [paths/to/R2.fastq.gz] ]
+        //ch_fastq.view() 
+        // [ sample_id, [paths/to/R1.fastq.gz], [paths/to/R2.fastq.gz] ]
+    }
 
     /*
     * cat fastq files if required
     */
     if (params.cat_fastq){
-        CAT_FASTQ(ch_fastq)
+        CAT_FASTQ(
+            ch_fastq
+        )
         ch_reads = CAT_FASTQ.out.reads
+
     }else{
         ch_reads = ch_fastq
     }
@@ -49,26 +62,42 @@ workflow RNASEQ_EXOME {
     ch_bam = Channel.empty()
     ch_log = Channel.empty()
     if (params.run_alignment){
-        STAR(ch_reads, params.genome, params.star, params.gtf)
-        ch_bam = STAR.out.bam
+        STAR(
+            ch_reads, 
+            params.genome, 
+            params.star, 
+            params.gtf
+        )
+        ch_bam = STAR.out.bam 
+        // [ [meta], path(bam) ]
         ch_log = STAR.out.log
+        // [ [meta], path(log) ]
     }
 
     /*
     * run featureCounts
     */
     ch_counts = Channel.empty()
-    if (params.run_alignment & params.run_featurecounts){
-        FEATURECOUNTS(ch_bam, params.gtf)
-        ch_counts = FEATURECOUNTS.out.counts.collect()
-        // [path/to/all/counts.txt]
+    if (params.run_featurecounts){
+        FEATURECOUNTS(
+            ch_bam, 
+            params.gtf
+        )
+        ch_counts = FEATURECOUNTS.out.counts
+        // [ [meta], path("count.txt") ]
     }
 
     /*
     * differential expression
     */
+    ch_comparison = params.comparison ? Channel.fromPath(params.comparison, checkIfExists: true) : Channel.empty()
     if (params.run_de){
-        DIFFERENTIAL_EXPRESSION(params.input, params.comparison, ch_counts, params.gene_txt)
+        DIFFERENTIAL_EXPRESSION(
+            samplesheet, 
+            ch_comparison, 
+            ch_counts.map{it[1]}.collect(), 
+            params.gene_txt
+        )
 
     }
 
@@ -79,12 +108,14 @@ workflow RNASEQ_EXOME {
         /*
         * FastQC
         */
-        fastqc = Channel.empty()
+        ch_fastqc = Channel.empty()
         if (params.run_fastqc){
             FASTQC(
-                    ch_samples
-                        .map { it -> [it.sample_id, it.fastq_1, it.fastq_2]}
-
+                CHECK_INPUT.out.fq
+                    .splitCsv(header: true)
+                    .map {
+                        row -> [ row, row.fastq_1, row.fastq_2]
+                    }
             )
             ch_fastqc = FASTQC.out.qc
         }
@@ -92,25 +123,37 @@ workflow RNASEQ_EXOME {
         /*
         * RNASeQC
         */
-        rnaseqc = Channel.empty()
+        ch_rnaseqc = Channel.empty()
         if (params.run_rnaseqc){
-            RNASEQC(ch_bam)
+            RNASEQC(
+                ch_bam,
+                params.rnaseqc_gtf,
+                params.strand,
+                params.read_type
+            )
             ch_rnaseqc = RNASEQC.out.qc
+            // [ [meta], path("*") ]
         }
 
         /*
         * RSeQC
         */
-        rseqc = Channel.empty()
+        ch_rseqc = Channel.empty()
         if (params.run_rseqc){
-            RSEQC(ch_bam)
+            RSEQC(
+                ch_bam,
+                params.rseqc_bed,
+                params.tx_bed,
+                params.gene_bed
+            )
             ch_rseqc = RSEQC.out.qc
+            // [ [meta], path("*") ]
         }
 
         /*
         * GATK collect_hs_metrics
         */
-        hs_metrics = Channel.empty()
+        ch_hs_metrics = Channel.empty()
         if (params.run_hs_metrics){
             HS_METRICS(
                 ch_bam,
@@ -118,6 +161,7 @@ workflow RNASEQ_EXOME {
                 params.target_region
             )
             ch_hs_metrics = HS_METRICS.out.qc
+            // [ [meta], path("*") ]
         }
 
     }
@@ -129,10 +173,10 @@ workflow RNASEQ_EXOME {
     if (params.run_multiqc){
         MULTIQC(
             ch_log.collect(), 
-            ch_fastqc.flatten().collect(), 
-            ch_rseqc.flatten().collect(), 
-            ch_rnaseqc.flatten().collect(),
-            ch_hs_metrics.flatten().collect()
+            ch_fastqc.map{it[1]}.flatten().collect(), 
+            ch_rseqc.map{it[1]}.flatten().collect(), 
+            ch_rnaseqc.map{it[1]}.flatten().collect(),
+            ch_hs_metrics.map{it[1]}.flatten().collect()
         )
     
     }
