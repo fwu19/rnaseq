@@ -5,6 +5,7 @@
 */
 include { RNASEQ_REGULAR } from './workflows/rnaseq_regular'
 include { RNASEQ_PDX } from './workflows/rnaseq_pdx'
+include { RNASEQ_EXOME } from './workflows/rnaseq_exome'
 
 /*
 * named workflows
@@ -19,8 +20,11 @@ workflow RNASEQ {
     else if (params.workflow == "pdx" ) {
         RNASEQ_PDX()
     }
+    else if (params.workflow == "exome" ) {
+        RNASEQ_EXOME()
+    }
     else {
-        err "Invalid workflow! Possible options: [workflow_regular, workflow_pdx, workflow_exome]"
+        err "Invalid workflow! Possible options: [regular, pdx, exome]"
     }
 }
 

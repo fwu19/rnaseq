@@ -18,38 +18,39 @@ nthread=$1; shift
 fq1=$1; shift
 fq2=$1; shift
 
+[[ -d $sample_id ]] || mkdir -p $sample_id
+cd $sample_id 
 
 RG="ID:$sample_id LB:$sample_id SM:$sample_id PL:illumina PU:$sample_id CN:FredHutch"
 STAR \
-	--genomeDir "${star_ref}" \
-	--readFilesIn ${fq1} ${fq2} \
-	--readFilesCommand zcat \
-	--runThreadN ${nthread} \
-	--outFilterMultimapScoreRange 1 \
-	--outFilterMultimapNmax 20 \
-	--outFilterMismatchNmax 10 \
-	--alignIntronMax 500000 \
-	--alignMatesGapMax 1000000 \
-	--sjdbScore 2 \
-	--alignSJDBoverhangMin 1 \
 	--genomeLoad NoSharedMemory \
-	--outFilterMatchNminOverLread 0.33 \
-	--outFilterScoreMinOverLread 0.33 \
-	--sjdbOverhang 100 \
-	--twopassMode Basic \
+	--genomeDir "../${star_ref}" \
+	--readFilesIn ../${fq1} ../${fq2} \
+	--readFilesCommand zcat \
+	--limitBAMsortRAM 1250000000 \
+	--outReadsUnmapped None \
+	--outSAMtype BAM Unsorted \
 	--outSAMstrandField intronMotif \
 	--outSAMattributes NH HI NM MD AS XS \
 	--outSAMunmapped Within \
-	--outSAMtype BAM Unsorted \
-	--outSAMheaderHD @HD VN:1.4 \
 	--outSAMattrRGline "${RG}" \
+	--outSAMheaderHD @HD VN:1.4 \
+	--outFilterMultimapNmax 20 \
+	--outFilterMultimapScoreRange 1 \
+	--outFilterMatchNminOverLread 0.33 \
+	--outFilterScoreMinOverLread 0.33 \
+	--outFilterMismatchNmax 10 \
+	--alignIntronMax 500000 \
+	--alignMatesGapMax 1000000 \
+	--alignSJDBoverhangMin 1 \
+	--sjdbGTFfile "../${gtf}" \
+	--sjdbOverhang 100 \
+	--sjdbScore 2 \
 	--quantMode TranscriptomeSAM GeneCounts \
-	--sjdbGTFfile "${gtf}" \
-	--outReadsUnmapped None # Could use "within", compatible with outSAMunmapped
+	--twopassMode Basic \
+	--runThreadN ${nthread} 
 
+samtools sort -T . -@ ${nthread} -o Aligned.sortedByCoord.out.bam Aligned.out.bam
 
-samtools sort -T . -@ 6 -o ${sample_id}.bam Aligned.out.bam
-rm Aligned.out.bam
-
-samtools index ${sample_id}.bam
+samtools index Aligned.sortedByCoord.out.bam
 

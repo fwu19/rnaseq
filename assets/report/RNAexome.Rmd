@@ -1,0 +1,653 @@
+---
+title: "RNA exome analysis"
+author: ""
+date: "`r format(Sys.time(), '%B %d , %Y')`"
+output: 
+    html_document:
+        toc: TRUE
+        toc_float: TRUE
+        toc_depth: 5
+        toc_collapsed: FALSE
+        theme: lumen
+        number_sections: FALSE
+        coding_folding: hide
+        code_download: FALSE
+editor_options: 
+  chunk_output_type: console
+params:
+  dat.dir: "kvickers/20241101_LH00740_0013_A22VGK2LT3"
+---
+
+```{r setup, include=FALSE, dev='CairoPNG'}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning=FALSE, dev="CairoPNG")
+knitr::opts_knit$set(root.dir = paste('~/project', params$dat.dir, sep = '/'))
+
+options(stringsAsFactors = F)
+options(scipen = 99)
+library(Cairo)
+library(ggplot2)
+library(dplyr)
+library(patchwork)
+library(kableExtra)
+
+wd <- paste('~/project', params$dat.dir, sep = '/')
+setwd(wd)
+```
+
+```{r read_args}
+ss <- read.csv('samples.csv') %>% 
+  mutate(
+    fastq_1 = basename(fastq_1),
+    fastq_2 = basename(fastq_2)
+  ) %>% 
+  relocate(fastq_1, fastq_2, .after = last_col())
+
+```
+
+
+```{r make_tabs, eval=TRUE, include=FALSE}
+# Function to create multiple tabs
+make_tabs <- function(title, contents){
+  cat(title, "\n\n")
+  for (cnt in contents){
+    print(cnt); 
+    cat("\n\n")
+    cat('$$\\\\[0.05in]$$')
+    cat("\n\n")
+    }
+  cat("\n\n")
+}
+```
+
+## Summary
+
+This document describes the analysis of RNA exome sequencing data.
+
+$$\\[0.5in]$$
+
+## Sample sheet
+```{r sample_sheet, eval=TRUE, include=TRUE}
+
+ss %>%  
+  DT::datatable(
+  class = 'cell-border stripe', 
+  rownames = T,  
+  filter = 'top', 
+  editable = F, 
+  extensions = 'Buttons', 
+  options = list(
+    pageLength = 6, 
+    dom = 'Bfrtip',
+    buttons = c('csv')
+  ))
+```
+
+$$\\[0.5in]$$
+
+## QC {.tabset .tabset-pills}
+
+### Plots
+```{r , fig.height=6, fig.width=7}
+plist <- readRDS(paste(wd, 'QC/qc.rds', sep = '/'))$plots
+
+p <- wrap_plots(plist[1:9], ncol = 3, guides = 'collect')
+print(p)
+```
+
+```{r , fig.height=4, fig.width=4}
+plist$genes_vs_seq
+```
+
+### Metrics
+Click a button to save as csv or Excel file. \
+```{r}
+readRDS('QC/qc.rds')$data %>% 
+  dplyr::select(
+    Sample, TOTAL_READS, Total.Mapped.Pairs, Mapping.Rate, PCT_OFF_BAIT, ZERO_CVG_TARGETS_PCT, Genes.Detected, Exonic.Rate, Intronic.Rate, Intergenic.Rate
+  ) %>%
+DT::datatable(
+  class = 'cell-border stripe', 
+  rownames = T, 
+  filter = 'top', 
+  editable = T, 
+  extensions = 'Buttons', 
+  options = list(
+    pageLength = 10, 
+    dom = 'Bfrtip',
+    buttons = c('csv', 'excel')
+  ))
+
+```
+
+##  {.unnumbered .unlisted}
+
+$$\\[0.5in]$$
+
+## Delivered files
+
+kvickers/20241101_LH00740_0013_A22VGK2LT3/Analysis/ has the following files and subfolders. \
+  \
+
+#### BAM/
+
+Genomic alignment bam files and bam index files.  _work/ contains other output files by STAR.
+
+#### {.unnumbered .unlisted}
+$$\\[0.1in]$$
+
+#### GeneCounts.raw.tsv
+Gene-level count matrix. Column *full_exome* lists the total exonic length of a gene whereas column *TruSeq_RNA_Exome* lists the effective length, i.e. counting only exons that contain TruSeq Exome probes. 
+
+#### {.unnumbered .unlisted}
+$$\\[0.1in]$$
+
+
+#### MultiQC/
+multiqc_report.html is a QC summary report generated using [MultiQC](https://multiqc.info). \
+
+#### {.unnumbered .unlisted}
+$$\\[0.1in]$$
+
+#### QC/
+
+QC by [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/), [RSeQC](http://doi.org/10.1093/bioinformatics/bts356) and [RNA-SeQC](https://pubmed.ncbi.nlm.nih.gov/22539670/). \
+
+## {.unnumbered .unlisted}
+
+$$\\[0.5in]$$
+
+
+## Methods
+
+[STAR v2.7.7a](https://pubmed.ncbi.nlm.nih.gov/23104886/) with 2-pass mapping was used to align paired-end reads to human hg38 assembly and GENCODE annotation v38 along with gene-level read quantification. [FastQC 0.11.9](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/), [RNA-SeQC 2.3.4](https://pubmed.ncbi.nlm.nih.gov/22539670/), [RSeQC 4.0.0](https://pubmed.ncbi.nlm.nih.gov/22743226/) were used to check various QC metrics including insert fragment size, read quality, read duplication rates, rRNA rates, gene body coverage and read distribution in different genomic regions. 
+
+$$\\[0.5in]$$
+
+## Acknowledgement
+(For publication, please include the following acknowledgement.)
+This research was supported by the Genomics & Bioinformatics Shared Resource of the Fred Hutch/University of Washington/Seattle Children's Cancer Consortium ([P30 CA015704](https://www.cancerconsortium.org/about.html)).
+
+$$\\[0.5in]$$
+
+##  {.unnumbered .unlisted}
+```{r exit_knit}
+knitr::knit_exit()
+```
+
+# Analyses {.unnumbered .unlisted}
+
+## process sample sheet
+
+
+
+## Run the analysis pipeline
+```{bash run_rnaseq}
+./scripts/get_fq_path.sh path/to/fastq/ >samples.csv
+cp fq.csv samples.csv
+bash scripts/run_rnaExome.sh params samples.csv
+
+sbatch --array=2-$(egrep -c "^" samples.unique.csv) scripts/collect_hs_metrics.sh params samples.unique.csv # 
+
+```
+
+## QC
+
+Make metrics summary
+```{r}
+## read data ####
+lst <- list()
+flist <- list.files('Analysis/QC/gatk/', full.names = T)
+lst$gatk <- data.table::rbindlist(lapply(
+  flist, function(fname){
+    read.delim(fname, comment.char = '#', nrows = 1) %>% mutate(Sample = gsub('.hs_metrics.txt', '', basename(fname)))
+  }
+), fill = T, use.names = T)
+
+lst$rnaseqc <- read.delim(paste(wd, 'Analysis/MultiQC/multiqc_data/multiqc_rna_seqc.txt', sep = '/'))
+
+ms <- full_join(
+  lst$rnaseqc, lst$gatk, by = "Sample"
+)
+dir.create('QC')
+saveRDS(ms, 'QC/241101_RNA_exome_metrics.rds')
+
+
+## make plots ####
+
+func <- function(df, xvar, xlab, xsf = 1, qq = 0.5){
+  require(ggplot2)
+  df <- as.data.frame(df)
+  df$x <- df[,xvar] * xsf
+
+  df %>% 
+  ggplot(aes(x = x))+
+  geom_density()+
+  labs(x = xlab)+
+  theme_bw(base_size = 10)+
+  theme(
+    plot.margin = unit(rep(10,4), units = 'pt'),
+    legend.position = 'none'
+  )
+}
+
+plist <- list()
+
+plist$total.reads <- func(ms, "TOTAL_READS", 'Total reads in million', 1e-6)
+
+plist$mapped.reads <- func(ms, "Total.Mapped.Pairs", 'Mapped reads in million', 1e-6)
+
+plist$mapping.rate <- func(ms, "Mapping.Rate", 'Mapping rate')
+
+plist$off.target.rate <- func(ms, "PCT_OFF_BAIT", 'Off-target rate')
+
+plist$zero.cvg.rate <- func(ms, "ZERO_CVG_TARGETS_PCT", 'Zero coverage rate')
+
+plist$gene.detected <- func(ms, "Genes.Detected", "Genes detected")
+
+plist$exonic.rate <- func(ms, "Exonic.Rate", 'Exonic rate')
+
+plist$intronic.rate <- func(ms, "Intronic.Rate", 'Intronic rate')
+
+plist$intergenic.rate <- func(ms, "Intergenic.Rate", 'Intergenic rate')
+
+wrap_plots(plist[1:9], ncol = 3, guides = 'collect')
+ggsave(paste(wd, 'QC/QC.pdf', sep = '/'), width = 7, height = 6)
+
+## detected genes vs sequencing depth
+require(ggrepel)
+plist$genes_vs_seq <- ms %>% 
+  ggplot(aes(x = Total.Mapped.Pairs/1e6, y = Genes.Detected))+
+  geom_point(size = 1, shape = 1)+
+  geom_text_repel(data = ms %>% filter(Genes.Detected < 16000), aes(label = Sample), size = 2.8)+
+  labs(x = 'Mapped reads (in million)', y = 'Genes detected')+
+  theme_bw(base_size = 8)+
+  theme(
+    plot.margin = unit(rep(10,4), units = 'pt'),
+    legend.position = 'top'
+  )
+ggsave(plot = plist$genes_vs_seq, paste(wd, 'QC/Q2C.pdf', sep = '/'), width = 3, height = 3)
+
+saveRDS(list(data=ms, plots=plist), paste(wd, 'QC/qc.rds', sep = '/'))
+
+## PCA plots ####
+count2dgelist <- function(counts.tsv, annotation.tsv=NULL, exclude.genes=NULL, include.gene.types=c('protein_coding','lncRNA'),pattern2remove="^X|.bam$", out.rds=NULL, cts = NULL, gene.length = NULL, cts.start = 3){
+  options(stringsAsFactors = F)
+  require(edgeR)
+  
+  out.dir <- ifelse(is.null(out.rds), './', dirname(out.rds))
+  if(!dir.exists(out.dir)){dir.create(out.dir, recursive = T)}
+  
+  if(is.null(cts)){ cts <- read.delim(counts.tsv) }
+  
+  if(!is.null(pattern2remove)){
+    colnames(cts) <- gsub(pattern2remove, '', colnames(cts))
+  }
+  
+  ## Add annotation
+  if(!is.null(annotation.tsv)){
+    annotation <- read.delim(annotation.tsv)
+    colnames(annotation)[grepl('gene_biotype', colnames(annotation))] <- 'gene_type'
+    genes <- annotation[match(cts$gene_id, annotation$gene_id), c('gene_id','gene_name','gene_type')]
+    if(!is.null(gene.length)){
+      if(gene.length %in% colnames(annotation)){
+        genes$gene_length <- annotation[,gene.length][match(cts$gene_id, annotation$gene_id)]
+      }else if (gene.length %in% colnames(cts)){
+        genes$gene_length <- cts[,gene.length]
+      }
+    }
+    more <- setdiff(colnames(cts)[1:(cts.start-1)], colnames(genes))
+    genes[more] <- cts[match(genes$gene_id, cts$gene_id), more]
+  }else{
+    genes <- cts[1:(cts.start-1)]
+  }
+  
+  ## Exclude genes
+  if(is.null(exclude.genes)){
+    k1 <- 1:nrow(genes)
+  }else{
+    k1 <- which(!genes$gene_id %in% exclude.genes)    
+  }
+  
+  ## Include gene types
+  if(is.null(include.gene.types)){
+    k2 <- 1:nrow(genes)
+  }else{
+    k2 <- which(genes$gene_type %in% include.gene.types)
+  }
+  
+  k <- intersect(k1,k2)
+  y0 <- DGEList(counts=cts[k,cts.start:ncol(cts)],genes=genes[k,], remove.zeros = T) 
+  y0 <- calcNormFactors(y0)
+  saveRDS(y0,paste(out.dir,'y0.rds',sep = '/'))
+  
+  if ("gene_length" %in% colnames(y0$genes)){
+    cbind(y0$genes, edgeR::rpkm(y0, normalized.lib.sizes = T, log = F, gene.length = "gene_length")) %>% 
+      write.table(paste(out.dir, 'expression/expression.TMMnormalized.RPKM.txt', sep = '/'), sep = '\t', quote = F, row.names = F)
+    
+    cbind(y0$genes, edgeR::rpkm(y0, normalized.lib.sizes = T, log = T, prior.count = 2, gene.length = "gene_length")) %>% 
+      write.table(paste(out.dir, 'expression/expression.TMMnormalized.log2RPKM.pseudocount2.txt', sep = '/'), sep = '\t', quote = F, row.names = F)
+  }
+  
+  return(y0)
+}
+
+
+## PCA
+plot_pca <- function(y, out.prefix, var.genes = NULL, color = NULL, plot.title = '', sample.label = T, feature.length = 'gene_length', fig.width = 7, fig.height = 5){
+  options(stringsAsFactors = F)
+  require(ggrepel)
+  require(edgeR)
+  
+    ## Create outdir if needed
+  out.dir <- dirname(out.prefix)
+  if(!dir.exists(out.dir)){dir.create(out.dir,recursive = T)}
+  
+  y <- y[!y$genes$chrom %in% c('chrX', 'chrY', 'chrM'),]
+  log2rpkm <- edgeR::rpkm(y, gene.length = feature.length, normalized.lib.sizes = T, log = T)
+  
+  if (!is.null(var.genes)){
+    keep <- rank(-apply(log2rpkm, 1, var)) < var.genes
+    log2rpkm <- log2rpkm[keep,]
+  }
+  
+  ## Run PCA
+  pca <- prcomp(t(log2rpkm), center = T, scale = T)
+  
+  ## Scree plot
+  pca.variance.prop <- (pca$sdev^2)/sum(pca$sdev^2)*100
+  
+  pdf(paste(out.dir,'pca.scree.plot.pdf',sep = '/'))
+  barplot(
+    pca.variance.prop[1:50],
+    cex.names = 1,
+    xlab = 'Principal component (PC), 1-50',
+    ylab = 'Proportion of variance (%)',
+    main = 'Scree plot',
+    ylim = c(0,80)
+  )
+  
+  points(
+    cumsum(pca.variance.prop)[1:50], col = 'red', type = 'l'
+  )
+  dev.off()
+  
+  ## PC1 vs PC2
+  df <- cbind(pca$x[,1:2],data.frame(label=rownames(pca$x)))
+  if(is.null(color)){
+    df$color <- y$samples$group
+  }else{
+    df$color <- color
+  }
+  
+  if(length(unique(df$color))>1){
+    p <- ggplot(df,aes(x=PC1,y=PC2,label=label,color=color))
+  }else{
+    p <- ggplot(df,aes(x=PC1,y=PC2,label=label))
+  }
+  p <- p +
+    geom_point(shape = 1)
+  
+  if(sample.label){
+    p <- p +
+      geom_text_repel(size = 2.4, color = 'black', position = 'jitter',max.overlaps = 80)
+  }
+  
+  p <- p +
+    guides(color = guide_legend(ncol = 1))+
+    labs(
+      title = plot.title,
+      color = '', 
+      x = paste0('PC1 (',round(pca.variance.prop[1],1),'%)'),
+      y = paste0('PC2 (',round(pca.variance.prop[2],1),'%)')
+    )+
+    theme_bw(base_size = 6)+
+    theme(
+      legend.position = 'right'
+    )
+  ggsave(paste(out.prefix,'PCA.pdf',sep='.'),width = fig.width,height = fig.height)
+  
+  ## return data
+  return(p)
+ 
+}
+
+
+y0 <- count2dgelist(
+  cts = read.delim('Analysis/GeneCounts.raw.tsv'), 
+  gene.length = "TruSeq_RNA_exome", 
+  cts.start = 10)
+
+
+pca <- plot_pca(y0,  'QC/all_samples', var.genes = 500, sample.label = F, feature.length = "TruSeq_RNA_exome")
+saveRDS(list(y0 = y0, plot = pca), paste(wd, 'QC/pca.rds', sep = '/'))
+
+ggsave('QC/all_samples.PCA.pdf', width = 7, height = 5)
+  
+
+```
+
+
+
+
+
+
+
+
+PCA plots
+```{r DE_functions, eval=FALSE}
+count2dgelist <- function(counts.tsv, annotation.tsv=NULL, exclude.genes=NULL, include.gene.types=c('protein_coding','lncRNA'),pattern2remove="^X|.bam$", out.rds=NULL, counts = NULL, gene.length = NULL, cts.start = 3){
+  options(stringsAsFactors = F)
+  require(edgeR)
+  
+  out.dir <- ifelse(is.null(out.rds), './', dirname(out.rds))
+  if(!dir.exists(out.dir)){dir.create(out.dir, recursive = T)}
+  
+  if(is.null(counts)){ cts <- read.delim(counts.tsv) }
+  
+  if(!is.null(pattern2remove)){
+    colnames(cts) <- gsub(pattern2remove, '', colnames(cts))
+  }
+  
+  ## Add annotation
+  if(!is.null(annotation.tsv)){
+    annotation <- read.delim(annotation.tsv)
+    colnames(annotation)[grepl('gene_biotype', colnames(annotation))] <- 'gene_type'
+    genes <- annotation[match(cts$gene_id, annotation$gene_id), c('gene_id','gene_name','gene_type')]
+    if(!is.null(gene.length)){
+      if(gene.length %in% colnames(annotation)){
+        genes$gene_length <- annotation[,gene.length][match(cts$gene_id, annotation$gene_id)]
+      }else if (gene.length %in% colnames(cts)){
+        genes$gene_length <- cts[,gene.length]
+      }
+    }
+    more <- setdiff(colnames(cts)[1:(cts.start-1)], colnames(genes))
+    genes[more] <- cts[match(genes$gene_id, cts$gene_id), more]
+  }else{
+    genes <- cts[1:(cts.start-1)]
+  }
+  
+  ## Exclude genes
+  if(is.null(exclude.genes)){
+    k1 <- 1:nrow(genes)
+  }else{
+    k1 <- which(!genes$gene_id %in% exclude.genes)    
+  }
+  
+  ## Include gene types
+  if(is.null(include.gene.types)){
+    k2 <- 1:nrow(genes)
+  }else{
+    k2 <- which(genes$gene_type %in% include.gene.types)
+  }
+  
+  k <- intersect(k1,k2)
+  y0 <- DGEList(counts=cts[k,cts.start:ncol(cts)],genes=genes[k,], remove.zeros = T) 
+  y0 <- calcNormFactors(y0)
+  saveRDS(y0,paste(out.dir,'y0.rds',sep = '/'))
+  
+  if(!dir.exists(paste(out.dir, 'expression', sep = '/'))){
+    dir.create(paste(out.dir, 'expression', sep = '/'), recursive = T)
+  }
+  write.table(cbind(y0$genes, y0$counts), paste(out.dir,'expression/expression.rawCounts.txt',sep = '/'), sep = '\t', quote = F, row.names = F)
+  
+  cbind(y0$genes, edgeR::cpm(y0, normalized.lib.sizes = T, log = F)) %>% 
+    write.table(paste(out.dir, 'expression/expression.TMMnormalized.CPM.txt', sep = '/'), sep = '\t', quote = F, row.names = F)
+  
+  cbind(y0$genes, edgeR::cpm(y0, normalized.lib.sizes = T, log = T, prior.count = 2)) %>% 
+    write.table(paste(out.dir, 'expression/expression.TMMnormalized.log2CPM.pseudocount2.txt', sep = '/'), sep = '\t', quote = F, row.names = F)
+  
+  if ("gene_length" %in% colnames(y0$genes)){
+    cbind(y0$genes, edgeR::rpkm(y0, normalized.lib.sizes = T, log = F, gene.length = "gene_length")) %>% 
+      write.table(paste(out.dir, 'expression/expression.TMMnormalized.RPKM.txt', sep = '/'), sep = '\t', quote = F, row.names = F)
+    
+    cbind(y0$genes, edgeR::rpkm(y0, normalized.lib.sizes = T, log = T, prior.count = 2, gene.length = "gene_length")) %>% 
+      write.table(paste(out.dir, 'expression/expression.TMMnormalized.log2RPKM.pseudocount2.txt', sep = '/'), sep = '\t', quote = F, row.names = F)
+  }
+  
+  return(y0)
+}
+
+
+## PCA
+plot_pca <- function(y, out.prefix, var.genes = NULL, color = NULL, plot.title = '', sample.label = T, feature.length = 'gene_length'){
+  options(stringsAsFactors = F)
+  require(ggrepel)
+  require(edgeR)
+  
+    ## Create outdir if needed
+  out.dir <- dirname(out.prefix)
+  if(!dir.exists(out.dir)){dir.create(out.dir,recursive = T)}
+  
+
+  log2rpkm <- edgeR::rpkm(y, gene.length = feature.length, normalized.lib.sizes = T, log = T)
+  
+  if (!is.null(var.genes)){
+    keep <- rank(-apply(log2rpkm, 1, var)) <= var.genes
+    log2rpkm <- log2rpkm[keep,]
+  }
+  
+  ## Run PCA
+  pca <- prcomp(t(log2rpkm), center = T, scale = T)
+  
+  ## Scree plot
+  pca.variance.prop <- (pca$sdev^2)/sum(pca$sdev^2)*100
+  
+  pdf(paste(out.dir,'pca.scree.plot.pdf',sep = '/'))
+  barplot(
+    pca.variance.prop[1:50],
+    cex.names = 1,
+    xlab = 'Principal component (PC), 1-50',
+    ylab = 'Proportion of variance (%)',
+    main = 'Scree plot',
+    ylim = c(0,80)
+  )
+  
+  points(
+    cumsum(pca.variance.prop)[1:50], col = 'red', type = 'l'
+  )
+  dev.off()
+  
+  ## PC1 vs PC2
+  df <- cbind(pca$x[,1:2],data.frame(label=rownames(pca$x)))
+  if(is.null(color)){
+    df$color <- y$samples$group
+  }else{
+    df$color <- color
+  }
+  
+  if(length(unique(df$color))>1){
+    p <- ggplot(df,aes(x=PC1,y=PC2,label=label,color=color))
+  }else{
+    p <- ggplot(df,aes(x=PC1,y=PC2,label=label))
+  }
+  p <- p +
+    geom_point(shape = 1)
+  
+  if(sample.label){
+    p <- p +
+      geom_text_repel(size = 2.4, color = 'black', position = 'jitter',max.overlaps = 80)
+  }
+  
+  p <- p +
+    guides(color = guide_legend(ncol = 1))+
+    labs(
+      title = plot.title,
+      color = '', 
+      x = paste0('PC1 (',round(pca.variance.prop[1],1),'%)'),
+      y = paste0('PC2 (',round(pca.variance.prop[2],1),'%)')
+    )+
+    theme_bw()+
+    theme(
+      legend.position = 'top'
+    )
+  ggsave(paste(out.prefix,'PCA.pdf',sep='.'),width = 5,height = 5)
+  
+  ## return data
+  return(p)
+ 
+}
+
+
+y0 <- count2dgelist(paste(wd, 'gene_expression/GeneCounts.raw.tsv', sep = '/'), gene.length = "TruSeq_RNA_exome", cts.start = 10)
+y0$samples <- y0$samples %>% 
+  mutate(
+    seq.id = rownames(.)
+  )
+
+pca <- plot_pca(y0, paste(wd, 'QC/all_samples', sep = '/'), var.genes = 1000, sample.label = T, feature.length = "TruSeq_RNA_exome")
+saveRDS(list(y0 = y0, plot = pca), paste(wd, 'QC/pca.rds', sep = '/'))
+
+
+
+```
+
+# Deliver data
+```{bash}
+user=kvickers
+fc=240614_VH00699_504_2222MJNNX
+cd /fh/fast/_SR/Genomics/user/fwu/project/$user/$fc
+log=/fh/fast/_SR/Genomics/user/fwu/project/log/$user.$fc.rsync.log
+dstgroup=malone_k_grp
+source params
+
+dst=/shared/ngs/illumina/$user/$fc/Analysis/
+[[ -d $dst ]] || mkdir -p $dst
+echo $dst
+rsync -vAXEWHhrlog --chown=solexa:$dstgroup --chmod=775 --no-compress --progress --exclude-from=scripts/exclude.txt Analysis/ $dst/
+
+rsync -vAXEWHhrlog --chown=solexa:$dstgroup --chmod=775 --no-compress --progress --exclude-from=scripts/exclude.txt Analysis/QC/ $dst/QC/
+rsync -va --chown=solexa:$dstgroup --chmod=775 --no-compress --progress --exclude-from=scripts/exclude.txt Analysis/GeneCounts.raw.tsv $dst/
+
+
+
+
+
+
+
+
+## NOT USED
+
+dst=/shared/ngs/illumina/$user/$fc/Analysis/STAR
+[[ -d $dst ]] || mkdir -p $dst
+
+rsync -vAXEWHhrLog --chown=solexa:$dstgroup --chmod=755 --no-compress --progress --exclude-from=scripts/exclude.txt $analysisDir/alignments/ $dst/BAM/ | tee -a $log
+rsync -vAXEWHhrLog --chown=solexa:$dstgroup --chmod=755 --no-compress --progress --exclude-from=scripts/exclude.txt $analysisDir/STAR/ $dst/BAM/_work/ | tee -a $log
+
+[[ -d $dst/QC ]] || mkdir -p $dst/QC
+subdir=FastQC; rsync -vAXEWHhrLog --chown=solexa:$dstgroup --chmod=750 --no-compress --progress --exclude-from=scripts/exclude.txt $analysisDir/$subdir/ $dst/QC/$subdir/ | tee -a $log
+subdir=RSeQC; rsync -vAXEWHhrLog --chown=solexa:$dstgroup --chmod=750 --no-compress --progress --exclude-from=scripts/exclude.txt $analysisDir/$subdir/ $dst/QC/$subdir/ | tee -a $log
+subdir=RNA-SeQC; rsync -vAXEWHhrLog --chown=solexa:$dstgroup --chmod=750 --no-compress --progress --exclude-from=scripts/exclude.txt $analysisDir/$subdir/ $dst/QC/$subdir/ | tee -a $log
+subdir=MultiQC; rsync -vAXEWHhrLog --chown=solexa:$dstgroup --chmod=750 --no-compress --progress --exclude-from=scripts/exclude.txt $analysisDir/$subdir/ $dst/QC/$subdir/ | tee -a $log
+
+rsync -va --chown=solexa:$dstgroup --chmod=750 $analysisDir/GeneCounts.raw.tsv $dst/
+rsync -va --chown=solexa:$dstgroup --chmod=750 230829_0597_RNAseq.html /shared/ngs/illumina/$user/$fc/Analysis/
+
+
+
+
+
+## Appendix
+sudo pmanage restore --path $dst --group $usergroup
+sudo pmanage read_other --path $dst
+ypmatch -k $user auto.illumina
+```

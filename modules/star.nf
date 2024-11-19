@@ -17,14 +17,13 @@ process STAR {
     path (gtf)
     
     output:
-    tuple path("*"), emit: star
-    tuple val(sample_id), path("${sample_id}.{bam,bam.bai}"), emit: bam 
-    tuple path("${sample_id}.ReadsPerGene.out.tab"), emit: counts
-    
+    tuple path( "$sample_id/Log.final.out" ), emit: log
+    tuple val(sample_id), path("${sample_id}/*.{bam,bam.bai}"), emit: bam 
+    tuple path("${sample_id}/ReadsPerGene.out.tab"), emit: counts
+    tuple path("$sample_id/")
+
     script:
     """
     star.sh ${sample_id} ${star} ${gtf} ${task.cpus} $read1 $read2
-    mv ReadsPerGene.out.tab ${sample_id}.ReadsPerGene.out.tab
-    rm $read1 $read2
     """
 }

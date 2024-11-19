@@ -10,10 +10,11 @@ process MULTIQC {
     publishDir "${params.outdir}/MultiQC/", mode: 'copy'
 
     input:
-    tuple path ("*", stageAs: 'STAR/*')
-    tuple path ("*", stageAs: 'FastQC/*')
-    tuple path ("*", stageAs: 'RSeQC/*')
-    tuple path ("*", stageAs: 'RNA-SeQC/*')
+    tuple path ("*", stageAs: 'star/*' )
+    tuple path ("*", stageAs: 'fastqc/*' )
+    tuple path ("*", stageAs: 'rseqc/*' )
+    tuple path ("*", stageAs: 'rnaseqc/*' )
+    tuple path ("*", stageAs: 'gatk/*' )
 
     output:
     path ('multiqc_data/*')
@@ -21,7 +22,7 @@ process MULTIQC {
 
     script:
     """
-    multiqc -o . --ignore _STARpass1/ -f STAR/ FastQC/ RSeQC/ RNA-SeQC/
+    multiqc -o . --ignore _STARpass1/ -f */
 
     """
 }
