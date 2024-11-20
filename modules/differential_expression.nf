@@ -11,17 +11,23 @@ process DIFFERENTIAL_EXPRESSION {
     publishDir "${params.outdir}/differential_expression/", mode: 'copy'
     
     input:
-    path (samplesheet)
-    path (comparison)
-    path ("*.txt", stageAs: "counts/*")
-    path (gene_txt)
+    path(samplesheet)
+    path(comparison)
+    path("*", stageAs: "counts/*")
+    path(gene_txt)
+    val(length_col)
+    val(strand)
+    val(fdr)
+    val(fc)
+    val(fdr2)
+    val(fc2)
 
     output:
     tuple path ("*")
     
     script:
     """
-    differential_expression.r input=$input comparison=$comparison count.dir=counts gene.txt=$gene_txt length.col=${params.length_col} strand=${params.strand} fdr=${params.fdr} fc=${params.fc} fdr2=${params.fdr2} fc2=${params.fc2}
+    differential_expression.r input=$samplesheet comparison=$comparison count.dir=counts gene.txt=$gene_txt length.col=${length_col} strand=${strand} fdr=${fdr} fc=${fc} fdr2=${fdr2} fc2=${fc2}
     rm -r counts/
     """
 }

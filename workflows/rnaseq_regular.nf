@@ -1,82 +1,119 @@
 #!/usr/bin/env nextflow 
 
-//include { CHECK_INPUT  } from './modules/check_input.nf'
-include { FASTQC  } from '../modules/fastqc.nf'
-include { CAT_FASTQ  } from '../modules/cat_fastq.nf'
-include { STAR  } from '../modules/star.nf'
-//include { CAT_STAR_COUNTS  } from '../modules/cat_star_counts.nf'
-include { RNASEQC  } from '../modules/rnaseqc.nf'
-include { RSEQC  } from '../modules/rseqc.nf'
-include { MULTIQC  } from '../modules/multiqc.nf'
-include { FEATURECOUNTS } from '../modules/featureCounts.nf'
-include { DIFFERENTIAL_EXPRESSION } from '../modules/differential_expression.nf'
-include { OUTPUT_PARAMS  } from '../modules/output_params.nf'
+include { CHECK_INPUT  } from '../modules/check_input.nf'
+include { FASTQC  } from '../modules/fastqc'
+include { CAT_FASTQ  } from '../modules/cat_fastq'
+include { STAR  } from '../modules/star'
+include { RNASEQC  } from '../modules/rnaseqc'
+include { RSEQC  } from '../modules/rseqc'
+include { HS_METRICS  } from '../modules/hs_metrics'
+include { MULTIQC  } from '../modules/multiqc'
+include { FEATURECOUNTS } from '../modules/featureCounts'
+include { DIFFERENTIAL_EXPRESSION } from '../modules/differential_expression'
+include { OUTPUT_PARAMS  } from '../modules/output_params'
 //include { TEST  } from './modules/test.nf'
 
-/*
-how to parse output to input of the next process
-how to implement dependency?
-*/
+ch_dummy_csv = Channel.fromPath("$projectDir/assets/dummy_file.csv", checkIfExists: true)
 
-Channel
-        .fromPath(params.input, checkIfExists: true)
-        .splitCsv(header: true)
-        // row is a list object
-        //.view { row -> "${row.sample_id}, ${row.fastq_1}, ${row.fastq_2}" }
-        //.take (3)
-        .set {ch_samples}
+if(!params.input){ exit 1, "Provide params.input!" }else{ ch_input = Channel.fromPath( params.input, checkIfExists:true ) }
+ch_metadata = params.metadata ? Channel.fromPath( params.metadata, checkIfExists: true ) : ch_dummy_csv
+
 
 
 workflow RNASEQ_REGULAR {
-    //CHECK_INPUT(params.input)
-    ch_fastq = Channel.empty()
-    ch_samples
-        .map {
-            row -> [row.sample_id, row.fastq_1, row.fastq_2]
-        }
-        .groupTuple (by: [0])
-        .set {ch_fastq}
-    //ch_fastq.view() 
-    // [ sample_id, [paths/to/R1.fastq.gz], [paths/to/R2.fastq.gz] ]
+    /*
+    * Run input check
+    */
+    samplesheet = ch_input
+    
+    if (params.run_input_check){
+        CHECK_INPUT(
+            ch_input,
+            ch_metadata
+        )
+        samplesheet = CHECK_INPUT.out.csv
+
+    }
 
     /*
     * cat fastq files if required
     */
-    ch_reads = Channel.empty()
     if (params.cat_fastq){
-        CAT_FASTQ(ch_fastq)
-        ch_reads = CAT_FASTQ.out.reads
+        CAT_FASTQ(
+            CHECK_INPUT.out.fq
+                .splitCsv(header: true)
+                .map {
+                    row -> [ row.id, row.fastq_1, row.fastq_2 ]
+                }
+                .groupTuple (by: [0])
+        )
+        samplesheet
+            .splitCsv( header: true )
+            .map {
+                row -> [ row.id, row ]
+            }
+            .join ( CAT_FASTQ.out.reads )
+            .map { it -> [ it[1], it[2], it[3] ]}
+            .set { ch_reads }
+        
     }else{
-        ch_reads = ch_fastq
+        CHECK_INPUT.out.fq
+                .splitCsv(header: true)
+                .map {
+                    row -> [ row, row.fastq_1, row.fastq_2 ]
+                }
+                .set { ch_reads}
     }
+    // ch_reads.view()
 
     /*
     * run STAR alignment
     */
     ch_bam = Channel.empty()
-    ch_star = Channel.empty()
-    ch_counts = Channel.empty()
+    ch_log = Channel.empty()
     if (params.run_alignment){
-        STAR(ch_reads, params.genome, params.star, params.gtf)
-        ch_bam = STAR.out.bam
-        ch_star = STAR.out.star
-        ch_counts = STAR.out.counts.collect() // [paths/to/all/counts.txt]
+        STAR(
+            ch_reads, 
+            params.genome, 
+            params.star, 
+            params.gtf
+        )
+        ch_bam = STAR.out.bam 
+        // [ [meta], path(bam) ]
+        ch_log = STAR.out.log
+        // [ [meta], path(log) ]
     }
 
     /*
     * run featureCounts
     */
+    ch_counts = STAR.out.counts
     if (params.run_featurecounts){
-        FEATURECOUNTS(ch_bam, params.gtf)
-        ch_counts = FEATURECOUNTS.out.counts.collect()
-        // [paths/to/all/counts.txt]
+        FEATURECOUNTS(
+            ch_bam, 
+            params.gtf
+        )
+        ch_counts = FEATURECOUNTS.out.counts
+        // [ [meta], path("count.txt") ]
     }
 
     /*
     * differential expression
     */
+    ch_comparison = params.comparison ? Channel.fromPath(params.comparison, checkIfExists: true) : Channel.empty()
     if (params.run_de){
-        DIFFERENTIAL_EXPRESSION(params.input, params.comparison, ch_counts, params.gene_txt)
+        DIFFERENTIAL_EXPRESSION(
+            samplesheet, 
+            ch_comparison, 
+            ch_counts.map{it[1]}.collect(), 
+            params.gene_txt,
+            params.length_col,
+            params.strand,
+            params.fdr,
+            params.fc,
+            params.fdr2,
+            params.fc2
+        )
 
     }
 
@@ -88,36 +125,61 @@ workflow RNASEQ_REGULAR {
         * FastQC
         */
         ch_fastqc = Channel.empty()
-        ch_samples
-        .map {
-            row -> [row.sample_id, row.fastq_1, row.fastq_2]
-        }
-        .set {ch_fastqc}
-        //ch_fastqc.view()
-
-        fastqc = Channel.empty()
         if (params.run_fastqc){
-            FASTQC(ch_fastqc)
+            FASTQC(
+                CHECK_INPUT.out.fq
+                    .splitCsv(header: true)
+                    .map {
+                        row -> [ row, row.fastq_1, row.fastq_2]
+                    }
+            )
             ch_fastqc = FASTQC.out.qc
         }
 
         /*
         * RNASeQC
         */
-        rnaseqc = Channel.empty()
+        ch_rnaseqc = Channel.empty()
         if (params.run_rnaseqc){
-            RNASEQC(ch_bam)
+            RNASEQC(
+                ch_bam,
+                params.rnaseqc_gtf,
+                params.strand,
+                params.read_type
+            )
             ch_rnaseqc = RNASEQC.out.qc
+            // [ [meta], path("*") ]
         }
 
         /*
         * RSeQC
         */
-        rseqc = Channel.empty()
+        ch_rseqc = Channel.empty()
         if (params.run_rseqc){
-            RSEQC(ch_bam)
+            RSEQC(
+                ch_bam,
+                params.rseqc_bed,
+                params.tx_bed,
+                params.gene_bed
+            )
             ch_rseqc = RSEQC.out.qc
+            // [ [meta], path("*") ]
         }
+
+        /*
+        * GATK collect_hs_metrics
+        */
+        ch_hs_metrics = Channel.empty()
+        if (params.workflow == 'exome' && params.run_hs_metrics){
+            HS_METRICS(
+                ch_bam,
+                params.genome_fa,
+                params.target_region
+            )
+            ch_hs_metrics = HS_METRICS.out.qc
+            // [ [meta], path("*") ]
+        }
+
     }
 
 
@@ -126,17 +188,13 @@ workflow RNASEQ_REGULAR {
     */
     if (params.run_multiqc){
         MULTIQC(
-            ch_star.flatten().collect(), 
-            ch_fastqc.flatten().collect(), 
-            ch_rseqc.flatten().collect(), 
-            ch_rnaseqc.flatten().collect()
+            ch_log.collect(), 
+            ch_fastqc.map{it[1]}.flatten().collect(), 
+            ch_rseqc.map{it[1]}.flatten().collect(), 
+            ch_rnaseqc.map{it[1]}.flatten().collect(),
+            ch_hs_metrics.map{it[1]}.flatten().collect()
         )
     
     }
     
-    /* 
-    * Report params used for the workflow 
-    */
-    OUTPUT_PARAMS( params.outdir )
-
 }

@@ -19,11 +19,12 @@ process STAR {
     output:
     tuple val(meta), path( "${meta.id}/Log.final.out" ), emit: log
     tuple val(meta), path("${meta.id}/Aligned.sortedByCoord.out.{bam,bam.bai}"), emit: bam 
-    tuple val(meta), path("${meta.id}/ReadsPerGene.out.tab"), emit: counts
-    path("${meta.id}/*")
+    tuple val(meta), path("${meta.id}.ReadsPerGene.out.tab"), emit: counts
+    path("${meta.id}", type: 'dir')
 
     script:
     """
     star.sh ${meta.id} ${star} ${gtf} ${task.cpus} $read1 $read2
+    cp ${meta.id}/ReadsPerGene.out.tab ${meta.id}.ReadsPerGene.out.tab
     """
 }

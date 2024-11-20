@@ -27,7 +27,7 @@ generate_count_matrix_star <- function(gene.txt, length.col, ss, count.files, co
         ))
     )
     colnames(cts)[9:ncol(cts)] <- gsub('.ReadsPerGene.*', '', basename(count.files))
-    if (!setequal(colnames(cts)[9:ncol(cts)], ss$sample_id)){
+    if (!setequal(colnames(cts)[9:ncol(cts)], ss$id)){
         warning(paste("Some samples don't have counts!"))
     }
     
@@ -54,7 +54,7 @@ generate_count_matrix_featurecounts <- function(gene.txt, length.col, ss, count.
         ))
     )
     colnames(cts)[9:ncol(cts)] <- gsub('.exonic.*', '', basename(count.files))
-    if (!setequal(colnames(cts)[9:ncol(cts)], ss$sample_id)){
+    if (!setequal(colnames(cts)[9:ncol(cts)], ss$id)){
         warning(paste("Some samples don't have counts!"))
     }
     return(cts)
@@ -465,7 +465,7 @@ y0 <- count2dgelist(
     out.dir = './', 
     feature.cols = 1:8, 
     samples = ss %>% 
-        arrange(factor(sample_id, levels = colnames(cts)[9:ncol(cts)])),
+        arrange(factor(id, levels = colnames(cts)[9:ncol(cts)])),
     group = 'sample_group'
 )
 
