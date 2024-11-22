@@ -29,13 +29,19 @@ add_metadata <- function(ss, meta_csv){
     
     ## add missing columns
     ss$sample_group <- add_col(ss, 'sample_group', ss$id)
-
-    ss <- ss %>% 
+    
+    if (sum(duplicated(ss$id)) > 0){
+        ss <- ss %>% 
+            group_by(id) %>% 
+            mutate(
+                fastq_1 = paste(basename(fastq_1), collapse = ';'),
+                fastq_2 = paste(basename(fastq_2), collapse = ';')
+            ) %>% 
+            unique.data.frame()
+    }
+    ss %>% 
         dplyr::relocate(id, fastq_1, fastq_2, sample_group)
-    
-    
-    return(ss)
-    
+        
 }
 
 ## read arguments ####
@@ -58,27 +64,13 @@ if (!'id' %in% colnames(ss)){
 ss$fastq_2 <- add_col(ss, 'fastq_2', "")
 ss$single_end <- ifelse(ss$fastq_2 == "", 'true', 'false')
 
-## add metadata if available
-ss <- add_metadata(ss, meta_csv)
-
 ## write sample sheet ####
 ss %>% 
-    write.table('samplesheet.byFastq.csv', sep = ',', quote = F, row.names = F)
+    write.table('fq.csv', sep = ',', quote = F, row.names = F)
 
-## collapse sample sheet by id if needed ####
-if (sum(duplicated(ss$id)) > 0){
-    ss2 <- ss %>% 
-        group_by(id) %>% 
-        mutate(
-            fastq_1 = paste(basename(fastq_1), collapse = ';'),
-            fastq_2 = paste(basename(fastq_2), collapse = ';')
-        ) %>% 
-        unique.data.frame()
-    ss2 %>% 
-        write.table('samplesheet.valid.csv', sep = ',', quote = F, row.names = F)
-}else{
-    file.copy('samplesheet.byFastq.csv', 'samplesheet.valid.csv')
-}
-# use samplesheet.byFastq.csv for cat_fastq process
-# publish samplesheet.valid.csv
+## add metadata and collapse by id if necessary ####
+ss <- add_metadata(ss, meta_csv)
+ss %>% 
+    write.table('samplesheet.valid.csv', sep = ',', quote = F, row.names = F)
+
 

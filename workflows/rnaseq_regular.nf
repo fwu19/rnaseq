@@ -20,7 +20,6 @@ include { OUTPUT_PARAMS  } from '../modules/output_params.nf'
 
 ch_dummy_csv = Channel.fromPath("$projectDir/assets/dummy_file.csv", checkIfExists: true)
 
-if(!params.input){ exit 1, "Provide params.input!" }else{ ch_input = Channel.fromPath( params.input, checkIfExists:true ) }
 ch_metadata = params.metadata ? Channel.fromPath( params.metadata, checkIfExists: true ) : ch_dummy_csv
 
 
@@ -28,7 +27,6 @@ workflow RNASEQ_REGULAR {
     /*
     * Run input check
     */
-    samplesheet = ch_input
     
     if (params.run_input_check){
         if ( params.input_dir =~ 'dummy' ){

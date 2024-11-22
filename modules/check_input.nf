@@ -11,7 +11,7 @@ process CHECK_INPUT {
 
     output:
     path 'samplesheet.valid.csv', emit: csv
-    path 'samplesheet.byFastq.csv', emit: fq
+    path 'fq.csv', emit: fq
     path  "versions.yml", emit: versions
 
     when:
