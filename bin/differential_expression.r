@@ -85,7 +85,7 @@ count2dgelist <- function(counts.tsv=NULL, return.counts = T, pattern2remove="^X
         }
     }
     if(!dir.exists(out.dir)){dir.create(out.dir, recursive = T)}
-    saveRDS(y0, paste(out.dir, 'y0.rds', sep = '/'))
+    saveRDS(y0, 'y0.rds')
     
     if(return.counts){
         write.table(cbind(y0$genes, y0$counts), paste(out.dir, 'all_samples.raw_counts.txt', sep = '/'), quote = F, row.names = F)
@@ -100,7 +100,7 @@ run_da <- function(
     fdr=0.01, fc=2, fdr2=NULL, fc2=NULL, 
     report.cpm=F, report.rpkm=T, 
     TMM=T, method = 'QL', 
-    rename.feature = NULL, feature.length = 'length', 
+    rename.feature = NULL, feature.length = 'gene_length', 
     design.object = ~0+group,
     target = NULL
 ){
@@ -143,7 +143,7 @@ run_da <- function(
     if (method == 'QL'){
         fit<-glmQLFit(y, design=design, dispersion = y$trended.dispersion, robust = T)
         
-        pdf(paste(out.dir,'qldisp.pdf',sep = '/'),width = 4, height = 4); plotQLDisp(fit); dev.off()
+        # pdf(paste(out.dir,'qldisp.pdf',sep = '/'),width = 4, height = 4); plotQLDisp(fit); dev.off()
         
         test <- glmQLFTest(fit, contrast = contrasts)
     }else{
@@ -161,7 +161,7 @@ run_da <- function(
     y$samples$group <- ifelse(y$samples$group %in% 'control', control.group, test.group)
     
     ## write out results ####
-    saveRDS(list(y=y, design=design, fit=fit, test=test), paste(out.dir,'da.rds',sep = '/'))
+    # saveRDS(list(y=y, design=design, test=test), paste(out.dir,'da.rds',sep = '/'))
     if(!is.null(rename.feature)){colnames(test$genes)[1] <- rename.feature}
     df <- cbind(test$genes,df[c('logFC','logCPM','PValue','FDR','is.sig')])
     if(!is.null(fdr2) & !is.null(fc2)){
@@ -208,13 +208,13 @@ run_da <- function(
         )
     }
     
-    return(list(summary = df_sum, y = y, df = df))
+    return(list(summary = df_sum, y = y, df = df, design=design, test=test))
     
 }
 
 
 ## PCA
-plot_pca <- function(y, out.prefix, var.genes = NULL, color = NULL, plot.title = '', sample.label = T, feature.length = 'gene_length'){
+plot_pca <- function(y, out.prefix, var.genes = NULL, color = NULL, plot.title = '', sample.label = T, feature.length = 'gene_length', scree.plot = F){
     options(stringsAsFactors = F)
     require(ggrepel)
     require(edgeR)
@@ -240,20 +240,22 @@ plot_pca <- function(y, out.prefix, var.genes = NULL, color = NULL, plot.title =
     ## Scree plot
     pca.variance.prop <- (pca$sdev^2)/sum(pca$sdev^2)*100
     
-    pdf(paste(out.dir,'pca.scree.plot.pdf',sep = '/'))
-    barplot(
-        pca.variance.prop[1:50],
-        cex.names = 1,
-        xlab = 'Principal component (PC), 1-50',
-        ylab = 'Proportion of variance (%)',
-        main = 'Scree plot',
-        ylim = c(0,80)
-    )
-    
-    points(
-        cumsum(pca.variance.prop)[1:50], col = 'red', type = 'l'
-    )
-    dev.off()
+    if (scree.plot){
+        pdf(paste(out.dir,'pca.scree.plot.pdf',sep = '/'), width = 3, height = 3)
+        barplot(
+            pca.variance.prop[1:10],
+            cex.names = 1,
+            xlab = 'Principal component (PC), 1-10',
+            ylab = 'Proportion of variance (%)',
+            main = 'Scree plot',
+            ylim = c(0,100)
+        )
+        
+        points(
+            cumsum(pca.variance.prop)[1:10], col = 'red', type = 'l'
+        )
+        dev.off()
+    }
     
     ## PC1 vs PC2
     df <- cbind(pca$x[,1:2],data.frame(label=rownames(pca$x)))
@@ -430,8 +432,7 @@ for (x in lst){
 } # read arguments: ss, comparison, count.dir, gene.txt, length.col, strand, fdr, fc, fdr2, fc2
 
 ss <- read.csv(input) %>% 
-    mutate(sample_group = gsub('-','_', sample_group)) %>% 
-    dplyr::select(-c(fastq_1, fastq_2)) %>% 
+    relocate(fastq_1, fastq_2, .after = last_col()) %>% 
     unique.data.frame() # sample sheet
 
 if(grepl('.csv$', comparison)){
@@ -462,7 +463,7 @@ if (grepl('ReadsPerGene.out.tab', count.files[1])){
 ## create DGElist ####
 y0 <- count2dgelist(
     counts = cts, 
-    out.dir = './', 
+    out.dir = 'all_samples', 
     feature.cols = 1:8, 
     samples = ss %>% 
         arrange(factor(id, levels = colnames(cts)[9:ncol(cts)])),
@@ -470,7 +471,7 @@ y0 <- count2dgelist(
 )
 
 ## plot PCA of all samples ####
-plot_pca(y0, out.prefix = 'all_samples', var.genes = 500, color = y0$samples$group, sample.label = T, feature.length = "gene_length")
+plot_pca(y0, out.prefix = 'all_samples/all_samples', var.genes = 500, color = y0$samples$group, sample.label = T, feature.length = "gene_length")
 
 ## detect differential expression ####
 de.list <- list()
@@ -480,7 +481,7 @@ for (i in 1:nrow(cmp)){
 names(de.list) <- basename(cmp$out.prefix)
 saveRDS(de.list, 'de.rds')
 
-de_sum <- bind_rows(lapply(de.list, function(de){de$summary})) %>% 
-    dplyr::relocate(output.folder, control.group, test.group, features.tested:FC.cutoff, control.samples:test.samples)
-de_sum %>% 
-    write.table('DE_summary.txt', sep = '\t', quote = F, row.names = F)
+saveRDS(
+    list(ss = ss, cmp = cmp),
+    'data.rds'
+)

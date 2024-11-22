@@ -23,7 +23,8 @@ process DIFFERENTIAL_EXPRESSION {
     val(fc2)
 
     output:
-    tuple path ("*")
+    path ("*.rds"), emit: rds
+    path ("*")
     
     script:
     """

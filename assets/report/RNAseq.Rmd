@@ -15,7 +15,7 @@ output:
 editor_options: 
   chunk_output_type: console
 params:
-  dat.dir: "/fh/fast/_SR/Genomics/user/fwu/project/dmacpherson/20241010_LH00740_0009_A22VGKMLT3/hg38"
+  dat.dir: "./"
 ---
 
 ```{r setup, include=FALSE, dev='CairoPNG'}
@@ -33,21 +33,17 @@ library(kableExtra)
 wd <- params$dat.dir
 setwd(wd)
 
-fq.dir <- 'macpherson_lab/20241010_LH00740_0009_A22VGKMLT3/Unaligned/RNAseq_MacPhersonLab_AD_KH_EM_JC_October2024/'
-dst.dir <- 'macpherson_lab/20241010_LH00740_0009_A22VGKMLT3/Analysis/hg38'
-
 ```
 
-```{r read_args, include=FALSE}
-## sample sheet 
-ss <- read.csv(paste(wd, 'samples.csv', sep = '/')) %>% 
-  mutate(
-    fastq_1 = basename(fastq_1),
-    fastq_2 = basename(fastq_2)
-  ) %>% 
-  relocate(fastq_1, fastq_2, .after = last_col())
 
-```
+
+## Summary
+
+This document describes the analysis of RNAseq data.
+
+$$\\[0.5in]$$
+
+## {.unnumbered .unlisted}
 
 ```{r make_tabs, eval=TRUE, include=FALSE}
 # Function to create multiple tabs
@@ -63,17 +59,203 @@ make_tabs <- function(title, contents){
 }
 ```
 
-## Summary
+```{r plot_functions}
+## PCA
+plot_pca <- function(y, var.genes = NULL, color = NULL, plot.title = '', sample.label = T, feature.length = 'gene_length'){
+    options(stringsAsFactors = F)
+    require(ggrepel)
+    require(edgeR)
+    
 
-This document describes the analysis of RNAseq data.
+    if('chrom' %in% colnames(y$genes)){
+        y <- y[!y$genes$chrom %in% c('chrX', 'chrY', 'chrM'), ]
+    }
+    
+    log2rpkm <- rpkm(y, gene.length = feature.length, normalized.lib.sizes = T, log = T)
+    
+    if (!is.null(var.genes)){
+        keep <- rank(-apply(log2rpkm, 1, var)) < var.genes
+        log2rpkm <- log2rpkm[keep,]
+    }
+    
+    ## Run PCA
+    pca <- prcomp(t(log2rpkm), center = T, scale = T)
+    
+    ## Scree plot
+    pca.variance.prop <- (pca$sdev^2)/sum(pca$sdev^2)*100
+    
+    ## PC1 vs PC2
+    df <- cbind(pca$x[,1:2],data.frame(label=rownames(pca$x)))
+    if(is.null(color)){
+        df$color <- y$samples$group
+    }else{
+        df$color <- color
+    }
+    
+    if(length(unique(df$color))>1){
+        p <- ggplot(df,aes(x=PC1,y=PC2,label=label,color=color))
+    }else{
+        p <- ggplot(df,aes(x=PC1,y=PC2,label=label))
+    }
+    p <- p +
+        geom_point(shape = 1)
+    
+    if(sample.label){
+        p <- p +
+            geom_text_repel(size = 2.4, color = 'black', position = 'jitter',max.overlaps = 80)
+    }
+    
+    p <- p +
+        labs(
+            title = plot.title,
+            color = '', 
+            x = paste0('PC1 (',round(pca.variance.prop[1],1),'%)'),
+            y = paste0('PC2 (',round(pca.variance.prop[2],1),'%)')
+        )+
+        theme_bw()+
+        theme(
+            legend.position = 'top'
+        )
 
-$$\\[0.5in]$$
+    ## return data
+    return(p)
+    
+}
+
+## Plot MD
+plot_MD <- function(df, plot.title = ""){
+    require(ggplot2)
+    
+    p <- ggplot(df, aes(x = logCPM, y = logFC, color=factor(is.sig)))+
+        geom_hline(yintercept = 0)+
+        geom_point(size = 0.2)+
+        scale_color_manual(
+            '',
+            values = c("-1" = "blue", "0" = "gray", "1" = "red"),
+            breaks = c(-1,0,1), labels = c('Down', 'No Sig.', 'Up')
+        )+
+        labs( 
+            x = "Average log CPM", 
+            y = "log-fold-of-change",
+            title = plot.title
+        )+
+        theme_bw()+
+        theme(
+            text = element_text(size = 8),
+            legend.position = 'top'
+        )
+    
+    return(p)
+} 
+
+## Plot volcano 
+plot_volcano <- function(df, plot.title = ""){
+    require(ggplot2)
+    
+    p <- ggplot(df,aes(x=logFC,y=-log10(FDR),color=factor(is.sig)))+
+        geom_point(size = 0.2)+ 
+        scale_color_manual(
+            values = c('-1'='blue','0'='gray','1'='red'),
+            breaks = c('-1','0','1'),
+            labels = c('Down','No Sig.','Up'),
+            drop = T
+        )+
+        labs(
+            x='log2(fold change)',
+            y='-log10(FDR)',
+            color='',
+            title = plot.title
+        )+
+        theme_bw()+
+        theme(
+            text = element_text(size = 8),
+            legend.position = 'top'
+        )
+    
+    return(p)
+}
+
+## recompute is.sig2
+recal_sig <- function(txt, col.sig, fdr, fc){
+    de <- read.delim(txt)
+    de[,col.sig] <- sign(de$logFC) * (abs(de$logFC) > log2(fc)) * (de$FDR < fdr)
+    write.table(de, txt, sep = '\t', quote = F, row.names = F)
+    return(
+        data.frame(
+            source.file = basename(txt),
+            modify.col = col.sig,
+            features.test = nrow(de),
+            features.up = sum(de[,col.sig] %in% 1),
+            features.down = sum(de[,col.sig] %in% -1),
+            FDR.cutoff = fdr,
+            FC.cutoff = fc
+        )
+    )
+}
+
+```
+
+```{r read_input}
+## sample sheet 
+ss <- read.csv(paste(wd, 'samples.csv', sep = '/')) %>% 
+  mutate(
+    fastq_1 = basename(fastq_1),
+    fastq_2 = basename(fastq_2)
+  ) %>% 
+  relocate(fastq_1, fastq_2, .after = last_col())
+
+```
+
+```{r run_de}
+de.rds <- 'de.rds'
+if (file.exists(de.rds)){
+  de.list <- readRDS(de.rds) # by conp, then by cmp
+}
+
+if (exists('de.list')){
+  de_sum <- bind_rows(lapply(de.list, function(de){de$summary})) %>% 
+    dplyr::relocate(output.folder, control.group, test.group, features.tested:FC.cutoff, control.samples:test.samples)
+  de_sum %>% 
+    write.table('DE_summary.txt', sep = '\t', quote = F, row.names = F)
+  
+ 
+  de_plots <- lapply(
+    de.list, function(de){
+      mapply(function(ide, prefix){
+        y <- ide$y
+        df <- ide$df
+        out.prefix <- basename(prefix)
+        plot.title <- gsub('_vs_', ' vs ', out.prefix)
+        list(
+          PCA = plot_pca(
+            y, 
+            out.prefix, 
+            color = y$samples$sample_group, 
+            sample.label = T, 
+            plot.title = "", 
+            var.genes = 500, 
+            feature.length = "length"),
+          MD = plot_MD(
+            df, out.prefix = out.prefix, 
+            plot.title = plot.title
+          ),
+          volcano = plot_volcano(
+            df, out.prefix = out.prefix, 
+            plot.title = plot.title
+          )
+        )
+        
+      }, de, names(de), SIMPLIFY = F)
+    }
+  )
+  
+}
+```
 
 ## Sample sheet
-```{r sample_sheet, eval=TRUE, include=TRUE}
+```{r sample_sheet}
 
 ss %>%  
-  dplyr::rename(Sample = sample_id) %>% 
   DT::datatable(
   class = 'cell-border stripe', 
   rownames = T,  
@@ -220,137 +402,4 @@ $$\\[0.5in]$$
 This research was supported by the Genomics & Bioinformatics Shared Resource of the Fred Hutch/University of Washington/Seattle Children's Cancer Consortium ([P30 CA015704](https://www.cancerconsortium.org/about.html)).
 
 $$\\[0.5in]$$
-
-##  {.unnumbered .unlisted}
-```{r exit_knit}
-knitr::knit_exit()
-```
-
-# Analyses {.unnumbered .unlisted}
-## Create a sample sheet and comparison table
-```{r}
-meta <- xlsx::read.xlsx('../_user/241011_BulkRNAseq_analysisrequest.xlsx', sheetIndex = 1) %>% 
-  dplyr::select(Sample_name:Analysis.group.name) %>% 
-  filter(!is.na(Sample_name))
-fq <- read.csv('fq.csv')
-
-
-## sample sheet ####
-ss <- fq %>% 
-  left_join(
-    meta, by = c('sample_id' = 'Sample_name')
-  ) %>% 
-  mutate(
-    sample_group = Analysis.group,
-    sample_group_name = Analysis.group.name,
-    analysis_type = case_when(
-      Species == 'mouse' ~ 'mm10',
-      Species == 'human' & Cell.line.or.tumor == 'tumor' ~ 'PDX',
-      Species == 'human' ~ 'hg38',
-      TRUE ~ 'TBD'
-    )
-  ) %>% 
-  dplyr::select(
-    sample_id, fastq_1, fastq_2, sample_group, sample_group_name, analysis_type
-  )
-ss %>% write.table('samples.csv', sep = ',', quote = F, row.names = F)
-
-
-
-## comparison table ####
-cmp <- tribble(
-  ~control.group, ~test.group,
-  'I1', 'I2',
-  'J1', 'J2',
-  'K1', 'K2',
-  'K1', 'K3',
-  'K1', c('K2','K3')
-) %>% 
-  rowwise() %>% 
-  mutate(
-    cg = paste(control.group, collapse = '+'),
-    tg = paste(test.group, collapse = '+'),
-    out.prefix = paste0(out.dir, '/', tg, '_vs_', cg, '/', tg, '_vs_', cg),
-    plot.title = paste(tg, 'vs', cg, '(reference)')
-    ) %>% 
-  dplyr::select(-c(cg,tg)) # comparisons of interest
-
-cmp %>% saveRDS('comparisons.rds')
-
-
-```
-
-## Run nextflow pipeline
-```{bash}
-shdir=~/github/rnaseq/local/bin
-bash $shdir/fqdir_to_csv.sh path/to/fastq/
-# (optional) adding additional metadata to sample sheet
-cp fq.csv samples.csv
-
-# edit params.json and/or nextflow.config as neccessary
-bash run_rnaseq.sh 
-
-## DE rerun
-differential_expression.r input=samples.csv comparison=comparisons.rds count.dir=counts gene.txt=gencode.v38.annotation.proteinCoding_lncRNA.genes.txt length.col=full_exome strand=0 fdr=0.05 fc=1.5 fdr2=0.01 fc2=2
-
-```
-
-
-# Deliver data
-```{bash}
-user=dmacpherson
-fc=20241010_LH00740_0009_A22VGKMLT3
-cd /fh/fast/_SR/Genomics/user/fwu/project/$user/$fc
-log=/fh/fast/_SR/Genomics/user/fwu/project/log/$user.$fc.rsync.log
-
-
-cat > to_exclude.txt <<STRING
-*.rds
-DE_summary.tx
-pca.scree.plot.pdf
-Rplots.pdf
-bcv.pdf
-qldisp.pdf
-pipeline_info/
-STRING
-
-## 24.10.28
-dst=/shared/ngs/illumina/macpherson_lab/$fc/
-ls -ldh $dst
-dstgroup=$(ls -ldh $dst | cut -f 4 -d ' ')
-echo $dstgroup
-
-dst=$dst/Analysis
-[[ -d $dst ]] || mkdir -p $dst
-
-## hg38
-src=/hpc/temp/_SR/Genomics/users/fwu/dmacpherson/20241010_LH00740_0009_A22VGKMLT3/Analysis/
-subdir=hg38
-rsync -va --chown=solexa:$dstgroup --chmod=775 $subdir/241010_RNAseq.html $dst/$subdir/
-rsync -vAXEWHhrLog --chown=solexa:$dstgroup --chmod=775 --no-compress --progress --exclude-from=to_exclude.txt $src/$subdir/ $dst/$subdir/ | tee -a $log
-
-## mm10
-src=/hpc/temp/_SR/Genomics/users/fwu/dmacpherson/20241010_LH00740_0009_A22VGKMLT3/Analysis/
-subdir=mm10
-rsync -va --chown=solexa:$dstgroup --chmod=775 $subdir/241010_RNAseq.html $dst/$subdir/
-rsync -vAXEWHhrLog --chown=solexa:$dstgroup --chmod=775 --no-compress --progress --exclude-from=to_exclude.txt $src/$subdir/ $dst/$subdir/ | tee -a $log
-
-src=/hpc/temp/_SR/Genomics/users/fwu/dmacpherson/20241010_LH00740_0009_A22VGKMLT3/Analysis/
-subdir=mm10
-rsync -va --chown=solexa:$dstgroup --chmod=775 $subdir/241010_RNAseq.html $dst/$subdir/
-subdir=mm10/differential_expression
-rsync -vAXEWHhrLog --chown=solexa:$dstgroup --chmod=775 --no-compress --progress --exclude-from=to_exclude.txt $src/$subdir/ $dst/$subdir/ | tee -a $log
-
-## PDX
-src=/fh/fast/_SR/Genomics/user/fwu/project/dmacpherson/20241010_LH00740_0009_A22VGKMLT3/Analysis/
-subdir=PDX
-rsync -va --chown=solexa:$dstgroup --chmod=775 $subdir/241010_RNAseq.html $dst/$subdir/
-rsync -vAXEWHhrLog --chown=solexa:$dstgroup --chmod=775 --no-compress --progress --exclude-from=to_exclude.txt $src/$subdir/ $dst/$subdir/ | tee -a $log
-
-## Appendix
-sudo pmanage restore --path $dst --group $dstgroup
-sudo pmanage read_other --path $dst
-ypmatch -k $user auto.illumina
-```
-
 

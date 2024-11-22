@@ -4,7 +4,6 @@
 * include workflows
 */
 include { RNASEQ_REGULAR } from './workflows/rnaseq_regular'
-include { RNASEQ_PDX } from './workflows/rnaseq_pdx'
 
 /*
 * named workflows
@@ -17,7 +16,7 @@ workflow RNASEQ {
         RNASEQ_REGULAR()
     }
     else if (params.workflow == "pdx" ) {
-        RNASEQ_PDX()
+        RNASEQ_REGULAR()
     }
     else if (params.workflow == "exome" ) {
         RNASEQ_REGULAR()

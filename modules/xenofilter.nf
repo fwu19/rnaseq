@@ -6,25 +6,25 @@ process XENOFILTER {
     module = ['fhR/4.1.2-foss-2021b', 'SAMtools/1.11-GCC-10.2.0']
 
 
-    tag "Differential expression"
+    tag "Filter bam on ${meta.id}"
 
     publishDir "${params.outdir}/STAR/${genome}_filtered", mode: 'copy'
     
     input:
-    tuple val(sample_id), path(graft_bam, stageAs: "graft/*"), path(host_bam, stageAs: "host/*")
+    tuple val(meta), path(graft_bam, stageAs: "graft/*"), path(host_bam, stageAs: "host/*")
     val (genome)
     val (mm_threshold)
 
 
     output:
-    tuple val (sample_id), path ("*"), emit: bam
+    tuple val(meta), path ("*.{bam,bai,log}"), emit: bam
+    tuple path("*.{bam,bai,log}")
     
     script:
     """
-    xenofilteR.r graft/*.bam host/*.bam $sample_id $mm_threshold ${task.cpus}
-    rm -r graft/ host/
-    mv Filtered_bams/XenofilteR.log ${sample_id}.XenofilteR.log
+    xenofilteR.r graft/*.bam host/*.bam ${meta.id} $mm_threshold ${task.cpus}
+    mv Filtered_bams/XenofilteR.log ${meta.id}.XenofilteR.log
     mv Filtered_bams/* .
-    rm -r Filtered_bams
+    
     """
 }
