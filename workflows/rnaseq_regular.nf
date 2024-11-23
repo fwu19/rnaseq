@@ -22,6 +22,7 @@ ch_dummy_csv = Channel.fromPath("$projectDir/assets/dummy_file.csv", checkIfExis
 
 ch_metadata = params.metadata ? Channel.fromPath( params.metadata, checkIfExists: true ) : ch_dummy_csv
 
+ch_multiqc_custom_config = params.multiqc_config ? Channel.fromPath(params.multiqc_config, checkIfExists: true ) : Channel.fromPath("$projectDir/assets/multiqc_config.yml")
 
 workflow RNASEQ_REGULAR {
     /*
@@ -238,6 +239,7 @@ workflow RNASEQ_REGULAR {
     /*
     * MultiQC
     */
+    ch_multiqc = Channel.empty()
     if (params.run_multiqc){
         MULTIQC(
             ch_log.collect(), 
@@ -246,7 +248,7 @@ workflow RNASEQ_REGULAR {
             ch_rnaseqc.map{it[1]}.flatten().collect(),
             ch_hs_metrics.map{it[1]}.flatten().collect()
         )
-    
+    ch_multiqc = MULTIQC.out.data
     }
 
     /*
@@ -256,7 +258,10 @@ workflow RNASEQ_REGULAR {
 
     if (params.run_report){
         GENERATE_REPORT(
+            params.workflow,
             samplesheet,
+            ch_multiqc.ifEmpty([]),
+            ch_hs_metrics.collect{it[1]}.ifEmpty([]),
             ch_dp.ifEmpty([]),
             ch_report_rmd
         )

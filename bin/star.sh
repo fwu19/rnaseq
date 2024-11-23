@@ -51,6 +51,6 @@ STAR \
 	--runThreadN ${nthread} 
 
 samtools sort -T . -@ ${nthread} -o Aligned.sortedByCoord.out.bam Aligned.out.bam
-
-samtools index Aligned.sortedByCoord.out.bam
+[[ -f Aligned.sortedByCoord.out.bam ]] && rm Aligned.out.bam
+[[ -f Aligned.sortedByCoord.out.bam ]] && samtools index Aligned.sortedByCoord.out.bam
 

@@ -10,19 +10,21 @@ process MULTIQC {
     publishDir "${params.outdir}/MultiQC/", mode: 'copy'
 
     input:
-    tuple path ("*", stageAs: 'star/*' )
-    tuple path ("*", stageAs: 'fastqc/*' )
-    tuple path ("*", stageAs: 'rseqc/*' )
-    tuple path ("*", stageAs: 'rnaseqc/*' )
-    tuple path ("*", stageAs: 'gatk/*' )
+    tuple path ( 'star/*' )
+    tuple path ( 'fastqc/*' )
+    tuple path ( 'rseqc/*' )
+    tuple path ( 'rnaseqc/*' )
+    tuple path ( 'gatk/*' )
 
     output:
-    path ('multiqc_data/*')
+    path ('multiqc_data/*'), emit: data
+    path ('multiqc_data/', type: 'dir' )
     path ('multiqc_report.html')
 
     script:
+    def args = task.ext.args ?: ''
+    def custom_config = params.multiqc_config ? "--config $multiqc_custom_config" : ''
     """
-    multiqc -o . --ignore _STARpass1/ -f */
-
+    multiqc -f --ignore _STARpass1/ .
     """
 }

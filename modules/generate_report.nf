@@ -6,8 +6,10 @@ process GENERATE_REPORT {
     tag "Make plots of read and peak metrics "
 
     input:
+    val( workflow )
     path( samplesheet, stageAs: "sample_sheet.csv" )
-    //path( read_metrics )
+    path( "multiqc_data/" )
+    path( "hs_metrics/*" )
     path( "*" )
     path( "*" )
 
@@ -16,7 +18,7 @@ process GENERATE_REPORT {
 
     script:
     """
-    prepare_report.r
+    prepare_report.r $workflow
     render_report.r _Analysis_report.Rmd
 
     """

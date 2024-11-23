@@ -1,0 +1,34 @@
+
+export_plots: true
+
+# Run only these modules
+run_modules:
+  - custom_content
+  - fastqc
+  - cutadapt
+  - star
+  - samtools
+  - picard
+
+module_order:
+  - fastqc:
+      name: "FastQC"
+      path_filters:
+        - "./fastqc/*.zip"
+  - cutadapt
+  - star:
+      name: "STAR"
+      path_filters:
+        - "./star/Log.final.out"
+  - star:
+      name: "STAR (host)"
+      path_filters:
+        - "./star_host/Log.final.out"
+  - samtools:
+      name: "Samtools"
+      path_filters:
+        - "./samtools/*"
+  - picard:
+      name: "Picard"
+        - "./gatk/*"
+  - custom_content
