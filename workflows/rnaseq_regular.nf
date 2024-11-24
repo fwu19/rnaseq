@@ -90,7 +90,8 @@ workflow RNASEQ_REGULAR {
     * for pdx workflow, run XenofilteR to remove reads with host origin
     */
     ch_counts = Channel.empty()
-
+    ch_bam = Channel.empty()
+    ch_star_log = Channel.empty()
     if (params.run_alignment){
         STAR(
             ch_reads, 
@@ -100,7 +101,7 @@ workflow RNASEQ_REGULAR {
         )
         ch_bam = STAR.out.bam
         // [ [meta], path(bam) ]
-        ch_log = STAR.out.log
+        ch_star_log = STAR.out.log
         // [ [meta], path(log) ]
         ch_counts = STAR.out.counts
         // [ [meta], path("ReadsPerGene.tab") ]
@@ -114,7 +115,7 @@ workflow RNASEQ_REGULAR {
             )
             ch_bam_host = STAR_HOST.out.bam
             // [ [meta], path(bam) ]
-            ch_log_host = STAR_HOST.out.log
+            ch_star_log_host = STAR_HOST.out.log
             // [ [meta], path("*") ]
 
             ch_bam
@@ -166,9 +167,9 @@ workflow RNASEQ_REGULAR {
             params.fdr2,
             params.fc2
         )
-
+        ch_dp = DIFFERENTIAL_EXPRESSION.out.rds
     }
-    ch_dp = DIFFERENTIAL_EXPRESSION.out.rds
+    
 
     /*
     * run QC
@@ -242,13 +243,14 @@ workflow RNASEQ_REGULAR {
     ch_multiqc = Channel.empty()
     if (params.run_multiqc){
         MULTIQC(
-            ch_log.collect(), 
+            ch_star_log.collect(), 
             ch_fastqc.map{it[1]}.flatten().collect(), 
             ch_rseqc.map{it[1]}.flatten().collect(), 
             ch_rnaseqc.map{it[1]}.flatten().collect(),
             ch_hs_metrics.map{it[1]}.flatten().collect()
         )
-    ch_multiqc = MULTIQC.out.data
+        ch_multiqc = MULTIQC.out.data
+        ch_multiqc.view()
     }
 
     /*
@@ -260,9 +262,9 @@ workflow RNASEQ_REGULAR {
         GENERATE_REPORT(
             params.workflow,
             samplesheet,
-            ch_multiqc.ifEmpty([]),
-            ch_hs_metrics.collect{it[1]}.ifEmpty([]),
-            ch_dp.ifEmpty([]),
+            ch_multiqc,
+            ch_hs_metrics.collect{it[1]},
+            ch_dp,
             ch_report_rmd
         )
     }

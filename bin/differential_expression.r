@@ -435,7 +435,10 @@ ss <- read.csv(input) %>%
     relocate(fastq_1, fastq_2, .after = last_col()) %>% 
     unique.data.frame() # sample sheet
 
-if(grepl('.csv$', comparison)){
+if(grepl('dummy', comparison)){
+    cat(comparison, "is a dummy file! Provide --comparison path/to/comparison_file (a comparison table in csv, txt, tsv or rds format)!")
+    quit()
+}else if(grepl('.csv$', comparison)){
     cmp <- read.csv(comparison)
 }else if (grepl('.rds$', comparison)){
     cmp <- readRDS(comparison)
