@@ -10,11 +10,11 @@ process MULTIQC {
     publishDir "${params.outdir}/MultiQC/", mode: 'copy'
 
     input:
-    tuple path ( 'star/*' )
-    tuple path ( 'fastqc/*' )
-    tuple path ( 'rseqc/*' )
-    tuple path ( 'rnaseqc/*' )
-    tuple path ( 'gatk/*' )
+    path ( 'star/*' )
+    path ( 'fastqc/*' )
+    path ( 'rseqc/*' )
+    path ( 'rnaseqc/*' )
+    path ( 'gatk/*' )
 
     output:
     path ('multiqc_data/*'), emit: data

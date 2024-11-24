@@ -13,7 +13,9 @@ dat$ss <- read.csv('sample_sheet.csv')
 
 ## RNA-SeQC ####
 if (dir.exists('multiqc_data')){
-    dat$rnaseqc <- read.delim('multiqc_data/multiqc_rna_seqc.txt')
+    if(file.exists('multiqc_data/multiqc_rna_seqc.txt')){
+        dat$rnaseqc <- read.delim('multiqc_data/multiqc_rna_seqc.txt')
+    }
 }
 
 ## collect_hs_metrics ####

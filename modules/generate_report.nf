@@ -7,14 +7,14 @@ process GENERATE_REPORT {
 
     input:
     val( workflow )
-    path( samplesheet, stageAs: "sample_sheet.csv" )
-    path( "multiqc_data/" )
-    path( "hs_metrics/*" )
-    path( "*" )
-    path( "*" )
+    path ( samplesheet, stageAs: "sample_sheet.csv" )
+    path ( "multiqc_data/" )
+    path ( "hs_metrics/*" )
+    path ( "*" )
+    path ( "*" )
 
     output:
-    tuple path( "*.{rds,html,Rmd}" )
+    path( "*.{rds,html,Rmd}" )
 
     script:
     """

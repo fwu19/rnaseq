@@ -152,24 +152,25 @@ workflow RNASEQ_REGULAR {
     /*
     * differential expression
     */
-    ch_comparison = params.comparison ? Channel.fromPath(params.comparison, checkIfExists: true) : Channel.empty()
     ch_dp = Channel.empty()
     if (params.run_de){
-        DIFFERENTIAL_EXPRESSION(
-            samplesheet, 
-            ch_comparison, 
-            ch_counts.map{it[1]}.collect(), 
-            params.gene_txt,
-            params.length_col,
-            params.strand,
-            params.fdr,
-            params.fc,
-            params.fdr2,
-            params.fc2
-        )
+        ch_comparison = params.comparison ? Channel.fromPath(params.comparison, checkIfExists: true) : Channel.empty()
+        if ( !ch_comparison ~/dummy/ ){
+            DIFFERENTIAL_EXPRESSION(
+                samplesheet, 
+                ch_comparison, 
+                ch_counts.map{it[1]}.collect(), 
+                params.gene_txt,
+                params.length_col,
+                params.strand,
+                params.fdr,
+                params.fc,
+                params.fdr2,
+                params.fc2
+            )
         ch_dp = DIFFERENTIAL_EXPRESSION.out.rds
+        }
     }
-    
 
     /*
     * run QC
@@ -243,28 +244,27 @@ workflow RNASEQ_REGULAR {
     ch_multiqc = Channel.empty()
     if (params.run_multiqc){
         MULTIQC(
-            ch_star_log.collect(), 
-            ch_fastqc.map{it[1]}.flatten().collect(), 
-            ch_rseqc.map{it[1]}.flatten().collect(), 
-            ch_rnaseqc.map{it[1]}.flatten().collect(),
-            ch_hs_metrics.map{it[1]}.flatten().collect()
+            ch_star_log.map{it[1]}.flatten().collect().ifEmpty([]), 
+            ch_fastqc.map{it[1]}.flatten().collect().ifEmpty([]),  
+            ch_rseqc.map{it[1]}.flatten().collect().ifEmpty([]),  
+            ch_rnaseqc.map{it[1]}.flatten().collect().ifEmpty([]),
+            ch_hs_metrics.map{it[1]}.flatten().collect().ifEmpty([])
         )
         ch_multiqc = MULTIQC.out.data
-        ch_multiqc.view()
+        //ch_multiqc.view()
     }
 
     /*
     * Generate a report
     */
-    ch_report_rmd = params.local_assets ? Channel.fromPath("${params.local_assets}/report/", type: 'dir', checkIfExists: true) : Channel.fromPath("$projectDir/assets/report/", type: 'dir', checkIfExists: true)
-
     if (params.run_report){
+        ch_report_rmd = params.local_assets ? Channel.fromPath("${params.local_assets}/report/", type: 'dir', checkIfExists: true) : Channel.fromPath("$projectDir/assets/report/", type: 'dir', checkIfExists: true)
         GENERATE_REPORT(
             params.workflow,
             samplesheet,
-            ch_multiqc,
-            ch_hs_metrics.collect{it[1]},
-            ch_dp,
+            ch_multiqc.ifEmpty([]),
+            ch_hs_metrics.collect{it[1]}.ifEmpty([]),
+            ch_dp.ifEmpty([]),
             ch_report_rmd
         )
     }
