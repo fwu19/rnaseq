@@ -16,8 +16,8 @@ process RSEQC {
     path(gene_bed)
 
     output:
-    tuple val(meta), path("*.{txt,pdf,r,bed,log,xls,xlsx}"), emit: qc
-    path("*.{txt,pdf,r,bed,log,xls,xlsx}")
+    tuple val(meta), path("${meta.id}*.{txt,pdf,r,bed,log,xls,xlsx}"), emit: qc
+    path("${meta.id}*.{txt,pdf,r,bed,log,xls,xlsx}")
 
     script:
     """

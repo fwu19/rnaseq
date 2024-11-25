@@ -18,7 +18,7 @@ process XENOFILTER {
 
     output:
     tuple val(meta), path ("*.{bam,bai,log}"), emit: bam
-    tuple path("*.{bam,bai,log}")
+    path("*.{bam,bai,log}")
     
     script:
     """

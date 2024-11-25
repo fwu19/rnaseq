@@ -9,7 +9,7 @@ process GENERATE_REPORT {
     val( workflow )
     path ( samplesheet, stageAs: "sample_sheet.csv" )
     path ( "multiqc_data/" )
-    path ( "hs_metrics/*" )
+    //path ( "hs_metrics/*" )
     path ( "*" )
     path ( "*" )
 

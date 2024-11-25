@@ -16,8 +16,9 @@ process RNASEQC {
     val(read_type)
 
     output:
-    tuple val(meta), path("*"), emit: qc
-
+    tuple val(meta), path("*.{tsv,gct}"), emit: qc
+    path("*.{tsv,gct}")
+    
     script:
     """
     rnaseqc.sh ${meta.id} ${gtf} ${strand} ${read_type} input/*.bam 

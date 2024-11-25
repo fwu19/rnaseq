@@ -22,7 +22,7 @@ ch_dummy_csv = Channel.fromPath("$projectDir/assets/dummy_file.csv", checkIfExis
 
 ch_metadata = params.metadata ? Channel.fromPath( params.metadata, checkIfExists: true ) : ch_dummy_csv
 
-ch_multiqc_custom_config = params.multiqc_config ? Channel.fromPath(params.multiqc_config, checkIfExists: true ) : Channel.fromPath("$projectDir/assets/multiqc_config.yml")
+//ch_multiqc_custom_config = params.multiqc_config ? Channel.fromPath(params.multiqc_config, checkIfExists: true ) : Channel.fromPath("$projectDir/assets/multiqc_config.yml")
 
 workflow RNASEQ_REGULAR {
     /*
@@ -154,22 +154,19 @@ workflow RNASEQ_REGULAR {
     */
     ch_dp = Channel.empty()
     if (params.run_de){
-        ch_comparison = params.comparison ? Channel.fromPath(params.comparison, checkIfExists: true) : Channel.empty()
-        if ( !ch_comparison ~/dummy/ ){
-            DIFFERENTIAL_EXPRESSION(
-                samplesheet, 
-                ch_comparison, 
-                ch_counts.map{it[1]}.collect(), 
-                params.gene_txt,
-                params.length_col,
-                params.strand,
-                params.fdr,
-                params.fc,
-                params.fdr2,
-                params.fc2
-            )
+        DIFFERENTIAL_EXPRESSION(
+            samplesheet, 
+            Channel.fromPath(params.comparison, checkIfExists: true), 
+            ch_counts.map{it[1]}.collect().ifEmpty([]), 
+            params.gene_txt,
+            params.length_col,
+            params.strand,
+            params.fdr,
+            params.fc,
+            params.fdr2,
+            params.fc2
+        )
         ch_dp = DIFFERENTIAL_EXPRESSION.out.rds
-        }
     }
 
     /*
@@ -263,7 +260,7 @@ workflow RNASEQ_REGULAR {
             params.workflow,
             samplesheet,
             ch_multiqc.ifEmpty([]),
-            ch_hs_metrics.collect{it[1]}.ifEmpty([]),
+            //ch_hs_metrics.collect{it[1]}.ifEmpty([]),
             ch_dp.ifEmpty([]),
             ch_report_rmd
         )

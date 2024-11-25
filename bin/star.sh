@@ -21,7 +21,7 @@ fq2=$1; shift
 [[ -d $sample_id ]] || mkdir -p $sample_id
 cd $sample_id 
 
-RG="ID:$sample_id LB:$sample_id SM:$sample_id PL:illumina PU:$sample_id CN:FredHutch"
+RG="ID:$sample_id SM:$sample_id LB:$sample_id PL:illumina PU:$sample_id CN:FredHutch"
 STAR \
 	--genomeLoad NoSharedMemory \
 	--genomeDir "../${star_ref}" \
