@@ -5,23 +5,23 @@ nextflow.enable.dsl = 2
 /*
 * include workflows
 */
-include { RNASEQ_REGULAR } from './workflows/rnaseq_regular'
+include { RNASEQ } from './workflows/rnaseq'
 
 /*
 * named workflows
 */
-workflow RNASEQ {  
+workflow RUN_RNASEQ {  
     /*
     * Call named workflow
     */
     if (params.workflow == "regular" ) {
-        RNASEQ_REGULAR()
+        RNASEQ()
     }
     else if (params.workflow == "pdx" ) {
-        RNASEQ_REGULAR()
+        RNASEQ()
     }
     else if (params.workflow == "exome" ) {
-        RNASEQ_REGULAR()
+        RNASEQ()
     }
     else {
         err "Invalid workflow! Possible options: [regular, pdx, exome]"
@@ -33,6 +33,6 @@ workflow RNASEQ {
 * call the main workflow
 */
 workflow {
-    RNASEQ()
+    RUN_RNASEQ()
 }
 

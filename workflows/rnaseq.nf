@@ -24,7 +24,7 @@ ch_metadata = params.metadata ? Channel.fromPath( params.metadata, checkIfExists
 
 //ch_multiqc_custom_config = params.multiqc_config ? Channel.fromPath(params.multiqc_config, checkIfExists: true ) : Channel.fromPath("$projectDir/assets/multiqc_config.yml")
 
-workflow RNASEQ_REGULAR {
+workflow RNASEQ {
     /*
     * Run input check
     */
@@ -172,11 +172,15 @@ workflow RNASEQ_REGULAR {
     /*
     * run QC
     */    
+    ch_fastqc = Channel.empty()
+    ch_rnaseqc = Channel.empty()
+    ch_rseqc = Channel.empty()
+    ch_hs_metrics = Channel.empty()
+
     if (params.run_qc){
         /*
         * FastQC
         */
-        ch_fastqc = Channel.empty()
         if (params.run_fastqc){
             FASTQC(
                 CHECK_INPUT.out.fq
@@ -191,7 +195,6 @@ workflow RNASEQ_REGULAR {
         /*
         * RNASeQC
         */
-        ch_rnaseqc = Channel.empty()
         if (params.run_rnaseqc){
             RNASEQC(
                 ch_bam,
@@ -206,7 +209,6 @@ workflow RNASEQ_REGULAR {
         /*
         * RSeQC
         */
-        ch_rseqc = Channel.empty()
         if (params.run_rseqc){
             RSEQC(
                 ch_bam,
@@ -221,7 +223,6 @@ workflow RNASEQ_REGULAR {
         /*
         * GATK collect_hs_metrics
         */
-        ch_hs_metrics = Channel.empty()
         if (params.workflow == 'exome' && params.run_hs_metrics){
             HS_METRICS(
                 ch_bam,
