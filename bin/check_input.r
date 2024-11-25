@@ -64,13 +64,14 @@ if (!'id' %in% colnames(ss)){
 ss$fastq_2 <- add_col(ss, 'fastq_2', "")
 ss$single_end <- ifelse(ss$fastq_2 == "", 'true', 'false')
 
-## write sample sheet ####
-ss %>% 
-    write.table('fq.csv', sep = ',', quote = F, row.names = F)
 
 ## add metadata and collapse by id if necessary ####
-ss <- add_metadata(ss, meta_csv)
-ss %>% 
+ssv <- add_metadata(ss, meta_csv)
+ssv %>% 
     write.table('samplesheet.valid.csv', sep = ',', quote = F, row.names = F)
 
+## write sample sheet ####
+ss %>% 
+    filter(id %in% ssv$id) %>% 
+    write.table('fq.csv', sep = ',', quote = F, row.names = F)
 

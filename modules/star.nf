@@ -13,7 +13,7 @@ process STAR {
     input:
     tuple val(meta), path(read1), path(read2)
     val (genome)
-    path (star)
+    path (star_index)
     path (gtf)
     
     output:
@@ -23,8 +23,9 @@ process STAR {
     path("${meta.id}", type: 'dir')
 
     script:
+    def args = task.ext.args ?: ""
     """
-    star.sh ${meta.id} ${star} ${gtf} ${task.cpus} $read1 $read2
+    star.sh ${meta.id} ${star_index} ${gtf} ${task.cpus} $read1 $read2 "$args"
     mkdir counts
     cp ${meta.id}/ReadsPerGene.out.tab counts/${meta.id}.ReadsPerGene.out.tab
     mkdir log

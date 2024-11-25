@@ -17,12 +17,13 @@ gtf=$1; shift
 nthread=$1; shift
 fq1=$1; shift
 fq2=$1; shift
+ext_args="$1"; shift
 
 [[ -d $sample_id ]] || mkdir -p $sample_id
 cd $sample_id 
 
 RG="ID:$sample_id SM:$sample_id LB:$sample_id PL:illumina PU:$sample_id CN:FredHutch"
-STAR \
+STAR $ext_args \
 	--genomeLoad NoSharedMemory \
 	--genomeDir "../${star_ref}" \
 	--readFilesIn ../${fq1} ../${fq2} \
@@ -31,10 +32,8 @@ STAR \
 	--outReadsUnmapped None \
 	--outSAMtype BAM Unsorted \
 	--outSAMstrandField intronMotif \
-	--outSAMattributes NH HI NM MD AS XS \
 	--outSAMunmapped Within \
 	--outSAMattrRGline "${RG}" \
-	--outSAMheaderHD @HD VN:1.4 \
 	--outFilterMultimapNmax 20 \
 	--outFilterMultimapScoreRange 1 \
 	--outFilterMatchNminOverLread 0.33 \
@@ -44,9 +43,7 @@ STAR \
 	--alignMatesGapMax 1000000 \
 	--alignSJDBoverhangMin 1 \
 	--sjdbGTFfile "../${gtf}" \
-	--sjdbOverhang 100 \
 	--sjdbScore 2 \
-	--quantMode TranscriptomeSAM GeneCounts \
 	--twopassMode Basic \
 	--runThreadN ${nthread} 
 
