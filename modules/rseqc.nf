@@ -10,7 +10,7 @@ process RSEQC {
     publishDir "${params.outdir}/QC/rseqc/", pattern: "*.{txt,pdf,r,bed,log,xls,xlsx}", mode: 'copy'
 
     input:
-    tuple val(meta), path("*.{bam,bai}", stageAs: "input/*")
+    tuple val(meta), path( "*" )
     path(rseqc_bed)
     path(tx_bed)
     path(gene_bed)
@@ -21,7 +21,9 @@ process RSEQC {
 
     script:
     """
-    rseqc.sh ${meta.id} ${rseqc_bed} ${tx_bed} ${gene_bed} input/*.bam 
+    ln -s Aligned.sortedByCoord.out.bam ${meta.id}.bam
+    ln -s Aligned.sortedByCoord.out.bam.bai ${meta.id}.bam.bai
+    rseqc.sh ${meta.id} ${rseqc_bed} ${tx_bed} ${gene_bed} ${meta.id}.bam 
 
     """
 }

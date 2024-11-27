@@ -475,7 +475,7 @@ if (grepl('ReadsPerGene.out.tab', count.files[1])){
 ## create DGElist ####
 y0 <- count2dgelist(
     counts = cts, 
-    out.dir = 'all_samples', 
+    out.dir = NULL, 
     feature.cols = 1:8, 
     samples = ss %>% 
         arrange(factor(id, levels = colnames(cts)[9:ncol(cts)])),
