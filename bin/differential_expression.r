@@ -22,7 +22,9 @@ generate_count_matrix_star <- function(gene.txt, length.col, ss, count.files, co
                 if(sum(!ann$gene_id %in% df[,1]) != 0){
                     warning(paste("Some genes in", gene.txt, "don't have counts!"))
                 }
-                df[,count.col][match(ann$gene_id, df[,1])]
+                v <- df[,count.col][match(ann$gene_id, df[,1])]
+                v[is.na(v)] <- 0
+                v
             }
         ))
     )
@@ -49,7 +51,9 @@ generate_count_matrix_featurecounts <- function(gene.txt, length.col, ss, count.
                 if(sum(!ann$gene_id %in% df$Geneid) != 0){
                     warning(paste("Some genes in", gene.txt, "don't have counts!"))
                 }
-                df[,7][match(ann$gene_id, df$Geneid)]
+                v <- df[,7][match(ann$gene_id, df$Geneid)]
+                v[is.na(v)] <- 0
+                v
             }
         ))
     )
@@ -388,7 +392,7 @@ wrap_one_cmp <- function(icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2){
     ## run DGE ####
     lst <- run_da(
         y0, 
-        out.prefix = out.prefix, 
+        out.prefix = file.path(out.prefix, out.prefix),
         control.group = control.group, 
         test.group = test.group, 
         group = y0$samples$sample_group, 
@@ -401,18 +405,18 @@ wrap_one_cmp <- function(icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2){
     lst$plots <- list(
         PCA = plot_pca(
             y, 
-            out.prefix, 
+            file.path(out.prefix, out.prefix), 
             color = y$samples$sample_group, 
             sample.label = T, 
             plot.title = "", 
             var.genes = 500, 
             feature.length = "gene_length"),
         MD = plot_MD(
-            df, out.prefix = out.prefix, 
+            df, out.prefix = file.path(out.prefix, out.prefix),
             plot.title = plot.title
         ),
         volcano = plot_volcano(
-            df, out.prefix = out.prefix, 
+            df, out.prefix = file.path(out.prefix, out.prefix),
             plot.title = plot.title
         )
     )
@@ -423,6 +427,11 @@ wrap_one_cmp <- function(icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2){
 
 }
 
+## add default value if a column is missing
+add_colv <- function(df, colv, value){
+    if (!colv %in% colnames(df)){df[,colv] <- value}
+    return(df)
+}
 
 ## read arguments ####
 args <- as.vector(commandArgs(T)) 
@@ -474,17 +483,16 @@ y0 <- count2dgelist(
 )
 
 ## plot PCA of all samples ####
-plot_pca(y0, out.prefix = 'all_samples/all_samples', var.genes = 500, color = y0$samples$group, sample.label = T, feature.length = "gene_length")
+plot_pca(y0, out.prefix = 'all_samples', var.genes = 500, color = y0$samples$group, sample.label = T, feature.length = "gene_length")
 
 ## detect differential expression ####
+cmp <- cmp %>% 
+    add_colv('out.prefix', paste(cmp$test, cmp$control, sep = '_vs_')) %>% 
+    add_colv('plot.title', paste(cmp$test, cmp$control, sep = ' vs '))
+
 de.list <- list()
 for (i in 1:nrow(cmp)){
     de.list[[i]] <- wrap_one_cmp(cmp[i,], ss, fdr, fc, fdr2, fc2)
 }
 names(de.list) <- basename(cmp$out.prefix)
 saveRDS(de.list, 'de.rds')
-
-saveRDS(
-    list(ss = ss, cmp = cmp),
-    'data.rds'
-)

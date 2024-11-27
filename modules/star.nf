@@ -19,7 +19,7 @@ process STAR {
     output:
     tuple val(meta), path("${meta.id}/Aligned.sortedByCoord.out.{bam,bam.bai}"), emit: bam 
     tuple val(meta), path("counts/${meta.id}.ReadsPerGene.out.tab"), emit: counts
-    tuple val(meta), path( "log/${meta.id}.Log.final.out" ), emit: log
+    tuple val(meta), path( "log/*" ), emit: log
     path("${meta.id}", type: 'dir')
 
     script:
@@ -30,5 +30,7 @@ process STAR {
     cp ${meta.id}/ReadsPerGene.out.tab counts/${meta.id}.ReadsPerGene.out.tab
     mkdir log
     cp ${meta.id}/Log.final.out log/${meta.id}.Log.final.out
+    cp ${meta.id}/ReadsPerGene.out.tab log/${meta.id}.ReadsPerGene.out.tab
+    
     """
 }
