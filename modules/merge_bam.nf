@@ -1,0 +1,25 @@
+
+process MERGE_BAM {
+    time = '1d'
+    cpus = 8
+    memory = '48G'
+    module = ['SAMtools/1.11-GCC-10.2.0']
+
+
+    tag "merge bam files for ${out_prefix}"
+
+    publishDir "${params.outdir}/merged_bam/", mode: 'copy'
+
+    input:
+    tuple val(meta), path("input/*")
+    
+    output:
+    tuple val(meta), path("*.{bam,bai}"), emit: bam 
+
+    script:
+    """
+    samtools merge -@ ${task.cpus} -f ${meta.id}.bam input/*.bam
+    samtools index ${meta.id}.bam
+
+    """
+}

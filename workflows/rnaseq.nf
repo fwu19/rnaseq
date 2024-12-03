@@ -1,12 +1,23 @@
 #!/usr/bin/env nextflow 
 
+/*
+* SUBWORKFLOWS
+*/
+
+/*
+* MODULES
+*/
 include { GET_FASTQ_PATHS } from '../modules/get_fastq_paths'
 include { CHECK_INPUT  } from '../modules/check_input.nf'
 include { FASTQC  } from '../modules/fastqc.nf'
 include { CAT_FASTQ  } from '../modules/cat_fastq.nf'
+include { SPLIT_FASTQ } from '../modules/split_fastq'
 include { STAR } from '../modules/star.nf'
 include { STAR  as  STAR_HOST } from '../modules/star.nf'
 include { XENOFILTER } from '../modules/xenofilter.nf'
+include { MERGE_BAM } from '../modules/merge_bam.nf'
+include { MERGE_BAM as MERGE_BAM_HOST } from '../modules/merge_bam.nf'
+include { MERGE_BAM as MERGE_BAM_XENO } from '../modules/merge_bam.nf'
 include { RNASEQC  } from '../modules/rnaseqc.nf'
 include { RSEQC  } from '../modules/rseqc.nf'
 include { HS_METRICS  } from '../modules/hs_metrics'
@@ -85,6 +96,31 @@ workflow RNASEQ {
     // ch_reads.view()
 
     /*
+    * split fastq files if needed
+    */
+    ch_split_fastq = Channel.empty()
+    if (params.run_split_fastq){
+        SPLIT_FASTQ(
+            ch_reads
+        )
+        ch_reads = ch_reads
+            .map{ it -> [ it[0].id, it ] }
+            .cross(
+                SPLIT_FASTQ.out.csv
+                    .map { it -> it[1] }
+                    .splitCsv( header: false )
+            )
+            .map{ it -> [ it[0][1][0], it[1][1], it[1][2], it[1][3] ]}
+
+    }else{
+        ch_reads = ch_reads
+            .map{ it -> [ it[0], it[0].id, it[1], it[2] ]}
+    }
+    // ch_reads.view()
+    // [ val(meta), val(out_prefix), path(fq1), path(fq2) ]
+
+
+    /*
     * run STAR alignment 
     * for pdx workflow, align to both graft and host genomes 
     * for pdx workflow, run XenofilteR to remove reads with host origin
@@ -100,11 +136,11 @@ workflow RNASEQ {
             params.gtf
         )
         ch_bam = STAR.out.bam
-        // [ [meta], path(bam) ]
+        // [ [meta], val(out_prefix), path(bam) ]
         ch_star_log = STAR.out.log
-        // [ [meta], path(log) ]
+        // [ [meta], val(out_prefix), path(log) ]
         ch_counts = STAR.out.counts
-        // [ [meta], path("ReadsPerGene.tab") ]
+        // [ [meta], val(out_prefix), path("ReadsPerGene.tab") ]
 
         if (params.workflow == 'pdx'){
             STAR_HOST(
@@ -114,15 +150,20 @@ workflow RNASEQ {
                 params.gtf_host
             )
             ch_bam_host = STAR_HOST.out.bam
-            // [ [meta], path(bam) ]
+            // [ [meta], val(out_prefix), path(bam) ]
             ch_star_log_host = STAR_HOST.out.log
-            // [ [meta], path("*") ]
+            // [ [meta], val(out_prefix), path("*") ]
 
             ch_bam
-                .join (ch_bam_host)
+                .map{ it -> [ [it[0],it[1]], it[2] ]}
+                .join (
+                    ch_bam_host
+                        .map{ it -> [ [it[0],it[1]], it[2] ]}
+                )
+                .map{ it -> [ it[0][0], it[0][1], it[1], it[2] ] }
                 .set {ch_bam_paired}
             // ch_bam_paired.view()
-            // [ [meta], [path/to/graft.{bam,bai}], [path/to/host.{bam,bai}]]
+            // [ [meta], val(out_prefix), [path/to/graft.{bam,bai}], [path/to/host.{bam,bai}]]
 
             XENOFILTER(
                 ch_bam_paired, 
@@ -131,6 +172,30 @@ workflow RNASEQ {
             )
             ch_bam = XENOFILTER.out.bam 
             // [ [meta], path/to/filtered.bam ]
+        }
+        
+        if (params.run_split_fastq){
+            MERGE_BAM(
+                ch_bam
+                    .map{ it -> [ it[0], it[2] ]}
+                    .groupTuple( by: [0] )
+            )
+            ch_bam = MERGE_BAM.out.bam
+
+            if (params.workflow == 'pdx'){
+                MERGE_BAM_HOST(
+                    ch_bam_host
+                        .map{ it -> [ it[0], it[2] ]}
+                        .groupTuple( by: [0] )
+                )
+                ch_bam_host = MERGE_BAM_HOST.out.bam
+                MERGE_BAM_HOST(
+                    ch_bam_host
+                        .map{ it -> [ it[0], it[2] ]}
+                        .groupTuple( by: [0] )
+                )
+
+            }
         }
     }
 
