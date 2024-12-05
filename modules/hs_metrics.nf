@@ -10,17 +10,17 @@ process HS_METRICS {
     publishDir "${params.outdir}/QC/gatk/", pattern: "*.{tsv,gct}", mode: 'copy'
 
     input:
-    tuple val(meta), path("*.{bam,bai}", stageAs: "input/*")
+    tuple val(meta), val(out_prefix), path("*.{bam,bai}", stageAs: "input/*")
     val(genome_fa)
     path(target_region)
 
     output:
     tuple val(meta), path("*.hs_metrics.txt"), emit: qc
-    tuple val(meta), path("*.hs_metrics.txt")
+    path("*.hs_metrics.txt")
 
     script:
     """
-    collect_hs_metrics.sh ${meta.id} input/Aligned.sortedByCoord.out.bam $genome_fa $target_region
+    collect_hs_metrics.sh ${out_prefix} input/Aligned.sortedByCoord.out.bam $genome_fa $target_region
 
     """
 }

@@ -10,11 +10,17 @@ process MULTIQC {
     publishDir "${params.outdir}/MultiQC/", mode: 'copy'
 
     input:
-    path ( 'star/*' )
+    path ( "${params.genome}_unfiltered/*" )
+    path ( "${params.genome_host}_unfiltered/*" )
     path ( 'fastqc/*' )
+    path ( 'fastqc_trimmed/*' )
     path ( 'rseqc/*' )
     path ( 'rnaseqc/*' )
     path ( 'gatk/*' )
+    path ( "${params.genome}_unfiltered/*" )
+    path ( "${params.genome_host}_unfiltered/*" )
+    path ( "${params.genome}_filtered/*" )
+    path ( 'counts/*' )
 
     output:
     path ('multiqc_data/*'), emit: data
@@ -25,6 +31,6 @@ process MULTIQC {
     def args = task.ext.args ?: ''
     def custom_config = params.multiqc_config ? "--config $multiqc_custom_config" : ''
     """
-    multiqc -f --ignore _STARpass1/ .
+    multiqc -f -d -dd 1 --ignore _STARpass1/ .
     """
 }

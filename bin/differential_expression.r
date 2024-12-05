@@ -22,7 +22,9 @@ generate_count_matrix_star <- function(gene.txt, length.col, ss, count.files, co
                 if(sum(!ann$gene_id %in% df[,1]) != 0){
                     warning(paste("Some genes in", gene.txt, "don't have counts!"))
                 }
-                df[,count.col][match(ann$gene_id, df[,1])]
+                v <- df[,count.col][match(ann$gene_id, df[,1])]
+                v[is.na(v)] <- 0
+                v
             }
         ))
     )
@@ -49,7 +51,9 @@ generate_count_matrix_featurecounts <- function(gene.txt, length.col, ss, count.
                 if(sum(!ann$gene_id %in% df$Geneid) != 0){
                     warning(paste("Some genes in", gene.txt, "don't have counts!"))
                 }
-                df[,7][match(ann$gene_id, df$Geneid)]
+                v <- df[,7][match(ann$gene_id, df$Geneid)]
+                v[is.na(v)] <- 0
+                v
             }
         ))
     )
@@ -78,7 +82,7 @@ count2dgelist <- function(counts.tsv=NULL, return.counts = T, pattern2remove="^X
     y0 <- calcNormFactors(y0)
     
     if(is.null(out.dir)){
-        if (is.null(count.tsv)){
+        if (is.null(counts.tsv)){
             out.dir <- './'
         }else{
             out.dir <- dirname(counts.tsv)
@@ -88,7 +92,7 @@ count2dgelist <- function(counts.tsv=NULL, return.counts = T, pattern2remove="^X
     saveRDS(y0, 'y0.rds')
     
     if(return.counts){
-        write.table(cbind(y0$genes, y0$counts), paste(out.dir, 'all_samples.raw_counts.txt', sep = '/'), quote = F, row.names = F)
+        write.table(cbind(y0$genes, y0$counts), paste(out.dir, 'all_samples.raw_counts.txt', sep = '/'), sep = '\t', quote = F, row.names = F)
     }
     return(y0)
 }
@@ -377,6 +381,31 @@ recal_sig <- function(txt, col.sig, fdr, fc){
     )
 }
 
+## compute normalized counts 
+normalize_counts <- function(y, out.prefix, return = c('rpkm','cpm'), gene.length = "gene_length", log = F){
+    require(edgeR)
+    
+    out.dir <- dirname(out.prefix)
+    if (!dir.exists(out.dir)){
+        dir.create(out.dir, recursive = T)
+    }
+    if(return[1] == 'cpm'){
+        cpm <- cpm(y, normalized.lib.sizes = T, log = log)
+        colnames(cpm) <- paste('CPM.TMMnormalized', colnames(cpm), sep = '.')
+        df <- cbind(y$genes, cpm)
+        out.suffix <- ifelse(log, 'log2CPM.txt', 'CPM.txt')
+        write.table(df,paste(out.prefix, out.suffix, sep = '.'), sep = '\t',quote = F,row.names = F)
+    }  
+    if(return[1] == 'rpkm'){
+        rpkm <- rpkm(y, gene.length = gene.length, normalized.lib.sizes = T, log = log)
+        colnames(rpkm) <- paste('FPKM.TMMnormalized', colnames(rpkm), sep = '.')
+        df <- cbind(y$genes, rpkm)
+        out.suffix <- ifelse(log, 'log2FPKM.txt', 'FPKM.txt')
+        write.table(df,paste(out.prefix, out.suffix, sep = '.'), sep = '\t',quote = F,row.names = F)
+    }  
+    
+}
+
 ## wrapper
 wrap_one_cmp <- function(icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2){
 
@@ -388,7 +417,7 @@ wrap_one_cmp <- function(icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2){
     ## run DGE ####
     lst <- run_da(
         y0, 
-        out.prefix = out.prefix, 
+        out.prefix = file.path(out.prefix, out.prefix),
         control.group = control.group, 
         test.group = test.group, 
         group = y0$samples$sample_group, 
@@ -401,18 +430,18 @@ wrap_one_cmp <- function(icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2){
     lst$plots <- list(
         PCA = plot_pca(
             y, 
-            out.prefix, 
+            file.path(out.prefix, out.prefix), 
             color = y$samples$sample_group, 
             sample.label = T, 
             plot.title = "", 
             var.genes = 500, 
             feature.length = "gene_length"),
         MD = plot_MD(
-            df, out.prefix = out.prefix, 
+            df, out.prefix = file.path(out.prefix, out.prefix),
             plot.title = plot.title
         ),
         volcano = plot_volcano(
-            df, out.prefix = out.prefix, 
+            df, out.prefix = file.path(out.prefix, out.prefix),
             plot.title = plot.title
         )
     )
@@ -423,6 +452,11 @@ wrap_one_cmp <- function(icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2){
 
 }
 
+## add default value if a column is missing
+add_colv <- function(df, colv, value){
+    if (!colv %in% colnames(df)){df[,colv] <- value}
+    return(df)
+}
 
 ## read arguments ####
 args <- as.vector(commandArgs(T)) 
@@ -466,7 +500,7 @@ if (grepl('ReadsPerGene.out.tab', count.files[1])){
 ## create DGElist ####
 y0 <- count2dgelist(
     counts = cts, 
-    out.dir = 'all_samples', 
+    out.dir = NULL, 
     feature.cols = 1:8, 
     samples = ss %>% 
         arrange(factor(id, levels = colnames(cts)[9:ncol(cts)])),
@@ -474,17 +508,16 @@ y0 <- count2dgelist(
 )
 
 ## plot PCA of all samples ####
-plot_pca(y0, out.prefix = 'all_samples/all_samples', var.genes = 500, color = y0$samples$group, sample.label = T, feature.length = "gene_length")
+plot_pca(y0, out.prefix = 'all_samples', var.genes = 500, color = y0$samples$group, sample.label = T, feature.length = "gene_length")
 
 ## detect differential expression ####
+cmp <- cmp %>% 
+    add_colv('out.prefix', paste(cmp$test, cmp$control, sep = '_vs_')) %>% 
+    add_colv('plot.title', paste(cmp$test, cmp$control, sep = ' vs '))
+
 de.list <- list()
 for (i in 1:nrow(cmp)){
     de.list[[i]] <- wrap_one_cmp(cmp[i,], ss, fdr, fc, fdr2, fc2)
 }
 names(de.list) <- basename(cmp$out.prefix)
 saveRDS(de.list, 'de.rds')
-
-saveRDS(
-    list(ss = ss, cmp = cmp),
-    'data.rds'
-)

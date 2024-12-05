@@ -14,12 +14,16 @@ process MERGE_BAM {
     tuple val(meta), path("input/*")
     
     output:
-    tuple val(meta), path("*.{bam,bai}"), emit: bam 
+    tuple val(meta), val(meta.id), path("*.bam"), emit: bam 
+    tuple val(meta), val(meta.id), path("*.bai"), emit: bai
+    path("*.{bam,bai}")
 
     script:
+    def suffix = task.ext.suffix ?: ""
+    def args = task.ext.args ?: ""
     """
-    samtools merge -@ ${task.cpus} -f ${meta.id}.bam input/*.bam
-    samtools index ${meta.id}.bam
+    samtools merge ${args} -@ ${task.cpus} -f ${meta.id}${suffix}.bam input/*.bam
+    samtools index ${meta.id}${suffix}.bam
 
     """
 }
