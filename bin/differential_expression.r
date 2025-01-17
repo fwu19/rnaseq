@@ -82,7 +82,7 @@ count2dgelist <- function(counts.tsv=NULL, return.counts = T, pattern2remove="^X
     y0 <- calcNormFactors(y0)
     
     if(is.null(out.dir)){
-        if (is.null(count.tsv)){
+        if (is.null(counts.tsv)){
             out.dir <- './'
         }else{
             out.dir <- dirname(counts.tsv)
@@ -92,7 +92,7 @@ count2dgelist <- function(counts.tsv=NULL, return.counts = T, pattern2remove="^X
     saveRDS(y0, 'y0.rds')
     
     if(return.counts){
-        write.table(cbind(y0$genes, y0$counts), paste(out.dir, 'all_samples.raw_counts.txt', sep = '/'), quote = F, row.names = F)
+        write.table(cbind(y0$genes, y0$counts), paste(out.dir, 'all_samples.raw_counts.txt', sep = '/'), sep = '\t', quote = F, row.names = F)
     }
     return(y0)
 }
@@ -379,6 +379,31 @@ recal_sig <- function(txt, col.sig, fdr, fc){
             FC.cutoff = fc
         )
     )
+}
+
+## compute normalized counts 
+normalize_counts <- function(y, out.prefix, return = c('rpkm','cpm'), gene.length = "gene_length", log = F){
+    require(edgeR)
+    
+    out.dir <- dirname(out.prefix)
+    if (!dir.exists(out.dir)){
+        dir.create(out.dir, recursive = T)
+    }
+    if(return[1] == 'cpm'){
+        cpm <- cpm(y, normalized.lib.sizes = T, log = log)
+        colnames(cpm) <- paste('CPM.TMMnormalized', colnames(cpm), sep = '.')
+        df <- cbind(y$genes, cpm)
+        out.suffix <- ifelse(log, 'log2CPM.txt', 'CPM.txt')
+        write.table(df,paste(out.prefix, out.suffix, sep = '.'), sep = '\t',quote = F,row.names = F)
+    }  
+    if(return[1] == 'rpkm'){
+        rpkm <- rpkm(y, gene.length = gene.length, normalized.lib.sizes = T, log = log)
+        colnames(rpkm) <- paste('FPKM.TMMnormalized', colnames(rpkm), sep = '.')
+        df <- cbind(y$genes, rpkm)
+        out.suffix <- ifelse(log, 'log2FPKM.txt', 'FPKM.txt')
+        write.table(df,paste(out.prefix, out.suffix, sep = '.'), sep = '\t',quote = F,row.names = F)
+    }  
+    
 }
 
 ## wrapper
