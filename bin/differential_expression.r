@@ -508,7 +508,8 @@ y0 <- count2dgelist(
 )
 
 ## plot PCA of all samples ####
-plot_pca(y0, out.prefix = 'all_samples', var.genes = 500, color = y0$samples$group, sample.label = T, feature.length = "gene_length")
+p <- plot_pca(y0, out.prefix = 'all_samples', var.genes = 500, color = y0$samples$group, sample.label = T, feature.length = "gene_length")
+saveRDS(p, 'pca.rds')
 
 ## detect differential expression ####
 cmp <- cmp %>% 

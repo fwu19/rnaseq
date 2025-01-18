@@ -19,7 +19,7 @@ process GENERATE_REPORT {
     script:
     """
     prepare_report.r $workflow
-    render_report.r _Analysis_report.Rmd
+    render_report.r *.Rmd
 
     """
 }
