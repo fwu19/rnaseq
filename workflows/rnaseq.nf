@@ -8,6 +8,7 @@ include { CUTADAPT  } from '../modules/cutadapt.nf'
 include { CAT_FASTQ  } from '../modules/cat_fastq.nf'
 include { STAR } from '../modules/star.nf'
 include { STAR  as  STAR_HOST } from '../modules/star.nf'
+include { BAM_TO_FASTQ } from '../modules/bam_to_fastq.nf'
 include { RNASEQC  } from '../modules/rnaseqc.nf'
 include { RSEQC  } from '../modules/rseqc.nf'
 include { HS_METRICS  } from '../modules/hs_metrics'
@@ -19,7 +20,7 @@ include { MULTIQC_PDX  } from '../modules/multiqc_pdx.nf'
 include { FEATURECOUNTS } from '../modules/featureCounts.nf'
 include { DIFFERENTIAL_EXPRESSION } from '../modules/differential_expression.nf'
 include { GENERATE_REPORT } from '../modules/generate_report.nf'
-include { OUTPUT_PARAMS  } from '../modules/output_params.nf'
+//include { OUTPUT_PARAMS  } from '../modules/output_params.nf'
 //include { TEST  } from './modules/test.nf'
 
 include { SINGLE_LIB } from '../subworkflows/single_lib.nf'
@@ -177,6 +178,12 @@ workflow RNASEQ {
         }
     }
 
+    if(params.workflow == 'pdx' & params.output_fastq){
+        BAM_TO_FASTQ(
+            ch_bam_xeno
+        )
+            
+    }
 
     /*
     * run featureCounts

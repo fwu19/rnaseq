@@ -3,6 +3,8 @@
 */
 
 include { SPLIT_FASTQ } from '../modules/split_fastq'
+include { BWA_MEM } from '../modules/bwa_mem.nf'
+include { BWA_MEM  as  BWA_MEM_HOST } from '../modules/bwa_mem.nf'
 include { STAR } from '../modules/star.nf'
 include { STAR  as  STAR_HOST } from '../modules/star.nf'
 include { XENOFILTER } from '../modules/xenofilter.nf'
@@ -26,33 +28,52 @@ workflow SPLIT_LIB {
         )
         .map{ it -> [ it[0][1][0], it[1][1], it[1][2], it[1][3] ]}
 
-    /*
-    * run STAR alignment 
-    * for pdx workflow, align to both graft and host genomes 
-    * for pdx workflow, run XenofilteR to remove reads with host origin
-    */
-    
     ch_bam = Channel.empty()
     ch_bam_host = Channel.empty()
     ch_bam_xeno = Channel.empty()
-    STAR(
+
+    if (params.aligner == 'star'){
+    
+        STAR(
         ch_reads, 
         params.genome, 
         params.star, 
         params.gtf
-    )
-    ch_bam = STAR.out.bam
-    // [ [meta], val(out_prefix), path(bam) ]
+        )
+        ch_bam = STAR.out.bam
+        // [ [meta], val(out_prefix), path(bam) ]
 
-    STAR_HOST(
+        STAR_HOST(
         ch_reads, 
         params.genome_host, 
         params.star_host, 
         params.gtf_host
-    )
-    ch_bam_host = STAR_HOST.out.bam
-    // [ [meta], val(out_prefix), path(bam) ]
+        )
+        ch_bam_host = STAR_HOST.out.bam
+        // [ [meta], val(out_prefix), path(bam) ]
+    }
+    else if (params.aligner == 'bwa-mem'){
+        BWA_MEM(
+        ch_reads, 
+        params.genome, 
+        params.bwa
+        )
+        ch_bam = BWA_MEM.out.bam
+        // [ [meta], val(out_prefix), path(bam) ]
 
+        BWA_MEM_HOST(
+        ch_reads, 
+        params.genome_host, 
+        params.bwa_host
+        )
+        ch_bam_host = BWA_MEM_HOST.out.bam
+        // [ [meta], val(out_prefix), path(bam) ]
+
+    }
+
+    /*
+    * Xenofilter
+    */
     ch_bam
         .map{ it -> [ [ it[0],it[1] ], it[2] ]}
         .join (
