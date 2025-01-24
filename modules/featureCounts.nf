@@ -10,17 +10,17 @@ process FEATURECOUNTS {
     publishDir "${params.outdir}/featureCounts/", pattern: "${meta.id}*.{txt,summary}", mode: 'copy'
 
     input:
-    tuple val(meta), path( bam )
+    tuple val(meta), val(out_prefix), path( bam )
     path (gtf)
     val (read_type)
     val (strand)
     
     output:
-    tuple val(meta), path("${meta.id}*.txt"), emit: counts
-    tuple val(meta), path("*")
+    tuple val(meta), path("${out_prefix}*.txt"), emit: counts
+    path("*.{txt,summary}")
 
     script:
     """
-    featureCounts.sh ${meta.id} $gtf *.bam ${read_type} ${strand} ${task.cpus}
+    featureCounts.sh ${out_prefix} ${gtf} ${bam} ${read_type} ${strand} ${task.cpus}
     """
 }

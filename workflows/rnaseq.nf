@@ -8,17 +8,22 @@ include { CUTADAPT  } from '../modules/cutadapt.nf'
 include { CAT_FASTQ  } from '../modules/cat_fastq.nf'
 include { STAR } from '../modules/star.nf'
 include { STAR  as  STAR_HOST } from '../modules/star.nf'
-include { XENOFILTER } from '../modules/xenofilter.nf'
 include { RNASEQC  } from '../modules/rnaseqc.nf'
 include { RSEQC  } from '../modules/rseqc.nf'
 include { HS_METRICS  } from '../modules/hs_metrics'
+include { SAMTOOLS_VIEW} from '../modules/samtools_view.nf'
+include { SAMTOOLS_VIEW as SAMTOOLS_VIEW_HOST } from '../modules/samtools_view.nf'
+include { SAMTOOLS_VIEW as SAMTOOLS_VIEW_XENO } from '../modules/samtools_view.nf'
 include { MULTIQC  } from '../modules/multiqc.nf'
+include { MULTIQC_PDX  } from '../modules/multiqc_pdx.nf'
 include { FEATURECOUNTS } from '../modules/featureCounts.nf'
 include { DIFFERENTIAL_EXPRESSION } from '../modules/differential_expression.nf'
 include { GENERATE_REPORT } from '../modules/generate_report.nf'
 include { OUTPUT_PARAMS  } from '../modules/output_params.nf'
 //include { TEST  } from './modules/test.nf'
 
+include { SINGLE_LIB } from '../subworkflows/single_lib.nf'
+include { SPLIT_LIB } from '../subworkflows/split_lib.nf'
 
 ch_dummy_csv = Channel.fromPath("$projectDir/assets/dummy_file.csv", checkIfExists: true)
 
@@ -117,43 +122,58 @@ workflow RNASEQ {
     ch_star_log = Channel.empty()
     if (params.run_alignment){
         STAR(
-            ch_reads, 
+            ch_reads
+                .map{ it -> [ it[0], it[0].id, it[1], it[2] ]}, 
             params.genome, 
             params.star, 
             params.gtf
         )
         ch_bam = STAR.out.bam
-        // [ [meta], path(bam) ]
+        // [ [meta], val(out_prefix), path(bam) ]
         ch_star_log = STAR.out.log
-        // [ [meta], path(log) ]
+        // [ [meta], val(out_prefix), path(log) ]
         ch_counts = STAR.out.counts
-        // [ [meta], path("ReadsPerGene.tab") ]
+        // [ [meta], val(out_prefix), path("ReadsPerGene.tab") ]
+    }
 
-        if (params.workflow == 'pdx'){
-            STAR_HOST(
-                ch_reads, 
-                params.genome_host, 
-                params.star_host, 
-                params.gtf_host
+    if (params.run_alignment & params.workflow == 'pdx'){
+        /*
+        * align to host genome
+        */
+        ch_bam_host = Channel.empty()
+        ch_star_host_log = Channel.empty()
+
+        STAR_HOST(
+            ch_reads
+                .map{ it -> [ it[0], it[0].id, it[1], it[2] ]}, 
+            params.genome_host, 
+            params.star_host, 
+            params.gtf_host
+        )
+        ch_bam_host = STAR_HOST.out.bam
+        // [ [meta], val(out_prefix), path(bam) ]
+        ch_star_host_log = STAR_HOST.out.log
+        // [ [meta], val(out_prefix), path(bam) ]
+
+        /*
+        * filter out reads of host origin
+        */
+        ch_bam_xeno = Channel.empty()
+        if (params.run_split_fastq){
+            SPLIT_LIB(
+                ch_reads
             )
-            ch_bam_host = STAR_HOST.out.bam
-            // [ [meta], path(bam) ]
-            ch_star_log_host = STAR_HOST.out.log
-            // [ [meta], path("*") ]
+            ch_bam_xeno = SPLIT_LIB.out.bam_xeno
+            // [ [meta], val(out_prefix), path/to/filtered.bam ]
 
-            ch_bam
-                .join (ch_bam_host)
-                .set {ch_bam_paired}
-            // ch_bam_paired.view()
-            // [ [meta], [path/to/graft.{bam,bai}], [path/to/host.{bam,bai}]]
-
-            XENOFILTER(
-                ch_bam_paired, 
-                params.genome, 
-                params.mm_threshold
+        }else{
+            SINGLE_LIB(
+                ch_bam,
+                ch_bam_host
             )
-            ch_bam = XENOFILTER.out.bam 
-            // [ [meta], path/to/filtered.bam ]
+            ch_bam_xeno = SINGLE_LIB.out.bam_xeno
+            // [ [meta], val(out_prefix), path/to/filtered.bam ]
+
         }
     }
 
@@ -256,6 +276,30 @@ workflow RNASEQ {
             // [ [meta], path("*") ]
         }
 
+        /*
+        * pdx
+        */
+        if (params.workflow == 'pdx'){
+            /*
+            * samtools
+            */
+            SAMTOOLS_VIEW(
+            ch_bam
+            )
+            ch_bam_stat = SAMTOOLS_VIEW.out.data
+
+            SAMTOOLS_VIEW_HOST(
+            ch_bam_host
+            )
+            ch_bam_host_stat = SAMTOOLS_VIEW_HOST.out.data
+
+            SAMTOOLS_VIEW_XENO(
+            ch_bam_xeno
+            )
+            ch_bam_xeno_stat = SAMTOOLS_VIEW_XENO.out.data
+        }
+
+
     }
 
 
@@ -264,15 +308,34 @@ workflow RNASEQ {
     */
     ch_multiqc = Channel.empty()
     if (params.run_multiqc){
-        MULTIQC(
+        if (params.workflow == 'pdx'){
+            MULTIQC_PDX(
+            ch_star_log.map{it[2]}.flatten().collect().ifEmpty([]), 
+            ch_star_host_log.map{it[2]}.flatten().collect().ifEmpty([]), 
+            ch_fastqc.map{it[1]}.flatten().collect().ifEmpty([]),  
+            ch_fastqc_trimmed.map{it[1]}.flatten().collect().ifEmpty([]),
+            ch_rseqc.map{it[1]}.flatten().collect().ifEmpty([]),  
+            ch_rnaseqc.map{it[1]}.flatten().collect().ifEmpty([]),
+            ch_hs_metrics.map{it[1]}.flatten().collect().ifEmpty([]),
+            ch_bam_stat.map{it[1]}.flatten().collect().ifEmpty([]),
+            ch_bam_host_stat.map{it[1]}.flatten().collect().ifEmpty([]),
+            ch_bam_xeno_stat.map{it[1]}.flatten().collect().ifEmpty([]),
+            ch_counts.map{it[1]}.collect().ifEmpty([]),
+            )
+            ch_multiqc = MULTIQC_PDX.out.data
+            //ch_multiqc.view()
+
+        }else{
+            MULTIQC(
             ch_star_log.map{it[1]}.flatten().collect().ifEmpty([]), 
             ch_fastqc.map{it[1]}.flatten().collect().ifEmpty([]),  
             ch_rseqc.map{it[1]}.flatten().collect().ifEmpty([]),  
             ch_rnaseqc.map{it[1]}.flatten().collect().ifEmpty([]),
             ch_hs_metrics.map{it[1]}.flatten().collect().ifEmpty([])
-        )
-        ch_multiqc = MULTIQC.out.data
-        //ch_multiqc.view()
+            )
+            ch_multiqc = MULTIQC.out.data
+            //ch_multiqc.view()
+        }
     }
 
     /*

@@ -6,7 +6,7 @@ nextflow.enable.dsl = 2
 * include workflows
 */
 include { RNASEQ } from './workflows/rnaseq'
-include { RNASEQ_PDX } from './workflows/rnaseq_pdx'
+//include { RNASEQ_PDX } from './workflows/rnaseq_pdx'
 
 /*
 * named workflows
@@ -19,7 +19,7 @@ workflow RUN_RNASEQ {
         RNASEQ()
     }
     else if (params.workflow == "pdx" ) {
-        RNASEQ_PDX()
+        RNASEQ()
     }
     else if (params.workflow == "exome" ) {
         RNASEQ()

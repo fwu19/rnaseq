@@ -289,7 +289,7 @@ workflow RNASEQ_PDX {
     */
     ch_multiqc = Channel.empty()
     if (params.run_multiqc){
-        MULTIQC(
+        MULTIQC_PDX(
             ch_star_log.map{it[2]}.flatten().collect().ifEmpty([]), 
             ch_star_host_log.map{it[2]}.flatten().collect().ifEmpty([]), 
             ch_fastqc.map{it[1]}.flatten().collect().ifEmpty([]),  
@@ -302,7 +302,7 @@ workflow RNASEQ_PDX {
             ch_bam_xeno_stat.map{it[1]}.flatten().collect().ifEmpty([]),
             ch_counts.map{it[1]}.collect().ifEmpty([]),
         )
-        ch_multiqc = MULTIQC.out.data
+        ch_multiqc = MULTIQC_PDX.out.data
         //ch_multiqc.view()
     }
 
