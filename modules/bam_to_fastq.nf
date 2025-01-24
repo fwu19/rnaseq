@@ -1,0 +1,26 @@
+
+process BAM_TO_FASTQ {
+    time = '1d'
+    cpus = 6
+    memory = '24G'
+    module = ['BEDTools/2.30.0-GCC-10.2.0', 'SAMtools/1.11-GCC-10.2.0']
+
+
+    tag "convert bam to fastq on ${out_prefix}"
+
+    publishDir "${params.outdir}/fastq/${out_prefix}", mode: 'copy'
+
+    input:
+    tuple val(meta), val(out_prefix), path(bam)
+
+    output:
+    path("*.fastq.gz")
+
+    script:
+    def args = task.ext.args ?: ""
+    """
+    samtools sort -n $bam | bedtools bamtofastq -i - -fq ${out_prefix}_R1.fastq -fq2 ${out_prefix}_R2.fastq
+    gzip ${out_prefix}_R1.fastq
+    gzip ${out_prefix}_R2.fastq
+    """
+}
