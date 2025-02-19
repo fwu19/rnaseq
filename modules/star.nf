@@ -18,7 +18,7 @@ process STAR {
     
     output:
     tuple val(meta), val(out_prefix), path( "output/${out_prefix}.bam" ), emit: bam 
-    tuple val(meta), val(out_prefix), path( "output/*.bai" ), emit: bai
+    tuple val(meta), val(out_prefix), path( "output/${out_prefix}.bam.bai" ), emit: bai
     tuple val(meta), val(out_prefix), path( "output/${out_prefix}.ReadsPerGene.out.tab" ), emit: counts
     tuple val(meta), val(out_prefix), path( "output/${out_prefix}.Log.final.out" ), emit: log
     path("${out_prefix}/", type: 'dir')

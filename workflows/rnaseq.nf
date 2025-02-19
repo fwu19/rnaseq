@@ -120,6 +120,7 @@ workflow RNASEQ {
     */
     ch_counts = Channel.empty()
     ch_bam = Channel.empty()
+    ch_bai = Channel.empty()
     ch_star_log = Channel.empty()
     if (params.run_alignment){
         STAR(
@@ -131,6 +132,8 @@ workflow RNASEQ {
         )
         ch_bam = STAR.out.bam
         // [ [meta], val(out_prefix), path(bam) ]
+        ch_bai = STAR.out.bai
+        // [ [meta], val(out_prefix), path(bai) ]
         ch_star_log = STAR.out.log
         // [ [meta], val(out_prefix), path(log) ]
         ch_counts = STAR.out.counts
@@ -248,6 +251,7 @@ workflow RNASEQ {
         if (params.run_rnaseqc){
             RNASEQC(
                 ch_bam,
+                ch_bai,
                 params.rnaseqc_gtf,
                 params.strand,
                 params.read_type
@@ -262,6 +266,7 @@ workflow RNASEQ {
         if (params.run_rseqc){
             RSEQC(
                 ch_bam,
+                ch_bai,
                 params.rseqc_bed,
                 params.tx_bed,
                 params.gene_bed
@@ -276,6 +281,7 @@ workflow RNASEQ {
         if (params.workflow == 'exome' && params.run_hs_metrics){
             HS_METRICS(
                 ch_bam,
+                ch_bai,
                 params.genome_fa,
                 params.target_region
             )
@@ -334,7 +340,7 @@ workflow RNASEQ {
 
         }else{
             MULTIQC(
-            ch_star_log.map{it[1]}.flatten().collect().ifEmpty([]), 
+            ch_star_log.map{it[2]}.flatten().collect().ifEmpty([]), 
             ch_fastqc.map{it[1]}.flatten().collect().ifEmpty([]),  
             ch_rseqc.map{it[1]}.flatten().collect().ifEmpty([]),  
             ch_rnaseqc.map{it[1]}.flatten().collect().ifEmpty([]),
