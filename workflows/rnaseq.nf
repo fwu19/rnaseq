@@ -9,6 +9,8 @@ include { CAT_FASTQ  } from '../modules/cat_fastq.nf'
 include { STAR } from '../modules/star.nf'
 include { STAR  as  STAR_HOST } from '../modules/star.nf'
 include { BAM_TO_FASTQ } from '../modules/bam_to_fastq.nf'
+include { SALMON  } from '../modules/salmon.nf'
+include { ARRIBA  } from '../modules/arriba.nf'
 include { RNASEQC  } from '../modules/rnaseqc.nf'
 include { RSEQC  } from '../modules/rseqc.nf'
 include { HS_METRICS  } from '../modules/hs_metrics'
@@ -46,7 +48,7 @@ workflow RNASEQ {
             }
         }else {
             GET_FASTQ_PATHS (
-                Channel.fromPath("${params.input_dir}/", type: 'dir', checkIfExists: true)
+                Channel.fromPath("${params.input_dir}", checkIfExists: true)
             )
             ch_input = GET_FASTQ_PATHS.out.csv
         }
@@ -134,10 +136,27 @@ workflow RNASEQ {
         // [ [meta], val(out_prefix), path(bam) ]
         ch_bai = STAR.out.bai
         // [ [meta], val(out_prefix), path(bai) ]
+        ch_tx_bam = STAR.out.tx_bam
+        // [ [meta], val(out_prefix), path(bam) ]
         ch_star_log = STAR.out.log
         // [ [meta], val(out_prefix), path(log) ]
         ch_counts = STAR.out.counts
         // [ [meta], val(out_prefix), path("ReadsPerGene.tab") ]
+    }
+
+    if (params.run_alignment & params.run_salmon){
+        SALMON(
+            ch_tx_bam,
+            Channel.fromPath( params.tx_fa, checkIfExists: true )
+        )
+        ch_salmon = SALMON.out.sf
+    }
+
+    if (params.run_alignment & params.run_arriba){
+        ARRIBA(
+            ch_bam
+        )
+        
     }
 
     if (params.run_alignment & params.workflow == 'pdx'){
