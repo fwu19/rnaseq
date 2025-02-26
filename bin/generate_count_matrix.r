@@ -413,12 +413,6 @@ wrap_one_cmp <- function(icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2){
     control.group <- icmp$control.group[[1]]
     test.group <- icmp$test.group[[1]]
     plot.title <- icmp$plot.title[1]
-    if (icmp$sample.group[1] %in% colnames(y0$samples)){
-        group <- y0$samples[,icmp$sample.group[1]]
-    }else{
-        group <- NULL
-    }
-    
     
     ## run DGE ####
     lst <- run_da(
@@ -426,7 +420,7 @@ wrap_one_cmp <- function(icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2){
         out.prefix = file.path(out.prefix, out.prefix),
         control.group = control.group, 
         test.group = test.group, 
-        group = group, 
+        group = y0$samples$sample_group, 
         feature.length = 'gene_length',
         fdr = fdr, fc = fc, fdr2 = fdr2, fc2 = fc2
     )
@@ -437,7 +431,7 @@ wrap_one_cmp <- function(icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2){
         PCA = plot_pca(
             y, 
             file.path(out.prefix, out.prefix), 
-            color = y$samples$group, 
+            color = y$samples$sample_group, 
             sample.label = T, 
             plot.title = "", 
             var.genes = 500, 

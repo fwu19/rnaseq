@@ -7,61 +7,23 @@ library(ggplot2)
 library(patchwork)
 
 ## functions ####
-generate_count_matrix_star <- function(gene.txt, length.col, ss, count.files, count.col){
-
+generate_count_matrix_salmon <- function(gene.txt, count.dirs, out.dir = './'){
+    require(edgeR)
+    
     ann <- read.delim(gene.txt) 
     
-    
-    cts <- cbind(
-        ann[1:7], 
-        data.frame(gene_length = ann[, length.col]),
-        do.call(cbind, lapply(
-            count.files, 
-            function(fname){
-                df <- read.delim(fname, header = F, comment.char = '#', skip = 4)
-                if(sum(!ann$gene_id %in% df[,1]) != 0){
-                    warning(paste("Some genes in", gene.txt, "don't have counts!"))
-                }
-                v <- df[,count.col][match(ann$gene_id, df[,1])]
-                v[is.na(v)] <- 0
-                v
-            }
-        ))
+    catch <- catchSalmon(paths = count.dirs)
+    scaled.counts <- catch$counts/catch$annotation$Overdispersion
+    colnames(scaled.counts) <- basename(colnames(scaled.counts))
+    cts <- cbind(data.frame(transcript_id = rownames(scaled.counts), catch$annotation) %>% 
+            left_join(ann, by = 'transcript_id'), 
+        scaled.counts
     )
-    colnames(cts)[9:ncol(cts)] <- gsub('.ReadsPerGene.*', '', basename(count.files))
-    if (!setequal(colnames(cts)[9:ncol(cts)], ss$id)){
-        warning(paste("Some samples don't have counts!"))
-    }
+    cts %>% 
+        write.table(file.path(out.dir, 'transcript.raw_counts.txt'), sep = '\t', quote = F, row.names = F)
     
     return(cts) 
     
-}
-
-generate_count_matrix_featurecounts <- function(gene.txt, length.col, ss, count.files){
-    
-    ann <- read.delim(gene.txt) 
-    
-    cts <- cbind(
-        ann[1:7], 
-        data.frame(gene_length = ann[, length.col]),
-        do.call(cbind, lapply(
-            count.files, 
-            function(fname){
-                df <- read.delim(fname, header = T, comment.char = '#')
-                if(sum(!ann$gene_id %in% df$Geneid) != 0){
-                    warning(paste("Some genes in", gene.txt, "don't have counts!"))
-                }
-                v <- df[,7][match(ann$gene_id, df$Geneid)]
-                v[is.na(v)] <- 0
-                v
-            }
-        ))
-    )
-    colnames(cts)[9:ncol(cts)] <- gsub('.exonic.*', '', basename(count.files))
-    if (!setequal(colnames(cts)[9:ncol(cts)], ss$id)){
-        warning(paste("Some samples don't have counts!"))
-    }
-    return(cts)
 }
 
 count2dgelist <- function(counts.tsv=NULL, return.counts = T, pattern2remove="^X|.bam$", counts=NULL, out.dir=NULL, feature.cols=1:8, samples = NULL, group.col = 'sample_group'){
@@ -413,12 +375,13 @@ wrap_one_cmp <- function(icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2){
     control.group <- icmp$control.group[[1]]
     test.group <- icmp$test.group[[1]]
     plot.title <- icmp$plot.title[1]
-    if (icmp$sample.group[1] %in% colnames(y0$samples)){
-        group <- y0$samples[,icmp$sample.group[1]]
-    }else{
+    if ('sample.group' %in% colnames(icmp)){
+        if (icmp$sample.group[1] %in% colnames(y0$samples)){
+            group <- y0$samples[,icmp$sample.group[1]]
+        }
+     }else{
         group <- NULL
     }
-    
     
     ## run DGE ####
     lst <- run_da(
@@ -427,7 +390,7 @@ wrap_one_cmp <- function(icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2){
         control.group = control.group, 
         test.group = test.group, 
         group = group, 
-        feature.length = 'gene_length',
+        feature.length = length.col,
         fdr = fdr, fc = fc, fdr2 = fdr2, fc2 = fc2
     )
     
@@ -441,7 +404,7 @@ wrap_one_cmp <- function(icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2){
             sample.label = T, 
             plot.title = "", 
             var.genes = 500, 
-            feature.length = "gene_length"),
+            feature.length = length.col),
         MD = plot_MD(
             df, out.prefix = file.path(out.prefix, out.prefix),
             plot.title = plot.title
@@ -486,35 +449,27 @@ if(grepl('dummy', comparison)){
     stop(paste(comparison, 'should be either csv or rds file!'))
 }
 
-count.col <- as.integer(strand) + 2 # for strand=0,1,2
 fdr <- as.numeric(fdr)
 fc <- as.numeric(fc)
 fdr2 <- as.numeric(fdr2)
 fc2 <- as.numeric(fc2)
 
 ## generate count matrix ####
-count.files <- list.files(count.dir, full.names = T)
-if (grepl('ReadsPerGene.out.tab', count.files[1])){
-    cts <- generate_count_matrix_star(gene.txt,length.col,ss,count.files,count.col)
-}else if (grepl('exonic.*.txt', count.files[1])){
-    cts <- generate_count_matrix_featurecounts(gene.txt,length.col,ss,count.files)
-}else {
-    stop (paste("Cannot parse files in", count.dir, "!"))
-}
-
+count.dirs <- list.dirs(count.dir, full.names = T, recursive = F)
+cts <- generate_count_matrix_salmon(gene.txt, count.dirs, out.dir = './')
 
 ## create DGElist ####
 y0 <- count2dgelist(
     counts = cts, 
     out.dir = NULL, 
-    feature.cols = 1:8, 
+    feature.cols = 1:11, 
     samples = ss %>% 
-        arrange(factor(id, levels = colnames(cts)[9:ncol(cts)])),
-    group = 'sample_group'
+        arrange(factor(id, levels = colnames(cts)[12:ncol(cts)])),
+    group.col = 'sample_group'
 )
 
 ## plot PCA of all samples ####
-p <- plot_pca(y0, out.prefix = 'all_samples', var.genes = 500, color = y0$samples$group, sample.label = T, feature.length = "gene_length")
+p <- plot_pca(y0, out.prefix = 'all_samples', var.genes = 500, color = y0$samples$group, sample.label = T, feature.length = length.col)
 saveRDS(p, 'pca.rds')
 
 ## detect differential expression ####
