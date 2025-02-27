@@ -226,10 +226,7 @@ workflow RNASEQ {
         DIFFERENTIAL_EXPRESSION(
             samplesheet, 
             Channel.fromPath(params.comparison, checkIfExists: true), 
-            ch_counts.map{it[1]}.collect().ifEmpty([]), 
-            params.gene_txt,
-            params.length_col,
-            params.strand,
+            ch_cts.ifEmpty([]), 
             params.fdr,
             params.fc,
             params.fdr2,
