@@ -41,11 +41,15 @@ get_fastqs <- function(fq_dirs){
 
 ## read arguments ####
 args <- as.vector(commandArgs(T))
-input_dirs <- args
 
-ss <- bind_rows(lapply(
-    input_dirs, get_fastqs
-))
+if(file_test('-f', args[1])){
+    input_dirs <- scan(args[1], what = 'character')
+}else if (file_test('-d', args[1])){
+    input_dirs <- args[1]
+}else{
+    stop("--input_dir takes either path/to/fastq/dir or a file containing paths/to/fastq/dir (one path in each row)")
+}
+ss <- get_fastqs(input_dirs)
 
 ss %>% 
     write.table('input.csv', sep = ',', quote = F, row.names = F)
