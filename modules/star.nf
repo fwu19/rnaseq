@@ -3,7 +3,7 @@ process STAR {
     time = '1d'
     cpus = 8
     memory = '48G'
-    module = ['STAR/2.7.7a-GCC-10.2.0', 'SAMtools/1.11-GCC-10.2.0']
+    module = ['STAR/2.7.11b-GCC-13.2.0', 'SAMtools/1.19.2-GCC-13.2.0']
 
 
     tag "STAR on ${out_prefix}"
