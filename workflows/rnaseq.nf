@@ -411,8 +411,8 @@ workflow RNASEQ {
             params.workflow,
             samplesheet,
             ch_multiqc.ifEmpty([]),
-            //ch_hs_metrics.collect{it[1]}.ifEmpty([]),
-            ch_dp.ifEmpty([]),
+            ch_cts.ifEmpty([]),
+            ch_de.ifEmpty([]),
             ch_report_rmd
         )
     }

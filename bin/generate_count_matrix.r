@@ -64,11 +64,7 @@ generate_count_matrix_featurecounts <- function(gene.txt, length.col, ss, count.
     return(cts)
 }
 
-<<<<<<< HEAD
-count2dgelist <- function(counts.tsv=NULL, return.counts = T, pattern2remove="^X|.bam$", counts=NULL, out.dir=NULL, feature.cols=1:8, samples = NULL, group.col = 'sample_group'){
-=======
 count2dgelist <- function(counts.tsv=NULL, pattern2remove="^X|.bam$", counts=NULL, feature.cols=1:8, samples = NULL, group.col = 'sample_group'){
->>>>>>> origin/main
     options(stringsAsFactors = F)
     require(edgeR)
     
@@ -85,24 +81,8 @@ count2dgelist <- function(counts.tsv=NULL, pattern2remove="^X|.bam$", counts=NUL
     }
     y0 <- calcNormFactors(y0)
     
-<<<<<<< HEAD
-    if(is.null(out.dir)){
-        if (is.null(counts.tsv)){
-            out.dir <- './'
-        }else{
-            out.dir <- dirname(counts.tsv)
-        }
-    }
-    if(!dir.exists(out.dir)){dir.create(out.dir, recursive = T)}
     saveRDS(y0, 'y0.rds')
     
-    if(return.counts){
-        write.table(cbind(y0$genes, y0$counts), paste(out.dir, 'all_samples.raw_counts.txt', sep = '/'), sep = '\t', quote = F, row.names = F)
-    }
-=======
-    saveRDS(y0, 'y0.rds')
-    
->>>>>>> origin/main
     return(y0)
 }
 
@@ -271,11 +251,7 @@ plot_pca <- function(y, out.prefix, var.genes = NULL, color = NULL, plot.title =
     }
     
     ## PC1 vs PC2
-<<<<<<< HEAD
-    df <- cbind(pca$x[,1:2],data.frame(label=rownames(pca$x)))
-=======
     df <- cbind(pca$x[,1:2],data.frame(label=factor(rownames(pca$x))))
->>>>>>> origin/main
     if(is.null(color)){
         df$color <- y$samples$group
     }else{
@@ -313,90 +289,6 @@ plot_pca <- function(y, out.prefix, var.genes = NULL, color = NULL, plot.title =
     
 }
 
-<<<<<<< HEAD
-## Plot MD
-plot_MD <- function(df, out.prefix, plot.title = ""){
-    require(ggplot2)
-    
-    ## Create outdir if needed
-    out.dir <- dirname(out.prefix)
-    if(!dir.exists(out.dir)){dir.create(out.dir,recursive = T)}
-    
-    p <- ggplot(df, aes(x = logCPM, y = logFC, color=factor(is.sig)))+
-        geom_hline(yintercept = 0)+
-        geom_point(size = 0.2)+
-        scale_color_manual(
-            '',
-            values = c("-1" = "blue", "0" = "gray", "1" = "red"),
-            breaks = c(-1,0,1), labels = c('Down', 'No Sig.', 'Up')
-        )+
-        labs( 
-            x = "Average log CPM", 
-            y = "log-fold-of-change",
-            title = plot.title
-        )+
-        theme_bw()+
-        theme(
-            text = element_text(size = 8),
-            legend.position = 'top'
-        )
-    
-    ggsave(paste(out.prefix,'MD.pdf',sep = '.'),width = 4,height = 5)
-    return(p)
-} 
-
-## Plot volcano 
-plot_volcano <- function(df, out.prefix, plot.title = ""){
-    require(ggplot2)
-    
-    ## Create outdir if needed
-    out.dir <- dirname(out.prefix)
-    if(!dir.exists(out.dir)){dir.create(out.dir,recursive = T)}
-    
-    p <- ggplot(df,aes(x=logFC,y=-log10(FDR),color=factor(is.sig)))+
-        geom_point(size = 0.2)+ 
-        scale_color_manual(
-            values = c('-1'='blue','0'='gray','1'='red'),
-            breaks = c('-1','0','1'),
-            labels = c('Down','No Sig.','Up'),
-            drop = T
-        )+
-        labs(
-            x='log2(fold change)',
-            y='-log10(FDR)',
-            color='',
-            title = plot.title
-        )+
-        theme_bw()+
-        theme(
-            text = element_text(size = 8),
-            legend.position = 'top'
-        )
-    
-    ggsave(paste(out.prefix,'Volcano.pdf',sep = '.'),width = 4,height = 5)
-    return(p)
-}
-
-## recompute is.sig2
-recal_sig <- function(txt, col.sig, fdr, fc){
-    de <- read.delim(txt)
-    de[,col.sig] <- sign(de$logFC) * (abs(de$logFC) > log2(fc)) * (de$FDR < fdr)
-    write.table(de, txt, sep = '\t', quote = F, row.names = F)
-    return(
-        data.frame(
-            source.file = basename(txt),
-            modify.col = col.sig,
-            features.test = nrow(de),
-            features.up = sum(de[,col.sig] %in% 1),
-            features.down = sum(de[,col.sig] %in% -1),
-            FDR.cutoff = fdr,
-            FC.cutoff = fc
-        )
-    )
-}
-
-=======
->>>>>>> origin/main
 ## compute normalized counts 
 normalize_counts <- function(y, out.prefix, return = c('rpkm','cpm'), gene.length = "gene_length", log = F){
     require(edgeR)
@@ -422,54 +314,6 @@ normalize_counts <- function(y, out.prefix, return = c('rpkm','cpm'), gene.lengt
     
 }
 
-<<<<<<< HEAD
-## wrapper
-wrap_one_cmp <- function(icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2){
-
-    out.prefix <- icmp$out.prefix[1]
-    control.group <- icmp$control.group[[1]]
-    test.group <- icmp$test.group[[1]]
-    plot.title <- icmp$plot.title[1]
-    
-    ## run DGE ####
-    lst <- run_da(
-        y0, 
-        out.prefix = file.path(out.prefix, out.prefix),
-        control.group = control.group, 
-        test.group = test.group, 
-        group = y0$samples$sample_group, 
-        feature.length = 'gene_length',
-        fdr = fdr, fc = fc, fdr2 = fdr2, fc2 = fc2
-    )
-    
-    y <- lst$y
-    df <- lst$df
-    lst$plots <- list(
-        PCA = plot_pca(
-            y, 
-            file.path(out.prefix, out.prefix), 
-            color = y$samples$sample_group, 
-            sample.label = T, 
-            plot.title = "", 
-            var.genes = 500, 
-            feature.length = "gene_length"),
-        MD = plot_MD(
-            df, out.prefix = file.path(out.prefix, out.prefix),
-            plot.title = plot.title
-        ),
-        volcano = plot_volcano(
-            df, out.prefix = file.path(out.prefix, out.prefix),
-            plot.title = plot.title
-        )
-    )
-    
-    ##
-    return(lst)
-
-
-}
-=======
->>>>>>> origin/main
 
 ## add default value if a column is missing
 add_colv <- function(df, colv, value){
@@ -482,30 +326,6 @@ args <- as.vector(commandArgs(T))
 lst <- strsplit(args, split = '=')
 for (x in lst){
     assign(x[1],x[2])
-<<<<<<< HEAD
-} # read arguments: ss, comparison, count.dir, gene.txt, length.col, strand, fdr, fc, fdr2, fc2
-
-ss <- read.csv(input) %>% 
-    relocate(fastq_1, fastq_2, .after = last_col()) %>% 
-    unique.data.frame() # sample sheet
-
-if(grepl('dummy', comparison)){
-    cat(comparison, "is a dummy file! Provide --comparison path/to/comparison_file (a comparison table in csv, txt, tsv or rds format)!")
-    quit()
-}else if(grepl('.csv$', comparison)){
-    cmp <- read.csv(comparison)
-}else if (grepl('.rds$', comparison)){
-    cmp <- readRDS(comparison)
-}else {
-    stop(paste(comparison, 'should be either csv or rds file!'))
-}
-
-count.col <- as.integer(strand) + 2 # for strand=0,1,2
-fdr <- as.numeric(fdr)
-fc <- as.numeric(fc)
-fdr2 <- as.numeric(fdr2)
-fc2 <- as.numeric(fc2)
-=======
 } # read arguments: ss, count.dir, gene.txt, length.col
 
 ss <- read.csv(input) %>% 
@@ -515,7 +335,6 @@ ss <- read.csv(input) %>%
 
 count.col <- as.integer(strand) + 2 # for strand=0,1,2
 
->>>>>>> origin/main
 
 ## generate count matrix ####
 count.files <- list.files(count.dir, full.names = T)
@@ -531,33 +350,12 @@ if (grepl('ReadsPerGene.out.tab', count.files[1])){
 ## create DGElist ####
 y0 <- count2dgelist(
     counts = cts, 
-<<<<<<< HEAD
-    out.dir = NULL, 
-=======
->>>>>>> origin/main
     feature.cols = 1:8, 
     samples = ss %>% 
         arrange(factor(id, levels = colnames(cts)[9:ncol(cts)])),
     group = 'sample_group'
 )
 
-<<<<<<< HEAD
-## plot PCA of all samples ####
-p <- plot_pca(y0, out.prefix = 'all_samples', var.genes = 500, color = y0$samples$group, sample.label = T, feature.length = "gene_length")
-saveRDS(p, 'pca.rds')
-
-## detect differential expression ####
-cmp <- cmp %>% 
-    add_colv('out.prefix', paste(cmp$test, cmp$control, sep = '_vs_')) %>% 
-    add_colv('plot.title', paste(cmp$test, cmp$control, sep = ' vs '))
-
-de.list <- list()
-for (i in 1:nrow(cmp)){
-    de.list[[i]] <- wrap_one_cmp(cmp[i,], ss, fdr, fc, fdr2, fc2)
-}
-names(de.list) <- basename(cmp$out.prefix)
-saveRDS(de.list, 'de.rds')
-=======
 ## write out raw counts ####
 if(workflow %in% 'exome' & !length.col %in% 'full_exome'){
     ann <- read.delim(gene.txt) %>% 
@@ -577,4 +375,3 @@ p <- plot_pca(y0, out.prefix = 'all_samples', var.genes = 500, color = factor(y0
 saveRDS(p, 'pca.rds')
 
 
->>>>>>> origin/main
