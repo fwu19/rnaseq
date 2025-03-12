@@ -9,6 +9,8 @@ include { CAT_FASTQ  } from '../modules/cat_fastq.nf'
 include { STAR } from '../modules/star.nf'
 include { STAR  as  STAR_HOST } from '../modules/star.nf'
 include { BAM_TO_FASTQ } from '../modules/bam_to_fastq.nf'
+include { SALMON  } from '../modules/salmon.nf'
+include { ARRIBA  } from '../modules/arriba.nf'
 include { RNASEQC  } from '../modules/rnaseqc.nf'
 include { RSEQC  } from '../modules/rseqc.nf'
 include { HS_METRICS  } from '../modules/hs_metrics'
@@ -19,6 +21,7 @@ include { MULTIQC  } from '../modules/multiqc.nf'
 include { MULTIQC_PDX  } from '../modules/multiqc_pdx.nf'
 include { FEATURECOUNTS } from '../modules/featureCounts.nf'
 include { DIFFERENTIAL_EXPRESSION } from '../modules/differential_expression.nf'
+include { DIFFERENTIAL_TRANSCRIPTS } from '../modules/differential_transcripts.nf'
 include { GENERATE_COUNT_MATRIX } from '../modules/generate_count_matrix.nf'
 include { GENERATE_REPORT } from '../modules/generate_report.nf'
 //include { OUTPUT_PARAMS  } from '../modules/output_params.nf'
@@ -47,7 +50,7 @@ workflow RNASEQ {
             }
         }else {
             GET_FASTQ_PATHS (
-                Channel.fromPath("${params.input_dir}/", type: 'dir', checkIfExists: true)
+                Channel.fromPath("${params.input_dir}", checkIfExists: true)
             )
             ch_input = GET_FASTQ_PATHS.out.csv
         }
@@ -135,10 +138,28 @@ workflow RNASEQ {
         // [ [meta], val(out_prefix), path(bam) ]
         ch_bai = STAR.out.bai
         // [ [meta], val(out_prefix), path(bai) ]
+        ch_tx_bam = STAR.out.tx_bam
+        // [ [meta], val(out_prefix), path(bam) ]
         ch_star_log = STAR.out.log
         // [ [meta], val(out_prefix), path(log) ]
         ch_counts = STAR.out.counts
         // [ [meta], val(out_prefix), path("ReadsPerGene.tab") ]
+    }
+
+    if (params.run_alignment & params.run_salmon){
+        SALMON(
+            ch_tx_bam,
+            params.tx_fa
+        )
+        ch_salmon = SALMON.out.sf
+        // [ [meta], val(out_prefix), path("${out_prefix}/") ]
+    }
+
+    if (params.run_alignment & params.run_arriba){
+        ARRIBA(
+            ch_bam
+        )
+        
     }
 
     if (params.run_alignment & params.workflow == 'pdx'){
@@ -221,7 +242,7 @@ workflow RNASEQ {
     /*
     * differential expression
     */
-    ch_dp = Channel.empty()
+    ch_de = Channel.empty()
     if (params.run_de){
         DIFFERENTIAL_EXPRESSION(
             samplesheet, 
@@ -232,7 +253,24 @@ workflow RNASEQ {
             params.fdr2,
             params.fc2
         )
-        ch_dp = DIFFERENTIAL_EXPRESSION.out.rds
+        ch_de = DIFFERENTIAL_EXPRESSION.out.rds
+    }
+
+    ch_dt = Channel.empty()
+    if (params.run_dt & params.run_salmon){
+        DIFFERENTIAL_TRANSCRIPTS(
+            samplesheet, 
+            Channel.fromPath(params.comparison, checkIfExists: true), 
+            ch_salmon.map{it[2]}.collect().ifEmpty([]), 
+            params.tx_txt,
+            "EffectiveLength",
+            params.strand,
+            params.fdr,
+            params.fc,
+            params.fdr2,
+            params.fc2
+        )
+        ch_dt = DIFFERENTIAL_TRANSCRIPTS.out.rds
     }
 
     /*
@@ -374,7 +412,7 @@ workflow RNASEQ {
             samplesheet,
             ch_multiqc.ifEmpty([]),
             ch_cts.ifEmpty([]),
-            ch_dp.ifEmpty([]),
+            ch_de.ifEmpty([]),
             ch_report_rmd
         )
     }

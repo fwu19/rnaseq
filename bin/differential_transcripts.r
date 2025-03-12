@@ -7,6 +7,57 @@ library(ggplot2)
 library(patchwork)
 
 ## functions ####
+generate_count_matrix_salmon <- function(gene.txt, count.dirs, out.dir = './'){
+    require(edgeR)
+    
+    ann <- read.delim(gene.txt) 
+    
+    catch <- catchSalmon(paths = count.dirs)
+    scaled.counts <- catch$counts/catch$annotation$Overdispersion
+    colnames(scaled.counts) <- basename(colnames(scaled.counts))
+    cts <- cbind(data.frame(transcript_id = rownames(scaled.counts), catch$annotation) %>% 
+            left_join(ann, by = 'transcript_id'), 
+        scaled.counts
+    )
+    cts %>% 
+        write.table(file.path(out.dir, 'transcript.raw_counts.txt'), sep = '\t', quote = F, row.names = F)
+    
+    return(cts) 
+    
+}
+
+count2dgelist <- function(counts.tsv=NULL, return.counts = T, pattern2remove="^X|.bam$", counts=NULL, out.dir=NULL, feature.cols=1:8, samples = NULL, group.col = 'sample_group'){
+    options(stringsAsFactors = F)
+    require(edgeR)
+    
+    if(is.null(counts)){
+        counts <- read.delim(counts.tsv)
+    }
+    if(!is.null(pattern2remove)){
+        colnames(counts) <- gsub(pattern2remove, '', colnames(counts))
+    }
+    
+    y0 <- DGEList(counts=counts[-(feature.cols)], genes=counts[feature.cols], remove.zeros = T, samples = samples) 
+    if(!is.null(samples) & group.col %in% colnames(samples)){
+        y0$samples$group <- samples[,group.col]
+    }
+    y0 <- calcNormFactors(y0)
+    
+    if(is.null(out.dir)){
+        if (is.null(counts.tsv)){
+            out.dir <- './'
+        }else{
+            out.dir <- dirname(counts.tsv)
+        }
+    }
+    if(!dir.exists(out.dir)){dir.create(out.dir, recursive = T)}
+    saveRDS(y0, 'y0.rds')
+    
+    if(return.counts){
+        write.table(cbind(y0$genes, y0$counts), paste(out.dir, 'all_samples.raw_counts.txt', sep = '/'), sep = '\t', quote = F, row.names = F)
+    }
+    return(y0)
+}
 
 ## for all
 run_da <- function(
@@ -324,12 +375,13 @@ wrap_one_cmp <- function(icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2){
     control.group <- icmp$control.group[[1]]
     test.group <- icmp$test.group[[1]]
     plot.title <- icmp$plot.title[1]
-    if (icmp$sample.group[1] %in% colnames(y0$samples)){
-        group <- y0$samples[,icmp$sample.group[1]]
-    }else{
+    if ('sample.group' %in% colnames(icmp)){
+        if (icmp$sample.group[1] %in% colnames(y0$samples)){
+            group <- y0$samples[,icmp$sample.group[1]]
+        }
+     }else{
         group <- NULL
     }
-    
     
     ## run DGE ####
     lst <- run_da(
@@ -338,7 +390,7 @@ wrap_one_cmp <- function(icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2){
         control.group = control.group, 
         test.group = test.group, 
         group = group, 
-        feature.length = 'gene_length',
+        feature.length = length.col,
         fdr = fdr, fc = fc, fdr2 = fdr2, fc2 = fc2
     )
     
@@ -352,7 +404,7 @@ wrap_one_cmp <- function(icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2){
             sample.label = T, 
             plot.title = "", 
             var.genes = 500, 
-            feature.length = "gene_length"),
+            feature.length = length.col),
         MD = plot_MD(
             df, out.prefix = file.path(out.prefix, out.prefix),
             plot.title = plot.title
@@ -380,7 +432,7 @@ args <- as.vector(commandArgs(T))
 lst <- strsplit(args, split = '=')
 for (x in lst){
     assign(x[1],x[2])
-} # read arguments: ss, comparison, rds, fdr, fc, fdr2, fc2
+} # read arguments: ss, comparison, count.dir, gene.txt, length.col, strand, fdr, fc, fdr2, fc2
 
 ss <- read.csv(input) %>% 
     relocate(fastq_1, fastq_2, .after = last_col()) %>% 
@@ -397,13 +449,28 @@ if(grepl('dummy', comparison)){
     stop(paste(comparison, 'should be either csv or rds file!'))
 }
 
-y0 <- readRDS(rds)
 fdr <- as.numeric(fdr)
 fc <- as.numeric(fc)
 fdr2 <- as.numeric(fdr2)
 fc2 <- as.numeric(fc2)
 
+## generate count matrix ####
+count.dirs <- list.dirs(count.dir, full.names = T, recursive = F)
+cts <- generate_count_matrix_salmon(gene.txt, count.dirs, out.dir = './')
 
+## create DGElist ####
+y0 <- count2dgelist(
+    counts = cts, 
+    out.dir = NULL, 
+    feature.cols = 1:11, 
+    samples = ss %>% 
+        arrange(factor(id, levels = colnames(cts)[12:ncol(cts)])),
+    group.col = 'sample_group'
+)
+
+## plot PCA of all samples ####
+p <- plot_pca(y0, out.prefix = 'all_samples', var.genes = 500, color = y0$samples$group, sample.label = T, feature.length = length.col)
+saveRDS(p, 'pca.rds')
 
 ## detect differential expression ####
 cmp <- cmp %>% 
