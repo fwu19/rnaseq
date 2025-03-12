@@ -7,95 +7,6 @@ library(ggplot2)
 library(patchwork)
 
 ## functions ####
-generate_count_matrix_star <- function(gene.txt, length.col, ss, count.files, count.col){
-
-    ann <- read.delim(gene.txt) 
-    
-    
-    cts <- cbind(
-        ann[1:7], 
-        data.frame(gene_length = ann[, length.col]),
-        do.call(cbind, lapply(
-            count.files, 
-            function(fname){
-                df <- read.delim(fname, header = F, comment.char = '#', skip = 4)
-                if(sum(!ann$gene_id %in% df[,1]) != 0){
-                    warning(paste("Some genes in", gene.txt, "don't have counts!"))
-                }
-                v <- df[,count.col][match(ann$gene_id, df[,1])]
-                v[is.na(v)] <- 0
-                v
-            }
-        ))
-    )
-    colnames(cts)[9:ncol(cts)] <- gsub('.ReadsPerGene.*', '', basename(count.files))
-    if (!setequal(colnames(cts)[9:ncol(cts)], ss$id)){
-        warning(paste("Some samples don't have counts!"))
-    }
-    
-    return(cts) 
-    
-}
-
-generate_count_matrix_featurecounts <- function(gene.txt, length.col, ss, count.files){
-    
-    ann <- read.delim(gene.txt) 
-    
-    cts <- cbind(
-        ann[1:7], 
-        data.frame(gene_length = ann[, length.col]),
-        do.call(cbind, lapply(
-            count.files, 
-            function(fname){
-                df <- read.delim(fname, header = T, comment.char = '#')
-                if(sum(!ann$gene_id %in% df$Geneid) != 0){
-                    warning(paste("Some genes in", gene.txt, "don't have counts!"))
-                }
-                v <- df[,7][match(ann$gene_id, df$Geneid)]
-                v[is.na(v)] <- 0
-                v
-            }
-        ))
-    )
-    colnames(cts)[9:ncol(cts)] <- gsub('.exonic.*', '', basename(count.files))
-    if (!setequal(colnames(cts)[9:ncol(cts)], ss$id)){
-        warning(paste("Some samples don't have counts!"))
-    }
-    return(cts)
-}
-
-count2dgelist <- function(counts.tsv=NULL, return.counts = T, pattern2remove="^X|.bam$", counts=NULL, out.dir=NULL, feature.cols=1:8, samples = NULL, group.col = 'sample_group'){
-    options(stringsAsFactors = F)
-    require(edgeR)
-    
-    if(is.null(counts)){
-        counts <- read.delim(counts.tsv)
-    }
-    if(!is.null(pattern2remove)){
-        colnames(counts) <- gsub(pattern2remove, '', colnames(counts))
-    }
-    
-    y0 <- DGEList(counts=counts[-(feature.cols)], genes=counts[feature.cols], remove.zeros = T, samples = samples) 
-    if(!is.null(samples) & group.col %in% colnames(samples)){
-        y0$samples$group <- samples[,group.col]
-    }
-    y0 <- calcNormFactors(y0)
-    
-    if(is.null(out.dir)){
-        if (is.null(counts.tsv)){
-            out.dir <- './'
-        }else{
-            out.dir <- dirname(counts.tsv)
-        }
-    }
-    if(!dir.exists(out.dir)){dir.create(out.dir, recursive = T)}
-    saveRDS(y0, 'y0.rds')
-    
-    if(return.counts){
-        write.table(cbind(y0$genes, y0$counts), paste(out.dir, 'all_samples.raw_counts.txt', sep = '/'), sep = '\t', quote = F, row.names = F)
-    }
-    return(y0)
-}
 
 ## for all
 run_da <- function(
@@ -469,7 +380,7 @@ args <- as.vector(commandArgs(T))
 lst <- strsplit(args, split = '=')
 for (x in lst){
     assign(x[1],x[2])
-} # read arguments: ss, comparison, count.dir, gene.txt, length.col, strand, fdr, fc, fdr2, fc2
+} # read arguments: ss, comparison, rds, fdr, fc, fdr2, fc2
 
 ss <- read.csv(input) %>% 
     relocate(fastq_1, fastq_2, .after = last_col()) %>% 
@@ -486,36 +397,13 @@ if(grepl('dummy', comparison)){
     stop(paste(comparison, 'should be either csv or rds file!'))
 }
 
-count.col <- as.integer(strand) + 2 # for strand=0,1,2
+y0 <- readRDS(rds)
 fdr <- as.numeric(fdr)
 fc <- as.numeric(fc)
 fdr2 <- as.numeric(fdr2)
 fc2 <- as.numeric(fc2)
 
-## generate count matrix ####
-count.files <- list.files(count.dir, full.names = T)
-if (grepl('ReadsPerGene.out.tab', count.files[1])){
-    cts <- generate_count_matrix_star(gene.txt,length.col,ss,count.files,count.col)
-}else if (grepl('exonic.*.txt', count.files[1])){
-    cts <- generate_count_matrix_featurecounts(gene.txt,length.col,ss,count.files)
-}else {
-    stop (paste("Cannot parse files in", count.dir, "!"))
-}
 
-
-## create DGElist ####
-y0 <- count2dgelist(
-    counts = cts, 
-    out.dir = NULL, 
-    feature.cols = 1:8, 
-    samples = ss %>% 
-        arrange(factor(id, levels = colnames(cts)[9:ncol(cts)])),
-    group = 'sample_group'
-)
-
-## plot PCA of all samples ####
-p <- plot_pca(y0, out.prefix = 'all_samples', var.genes = 500, color = y0$samples$group, sample.label = T, feature.length = "gene_length")
-saveRDS(p, 'pca.rds')
 
 ## detect differential expression ####
 cmp <- cmp %>% 

@@ -22,6 +22,7 @@ include { MULTIQC_PDX  } from '../modules/multiqc_pdx.nf'
 include { FEATURECOUNTS } from '../modules/featureCounts.nf'
 include { DIFFERENTIAL_EXPRESSION } from '../modules/differential_expression.nf'
 include { DIFFERENTIAL_TRANSCRIPTS } from '../modules/differential_transcripts.nf'
+include { GENERATE_COUNT_MATRIX } from '../modules/generate_count_matrix.nf'
 include { GENERATE_REPORT } from '../modules/generate_report.nf'
 //include { OUTPUT_PARAMS  } from '../modules/output_params.nf'
 //include { TEST  } from './modules/test.nf'
@@ -220,8 +221,23 @@ workflow RNASEQ {
             params.strand
         )
         ch_counts = FEATURECOUNTS.out.counts
-        // [ [meta], path("count.txt") ]
+        // [ [meta], val(out_prefix), path("count.txt") ]
+
     }
+
+    /*
+    *   collect gene-level count matrix and run PCA
+    */
+    ch_cts = Channel.empty()
+    GENERATE_COUNT_MATRIX(
+            samplesheet, 
+            ch_counts.map{it[2]}.collect().ifEmpty([]), 
+            params.gene_txt,
+            params.length_col,
+            params.strand,
+            params.workflow
+        )
+    ch_cts = GENERATE_COUNT_MATRIX.out.rds
 
     /*
     * differential expression
@@ -231,10 +247,7 @@ workflow RNASEQ {
         DIFFERENTIAL_EXPRESSION(
             samplesheet, 
             Channel.fromPath(params.comparison, checkIfExists: true), 
-            ch_counts.map{it[1]}.collect().ifEmpty([]), 
-            params.gene_txt,
-            params.length_col,
-            params.strand,
+            ch_cts.ifEmpty([]), 
             params.fdr,
             params.fc,
             params.fdr2,
@@ -399,7 +412,7 @@ workflow RNASEQ {
             samplesheet,
             ch_multiqc.ifEmpty([]),
             //ch_hs_metrics.collect{it[1]}.ifEmpty([]),
-            ch_de.ifEmpty([]),
+            ch_dp.ifEmpty([]),
             ch_report_rmd
         )
     }

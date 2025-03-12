@@ -64,7 +64,11 @@ generate_count_matrix_featurecounts <- function(gene.txt, length.col, ss, count.
     return(cts)
 }
 
+<<<<<<< HEAD
 count2dgelist <- function(counts.tsv=NULL, return.counts = T, pattern2remove="^X|.bam$", counts=NULL, out.dir=NULL, feature.cols=1:8, samples = NULL, group.col = 'sample_group'){
+=======
+count2dgelist <- function(counts.tsv=NULL, pattern2remove="^X|.bam$", counts=NULL, feature.cols=1:8, samples = NULL, group.col = 'sample_group'){
+>>>>>>> origin/main
     options(stringsAsFactors = F)
     require(edgeR)
     
@@ -81,6 +85,7 @@ count2dgelist <- function(counts.tsv=NULL, return.counts = T, pattern2remove="^X
     }
     y0 <- calcNormFactors(y0)
     
+<<<<<<< HEAD
     if(is.null(out.dir)){
         if (is.null(counts.tsv)){
             out.dir <- './'
@@ -94,6 +99,10 @@ count2dgelist <- function(counts.tsv=NULL, return.counts = T, pattern2remove="^X
     if(return.counts){
         write.table(cbind(y0$genes, y0$counts), paste(out.dir, 'all_samples.raw_counts.txt', sep = '/'), sep = '\t', quote = F, row.names = F)
     }
+=======
+    saveRDS(y0, 'y0.rds')
+    
+>>>>>>> origin/main
     return(y0)
 }
 
@@ -262,7 +271,11 @@ plot_pca <- function(y, out.prefix, var.genes = NULL, color = NULL, plot.title =
     }
     
     ## PC1 vs PC2
+<<<<<<< HEAD
     df <- cbind(pca$x[,1:2],data.frame(label=rownames(pca$x)))
+=======
+    df <- cbind(pca$x[,1:2],data.frame(label=factor(rownames(pca$x))))
+>>>>>>> origin/main
     if(is.null(color)){
         df$color <- y$samples$group
     }else{
@@ -300,6 +313,7 @@ plot_pca <- function(y, out.prefix, var.genes = NULL, color = NULL, plot.title =
     
 }
 
+<<<<<<< HEAD
 ## Plot MD
 plot_MD <- function(df, out.prefix, plot.title = ""){
     require(ggplot2)
@@ -381,6 +395,8 @@ recal_sig <- function(txt, col.sig, fdr, fc){
     )
 }
 
+=======
+>>>>>>> origin/main
 ## compute normalized counts 
 normalize_counts <- function(y, out.prefix, return = c('rpkm','cpm'), gene.length = "gene_length", log = F){
     require(edgeR)
@@ -406,6 +422,7 @@ normalize_counts <- function(y, out.prefix, return = c('rpkm','cpm'), gene.lengt
     
 }
 
+<<<<<<< HEAD
 ## wrapper
 wrap_one_cmp <- function(icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2){
 
@@ -451,6 +468,8 @@ wrap_one_cmp <- function(icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2){
 
 
 }
+=======
+>>>>>>> origin/main
 
 ## add default value if a column is missing
 add_colv <- function(df, colv, value){
@@ -463,6 +482,7 @@ args <- as.vector(commandArgs(T))
 lst <- strsplit(args, split = '=')
 for (x in lst){
     assign(x[1],x[2])
+<<<<<<< HEAD
 } # read arguments: ss, comparison, count.dir, gene.txt, length.col, strand, fdr, fc, fdr2, fc2
 
 ss <- read.csv(input) %>% 
@@ -485,6 +505,17 @@ fdr <- as.numeric(fdr)
 fc <- as.numeric(fc)
 fdr2 <- as.numeric(fdr2)
 fc2 <- as.numeric(fc2)
+=======
+} # read arguments: ss, count.dir, gene.txt, length.col
+
+ss <- read.csv(input) %>% 
+    mutate(id = factor(id)) %>% 
+    relocate(fastq_1, fastq_2, .after = last_col()) %>% 
+    unique.data.frame() # sample sheet
+
+count.col <- as.integer(strand) + 2 # for strand=0,1,2
+
+>>>>>>> origin/main
 
 ## generate count matrix ####
 count.files <- list.files(count.dir, full.names = T)
@@ -500,13 +531,17 @@ if (grepl('ReadsPerGene.out.tab', count.files[1])){
 ## create DGElist ####
 y0 <- count2dgelist(
     counts = cts, 
+<<<<<<< HEAD
     out.dir = NULL, 
+=======
+>>>>>>> origin/main
     feature.cols = 1:8, 
     samples = ss %>% 
         arrange(factor(id, levels = colnames(cts)[9:ncol(cts)])),
     group = 'sample_group'
 )
 
+<<<<<<< HEAD
 ## plot PCA of all samples ####
 p <- plot_pca(y0, out.prefix = 'all_samples', var.genes = 500, color = y0$samples$group, sample.label = T, feature.length = "gene_length")
 saveRDS(p, 'pca.rds')
@@ -522,3 +557,24 @@ for (i in 1:nrow(cmp)){
 }
 names(de.list) <- basename(cmp$out.prefix)
 saveRDS(de.list, 'de.rds')
+=======
+## write out raw counts ####
+if(workflow %in% 'exome' & !length.col %in% 'full_exome'){
+    ann <- read.delim(gene.txt) %>% 
+        dplyr::select(gene_id, full_exome)
+    cts <- cts %>% 
+        left_join(
+            ann, by = 'gene_id'
+        ) %>% 
+        relocate(full_exome, .after = 'gene_length')
+    colnames(cts)[8:9] <- paste(c(length.col, 'full_exome'), 'length', sep = '_')
+        
+}
+write.table(cts, paste('all_samples', 'raw_counts.txt', sep = '.'), sep = '\t', quote = F, row.names = F)
+
+## plot PCA of all samples ####
+p <- plot_pca(y0, out.prefix = 'all_samples', var.genes = 500, color = factor(y0$samples$group), sample.label = T, feature.length = "gene_length")
+saveRDS(p, 'pca.rds')
+
+
+>>>>>>> origin/main

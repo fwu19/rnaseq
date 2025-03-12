@@ -13,10 +13,7 @@ process DIFFERENTIAL_EXPRESSION {
     input:
     path(samplesheet)
     path(comparison)
-    path("*", stageAs: "counts/*")
-    path(gene_txt)
-    val(length_col)
-    val(strand)
+    path("*")
     val(fdr)
     val(fc)
     val(fdr2)
@@ -28,7 +25,7 @@ process DIFFERENTIAL_EXPRESSION {
     
     script:
     """
-    differential_expression.r input=$samplesheet comparison=$comparison count.dir=counts gene.txt=$gene_txt length.col=${length_col} strand=${strand} fdr=${fdr} fc=${fc} fdr2=${fdr2} fc2=${fc2}
-    rm -r counts/
+    differential_expression.r input=$samplesheet comparison=$comparison rds=y0.rds fdr=${fdr} fc=${fc} fdr2=${fdr2} fc2=${fc2}
+    
     """
 }
