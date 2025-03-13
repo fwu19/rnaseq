@@ -229,7 +229,8 @@ workflow RNASEQ {
     *   collect gene-level count matrix and run PCA
     */
     ch_cts = Channel.empty()
-    GENERATE_COUNT_MATRIX(
+    if (params.run_alignment){
+        GENERATE_COUNT_MATRIX(
             samplesheet, 
             ch_counts.map{it[2]}.collect().ifEmpty([]), 
             params.gene_txt,
@@ -237,8 +238,9 @@ workflow RNASEQ {
             params.strand,
             params.workflow
         )
-    ch_cts = GENERATE_COUNT_MATRIX.out.rds
-
+        ch_cts = GENERATE_COUNT_MATRIX.out.rds
+    }
+    
     /*
     * differential expression
     */
