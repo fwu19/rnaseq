@@ -368,7 +368,7 @@ if(workflow %in% 'exome' & !length.col %in% 'full_exome'){
     colnames(cts)[8:9] <- paste(c(length.col, 'full_exome'), 'length', sep = '_')
         
 }
-write.table(cts, paste('all_samples', 'raw_counts.txt', sep = '.'), sep = '\t', quote = F, row.names = F)
+write.table(cts, paste('all_samples', 'gene_raw_counts.txt', sep = '.'), sep = '\t', quote = F, row.names = F)
 
 ## plot PCA of all samples ####
 p <- plot_pca(y0, out.prefix = 'all_samples', var.genes = 500, color = factor(y0$samples$group), sample.label = T, feature.length = "gene_length")

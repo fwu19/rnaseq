@@ -22,7 +22,8 @@ include { MULTIQC_PDX  } from '../modules/multiqc_pdx.nf'
 include { FEATURECOUNTS } from '../modules/featureCounts.nf'
 include { DIFFERENTIAL_EXPRESSION } from '../modules/differential_expression.nf'
 include { DIFFERENTIAL_TRANSCRIPTS } from '../modules/differential_transcripts.nf'
-include { GENERATE_COUNT_MATRIX } from '../modules/generate_count_matrix.nf'
+include { GENERATE_GENE_COUNT_MATRIX } from '../modules/generate_gene_count_matrix.nf'
+include { GENERATE_TRANSCRIPT_COUNT_MATRIX } from '../modules/generate_transcript_count_matrix.nf'
 include { GENERATE_REPORT } from '../modules/generate_report.nf'
 //include { OUTPUT_PARAMS  } from '../modules/output_params.nf'
 //include { TEST  } from './modules/test.nf'
@@ -34,7 +35,7 @@ ch_dummy_csv = Channel.fromPath("$projectDir/assets/dummy_file.csv", checkIfExis
 
 ch_metadata = params.metadata ? Channel.fromPath( params.metadata, checkIfExists: true ) : ch_dummy_csv
 
-//ch_multiqc_custom_config = params.multiqc_config ? Channel.fromPath(params.multiqc_config, checkIfExists: true ) : Channel.fromPath("$projectDir/assets/multiqc_config.yml")
+ch_multiqc_custom_config = params.multiqc_config ? Channel.fromPath(params.multiqc_config, checkIfExists: true ) : Channel.fromPath("$projectDir/assets/multiqc_config.yml")
 
 workflow RNASEQ {
     /*
@@ -211,71 +212,6 @@ workflow RNASEQ {
     }
 
     /*
-    * run featureCounts
-    */
-    if (params.run_featurecounts){
-        FEATURECOUNTS(
-            ch_bam, 
-            params.gtf,
-            params.read_type,
-            params.strand
-        )
-        ch_counts = FEATURECOUNTS.out.counts
-        // [ [meta], val(out_prefix), path("count.txt") ]
-
-    }
-
-    /*
-    *   collect gene-level count matrix and run PCA
-    */
-    ch_cts = Channel.empty()
-    if (params.run_alignment){
-        GENERATE_COUNT_MATRIX(
-            samplesheet, 
-            ch_counts.map{it[2]}.collect().ifEmpty([]), 
-            params.gene_txt,
-            params.length_col,
-            params.strand,
-            params.workflow
-        )
-        ch_cts = GENERATE_COUNT_MATRIX.out.rds
-    }
-    
-    /*
-    * differential expression
-    */
-    ch_de = Channel.empty()
-    if (params.run_de){
-        DIFFERENTIAL_EXPRESSION(
-            samplesheet, 
-            Channel.fromPath(params.comparison, checkIfExists: true), 
-            ch_cts.ifEmpty([]), 
-            params.fdr,
-            params.fc,
-            params.fdr2,
-            params.fc2
-        )
-        ch_de = DIFFERENTIAL_EXPRESSION.out.rds
-    }
-
-    ch_dt = Channel.empty()
-    if (params.run_dt & params.run_salmon){
-        DIFFERENTIAL_TRANSCRIPTS(
-            samplesheet, 
-            Channel.fromPath(params.comparison, checkIfExists: true), 
-            ch_salmon.map{it[2]}.collect().ifEmpty([]), 
-            params.tx_txt,
-            "EffectiveLength",
-            params.strand,
-            params.fdr,
-            params.fc,
-            params.fdr2,
-            params.fc2
-        )
-        ch_dt = DIFFERENTIAL_TRANSCRIPTS.out.rds
-    }
-
-    /*
     * run QC
     */    
     ch_fastqc = Channel.empty()
@@ -393,8 +329,11 @@ workflow RNASEQ {
 
         }else{
             MULTIQC(
+            ch_multiqc_custom_config.ifEmpty([]),
             ch_star_log.map{it[2]}.flatten().collect().ifEmpty([]), 
+            ch_counts.map{it[2]}.flatten().collect().ifEmpty([]), 
             ch_fastqc.map{it[1]}.flatten().collect().ifEmpty([]),  
+            ch_fastqc_trimmed.map{it[1]}.flatten().collect().ifEmpty([]),  
             ch_rseqc.map{it[1]}.flatten().collect().ifEmpty([]),  
             ch_rnaseqc.map{it[1]}.flatten().collect().ifEmpty([]),
             ch_hs_metrics.map{it[1]}.flatten().collect().ifEmpty([])
@@ -405,6 +344,89 @@ workflow RNASEQ {
     }
 
     /*
+    * run featureCounts
+    */
+    if (params.run_featurecounts){
+        FEATURECOUNTS(
+            ch_bam, 
+            params.gtf,
+            params.read_type,
+            params.strand
+        )
+        ch_counts = FEATURECOUNTS.out.counts
+        // [ [meta], val(out_prefix), path("count.txt") ]
+
+    }
+
+    /*
+    *   collect gene-level count matrix and run PCA
+    */
+    ch_gene_rds = Channel.empty()
+    if (params.run_alignment){
+        GENERATE_GENE_COUNT_MATRIX(
+            samplesheet, 
+            ch_counts.map{it[2]}.collect().ifEmpty([]), 
+            params.gene_txt,
+            params.length_col,
+            params.strand,
+            params.workflow
+        )
+        ch_gene_rds = GENERATE_GENE_COUNT_MATRIX.out.rds
+    }
+    
+    /*
+    * differential genes
+    */
+    ch_de = Channel.empty()
+    if (params.run_de){
+        DIFFERENTIAL_EXPRESSION(
+            samplesheet, 
+            Channel.fromPath(params.comparison, checkIfExists: true), 
+            ch_gene_rds, 
+            params.fdr,
+            params.fc,
+            params.fdr2,
+            params.fc2
+        )
+        ch_de = DIFFERENTIAL_EXPRESSION.out.rds
+    }
+
+    /*
+    *   collect transcript-level count matrix and run PCA
+    */
+    ch_tx_rds = Channel.empty()
+    if (params.run_alignment & params.run_salmon){
+        GENERATE_TRANSCRIPT_COUNT_MATRIX(
+            samplesheet, 
+            Channel.fromPath(params.comparison, checkIfExists: true), 
+            ch_salmon.map{it[2]}.collect().ifEmpty([]), 
+            params.tx_txt,
+            "EffectiveLength"
+        )
+        ch_tx_rds = GENERATE_TRANSCRIPT_COUNT_MATRIX.out.rds
+    }
+
+
+    /*
+    * differential transcripts
+    */
+    ch_dt = Channel.empty()
+    if (params.run_dt & params.run_salmon){
+        DIFFERENTIAL_TRANSCRIPTS(
+            samplesheet, 
+            Channel.fromPath(params.comparison, checkIfExists: true), 
+            ch_tx_rds, 
+            "EffectiveLength",
+            params.fdr,
+            params.fc,
+            params.fdr2,
+            params.fc2
+        )
+        ch_dt = DIFFERENTIAL_TRANSCRIPTS.out.rds
+    }
+
+
+    /*
     * Generate a report
     */
     if (params.run_report){
@@ -413,8 +435,8 @@ workflow RNASEQ {
             params.workflow,
             samplesheet,
             ch_multiqc.ifEmpty([]),
-            ch_cts.ifEmpty([]),
             ch_de.ifEmpty([]),
+            ch_dt.ifEmpty([]),
             ch_report_rmd
         )
     }

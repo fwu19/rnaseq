@@ -2,7 +2,7 @@ process MULTIQC {
     time = '1d'
     cpus = 6
     memory = '36G'
-    module = ['MultiQC/1.9-foss-2019b-Python-3.7.4']
+    module = ['MultiQC/1.21-foss-2023a']
 
 
     tag "MultiQC on all samples"
@@ -10,8 +10,11 @@ process MULTIQC {
     publishDir "${params.outdir}/MultiQC/", mode: 'copy'
 
     input:
-    path ( 'star/*' )
+    path ( multiqc_custom_config)
+    path ( 'star_log/*' )
+    path ( 'star_count/*' )
     path ( 'fastqc/*' )
+    path ( 'fastqc_trimmed/*' )
     path ( 'rseqc/*' )
     path ( 'rnaseqc/*' )
     path ( 'gatk/*' )
@@ -25,6 +28,6 @@ process MULTIQC {
     def args = task.ext.args ?: ''
     def custom_config = params.multiqc_config ? "--config $multiqc_custom_config" : ''
     """
-    multiqc -f --ignore _STARpass1/ .
+    multiqc -f --ignore _STARpass1/ $custom_config .
     """
 }

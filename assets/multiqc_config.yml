@@ -14,12 +14,17 @@ module_order:
   - fastqc:
       name: "FastQC"
       path_filters:
-        - "./fastqc/*.zip"
+        - ./fastqc/*.zip
+  - fastqc:
+      name: "FastQC_trimmed"
+      path_filters:
+        - ./fastqc_trimmed/*.zip
   - cutadapt
   - star:
       name: "STAR"
       path_filters:
-        - "./star/Log.final.out"
+        - "./star_log/Log.final.out"
+        - "./star_counts/ReadsPerGene.tab"
   - star:
       name: "STAR (host)"
       path_filters:

@@ -318,7 +318,7 @@ normalize_counts <- function(y, out.prefix, return = c('rpkm','cpm'), gene.lengt
 }
 
 ## wrapper
-wrap_one_cmp <- function(icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2){
+wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2){
 
     out.prefix <- icmp$out.prefix[1]
     control.group <- icmp$control.group[[1]]
@@ -408,11 +408,12 @@ fc2 <- as.numeric(fc2)
 ## detect differential expression ####
 cmp <- cmp %>% 
     add_colv('out.prefix', paste(cmp$test, cmp$control, sep = '_vs_')) %>% 
-    add_colv('plot.title', paste(cmp$test, cmp$control, sep = ' vs '))
+    add_colv('plot.title', paste(cmp$test, cmp$control, sep = ' vs ')) %>% 
+    add_colv('sample.group', '')
 
 de.list <- list()
 for (i in 1:nrow(cmp)){
-    de.list[[i]] <- wrap_one_cmp(cmp[i,], ss, fdr, fc, fdr2, fc2)
+    de.list[[i]] <- wrap_one_cmp(y0, cmp[i,], ss, fdr, fc, fdr2, fc2)
 }
 names(de.list) <- basename(cmp$out.prefix)
-saveRDS(de.list, 'de.rds')
+saveRDS(de.list, 'differential_genes.rds')
