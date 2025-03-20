@@ -10,7 +10,7 @@ process MULTIQC {
     publishDir "${params.outdir}/MultiQC/", mode: 'copy'
 
     input:
-    path ( multiqc_custom_config)
+    path ( multiqc_config)
     path ( 'star_log/*' )
     path ( 'star_count/*' )
     path ( 'fastqc/*' )
@@ -26,8 +26,7 @@ process MULTIQC {
 
     script:
     def args = task.ext.args ?: ''
-    def custom_config = params.multiqc_config ? "--config $multiqc_custom_config" : ''
     """
-    multiqc -f --ignore _STARpass1/ $custom_config .
+    multiqc -f --ignore _STARpass1/ --config $multiqc_config .
     """
 }

@@ -3,37 +3,46 @@ export_plots: true
 
 # Run only these modules
 run_modules:
-  - custom_content
   - fastqc
-  - cutadapt
   - star
   - samtools
   - picard
+  - rna_seqc
+  - rseqc
 
 module_order:
   - fastqc:
       name: "FastQC"
       path_filters:
-        - ./fastqc/*.zip
+        - "fastqc/*.zip"
   - fastqc:
       name: "FastQC_trimmed"
       path_filters:
-        - ./fastqc_trimmed/*.zip
-  - cutadapt
+        - "fastqc_trimmed/*.zip"
   - star:
       name: "STAR"
       path_filters:
-        - "./star_log/Log.final.out"
-        - "./star_counts/ReadsPerGene.tab"
+        - "star_log/*"
+        - "star_count/*"
   - star:
       name: "STAR (host)"
       path_filters:
-        - "./star_host/Log.final.out"
+        - "star_log_host/*"
+        - "star_count_host/*"
   - samtools:
       name: "Samtools"
       path_filters:
-        - "./samtools/*"
+        - "samtools/*"
   - picard:
       name: "Picard"
-        - "./gatk/*"
-  - custom_content
+      path_filters:
+        - "gatk/*"
+  - rna_seqc:
+      name: "RNA-SeQC"
+      path_filters:
+        - "rnaseqc/*"
+  - rseqc:
+      name: "RSeQC"
+      path_filters:
+        - "rseqc/*"
+        
