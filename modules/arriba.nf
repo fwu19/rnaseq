@@ -3,24 +3,33 @@ process ARRIBA {
     time = '1d'
     cpus = 8
     memory = '48G'
-    module = []
+    module = [ 'Arriba/2.4.0-GCC-12.2.0' ]
 
 
     tag "Arriba on ${out_prefix}"
 
-    publishDir "${params.outdir}/Arriba/${params.genome}/", mode: 'copy'
+    publishDir "${params.outdir}/arriba/${params.genome}/", mode: 'copy'
 
     input:
-    tuple val(meta), val(out_prefix), path(bam)
+    tuple val(meta), val(out_prefix), path(read1), path(read2)
+    val (genome)
+    path (star_index)
+    path (gtf)
+    path (genome_fa)
+    path (blacklist)
+    path (known_fusions)
+    path (protein_domains)
+
     
     output:
-    tuple val(meta), val(out_prefix), path( "${out_prefix}.*" ), emit: out 
-    path( "${out_prefix}.*" )
+    path("${out_prefix}/", type: 'dir')
 
     script:
     def args = task.ext.args ?: ""
     """
-    arriba.sh ${bam} ${out_prefix}
+    mkdir ${out_prefix}
+    cd ${out_prefix}
+    run_arriba.sh ../${star_index} ../${gtf} ../${genome_fa} ../${blacklist} ../${known_fusions} ../${protein_domains} ${task.cpus} ../${read1} ../${read2}
     
     """
 }

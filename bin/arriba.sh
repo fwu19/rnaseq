@@ -10,7 +10,16 @@ KNOWN_FUSIONS_TSV="${BASE_DIR}/database/known_fusions_hg38_GRCh38_v2.4.0.tsv.gz"
 TAGS_TSV="$KNOWN_FUSIONS_TSV" # different files can be used for filtering and tagging, but the provided one can be used for both
 PROTEIN_DOMAINS_GFF3="${BASE_DIR}/database/protein_domains_hg38_GRCh38_v2.4.0.gff3"
 
-bam=$1; shift
+STAR_INDEX_DIR="$1"
+ANNOTATION_GTF="$2"
+ASSEMBLY_FA="$3"
+BLACKLIST_TSV="$4"
+KNOWN_FUSIONS_TSV="$5"
+TAGS_TSV="$KNOWN_FUSIONS_TSV" # different files can be used for filtering and tagging, but the provided one can be used for both
+PROTEIN_DOMAINS_GFF3="$6"
+THREADS="$7"
+READ1="$8"
+READ2="${9-}"
 out_prefix=$1; shift
 
 
@@ -18,3 +27,5 @@ out_prefix=$1; shift
         -x $bam \
         -o ${out_prefix}.fusions.tsv -O ${out_prefix}.fusions.discarded.tsv \
         -a "$ASSEMBLY_FA" -g "$ANNOTATION_GTF" -b "$BLACKLIST_TSV" -k "$KNOWN_FUSIONS_TSV" -t "$TAGS_TSV" -p "$PROTEIN_DOMAINS_GFF3" | tee ${out_prefix}.arriba.log
+
+run_arriba.sh $@

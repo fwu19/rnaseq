@@ -35,7 +35,7 @@ ch_dummy_csv = Channel.fromPath("$projectDir/assets/dummy_file.csv", checkIfExis
 
 ch_metadata = params.metadata ? Channel.fromPath( params.metadata, checkIfExists: true ) : ch_dummy_csv
 
-ch_multiqc_custom_config = params.multiqc_config ? Channel.fromPath(params.multiqc_config, checkIfExists: true ) : Channel.fromPath("$projectDir/assets/multiqc_config.yml")
+ch_multiqc_config = params.multiqc_config ? Channel.fromPath(params.multiqc_config, checkIfExists: true ) : Channel.fromPath("$projectDir/assets/multiqc_config.yml")
 
 workflow RNASEQ {
     /*
@@ -158,7 +158,15 @@ workflow RNASEQ {
 
     if (params.run_alignment & params.run_arriba){
         ARRIBA(
-            ch_bam
+            ch_reads
+                .map{ it -> [ it[0], it[0].id, it[1], it[2] ]}, 
+            params.genome, 
+            params.star, 
+            params.gtf,
+            params.genome_fa,
+            params.blacklist,
+            params.known_fusions,
+            params.protein_domains
         )
         
     }
@@ -329,7 +337,7 @@ workflow RNASEQ {
 
         }else{
             MULTIQC(
-            ch_multiqc_custom_config.ifEmpty([]),
+            ch_multiqc_config,
             ch_star_log.map{it[2]}.flatten().collect().ifEmpty([]), 
             ch_counts.map{it[2]}.flatten().collect().ifEmpty([]), 
             ch_fastqc.map{it[1]}.flatten().collect().ifEmpty([]),  
