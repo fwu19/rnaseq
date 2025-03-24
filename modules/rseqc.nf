@@ -2,7 +2,7 @@ process RSEQC {
     time = '1d'
     cpus = 6
     memory = '36G'
-    module = ['RSeQC/5.0.1-foss-2021b', 'SAMtools/1.16.1-GCC-11.2.0', 'R/4.1.2-foss-2021b']
+    module = ['RSeQC/5.0.1-foss-2021b', 'SAMtools/1.17-GCC-12.2.0', 'R/4.1.2-foss-2021b']
 
 
     tag "RSeQC on ${meta.id}"

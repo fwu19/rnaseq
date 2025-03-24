@@ -3,7 +3,7 @@ process BAM_TO_FASTQ {
     time = '1d'
     cpus = 6
     memory = '24G'
-    module = ['BEDTools/2.30.0-GCC-10.2.0', 'SAMtools/1.11-GCC-10.2.0']
+    module = ['BEDTools/2.30.0-GCC-12.2.0', 'SAMtools/1.17-GCC-12.2.0']
 
 
     tag "convert bam to fastq on ${out_prefix}"

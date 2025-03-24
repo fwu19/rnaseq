@@ -1,8 +1,13 @@
 
 export_plots: true
 
+use_filename_as_sample_name:
+  - cutadapt
+  - picard
+
 # Run only these modules
 run_modules:
+  - cutadapt
   - fastqc
   - star
   - samtools
@@ -19,20 +24,39 @@ module_order:
       name: "FastQC_trimmed"
       path_filters:
         - "fastqc_trimmed/*.zip"
+  - cutadapt:
+      name: "Cutadapt"
+      path_filters:
+        - "cutadapt/*"  
   - star:
       name: "STAR"
       path_filters:
         - "star_log/*"
         - "star_count/*"
   - star:
+      name: "STAR (graft)"
+      path_filters:
+        - "star_log_graft/*"
+  - star:
       name: "STAR (host)"
       path_filters:
         - "star_log_host/*"
-        - "star_count_host/*"
   - samtools:
       name: "Samtools"
       path_filters:
         - "samtools/*"
+  - samtools:
+      name: "Samtools (alignment to graft genome)"
+      path_filters:
+        - "samtools_graft/*"
+  - samtools:
+      name: "Samtools (excluding reads of host origin)"
+      path_filters:
+        - "samtools_xeno/*"
+  - samtools:
+      name: "Samtools (alignment to host genome)"
+      path_filters:
+        - "samtools_host/*"
   - picard:
       name: "Picard"
       path_filters:

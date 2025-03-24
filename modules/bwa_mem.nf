@@ -3,7 +3,7 @@ process BWA_MEM {
     time = '1d'
     cpus = 12
     memory = '48G'
-    module = ['BWA/0.7.17-GCCcore-12.2.0', 'SAMtools/1.11-GCC-10.2.0']
+    module = ['BWA/0.7.17-GCCcore-12.2.0', 'SAMtools/1.17-GCC-12.2.0']
 
 
     tag "BWA_MEM on ${out_prefix}"

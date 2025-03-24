@@ -3,7 +3,7 @@ process XENOFILTER {
     time = '1d'
     cpus = 8
     memory = '48G'
-    module = ['fhR/4.1.2-foss-2021b', 'SAMtools/1.11-GCC-10.2.0']
+    module = ['fhR/4.1.2-foss-2021b', 'SAMtools/1.17-GCC-12.2.0']
 
 
     tag "Filter bam on ${out_prefix}"

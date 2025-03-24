@@ -2,7 +2,7 @@ process MULTIQC_PDX {
     time = '1d'
     cpus = 6
     memory = '36G'
-    module = ['MultiQC/1.9-foss-2019b-Python-3.7.4']
+    module = ['MultiQC/1.21-foss-2023a']
 
 
     tag "MultiQC on all samples"
@@ -10,17 +10,20 @@ process MULTIQC_PDX {
     publishDir "${params.outdir}/MultiQC/", mode: 'copy'
 
     input:
-    path ( "${params.genome}_unfiltered/*" )
-    path ( "${params.genome_host}_unfiltered/*" )
+    path ( multiqc_config )
     path ( 'fastqc/*' )
+    path ( 'cutadapt/*' )
     path ( 'fastqc_trimmed/*' )
     path ( 'rseqc/*' )
     path ( 'rnaseqc/*' )
     path ( 'gatk/*' )
-    path ( "${params.genome}_unfiltered/*" )
-    path ( "${params.genome_host}_unfiltered/*" )
-    path ( "${params.genome}_filtered/*" )
-    path ( 'counts/*' )
+
+    path ( 'star_log_graft/*' )
+    path ( "star_log_host/*" )
+
+    path ( "samtools_graft/*" )
+    path ( "samtools_host/*" )
+    path ( "samtools_xeno/*" )
 
     output:
     path ('multiqc_data/*'), emit: data
@@ -29,8 +32,7 @@ process MULTIQC_PDX {
 
     script:
     def args = task.ext.args ?: ''
-    def custom_config = params.multiqc_config ? "--config $multiqc_custom_config" : ''
     """
-    multiqc -f -d -dd 1 --ignore _STARpass1/ .
+    multiqc -f --ignore _STARpass1/ --config $multiqc_config .
     """
 }

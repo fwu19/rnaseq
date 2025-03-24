@@ -2,7 +2,7 @@ process FASTQC {
     time = '1d'
     cpus = 1
     memory = '12G'
-    module = 'FastQC/0.11.9-Java-11'
+    module = 'FastQC/0.12.1-Java-11'
 
 
     tag "FASTQC on ${meta.id}"

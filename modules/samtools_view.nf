@@ -3,7 +3,7 @@ process SAMTOOLS_VIEW {
     time = '1d'
     cpus = 8
     memory = '48G'
-    module = ['SAMtools/1.11-GCC-10.2.0']
+    module = ['SAMtools/1.17-GCC-12.2.0']
 
 
     tag "samtools on ${out_prefix}"

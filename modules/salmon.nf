@@ -3,7 +3,7 @@ process SALMON {
     time = '1d'
     cpus = 8
     memory = '48G'
-    module = ['Salmon/1.10.1-GCC-12.2.0']
+    module = ['Salmon/1.10.1-GCC-12.2.0', 'SAMtools/1.17-GCC-12.2.0']
 
 
     tag "Salmon on ${out_prefix}"

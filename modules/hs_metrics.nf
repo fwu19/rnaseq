@@ -2,7 +2,7 @@ process HS_METRICS {
     time = '1d'
     cpus = 1
     memory = '24G'
-    module = ['GATK/4.1.8.1-GCCcore-8.3.0-Java-1.8.0_181', 'SAMtools/1.10-GCCcore-8.3.0']
+    module = ['GATK/4.4.0.0-GCCcore-12.2.0-Java-17', 'SAMtools/1.17-GCC-12.2.0']
 
 
     tag "collect hs_metrics on ${meta.id}"

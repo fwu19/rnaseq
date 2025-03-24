@@ -2,7 +2,7 @@ process RNASEQC {
     time = '1d'
     cpus = 6
     memory = '36G'
-    module = ['RNA-SeQC/2.3.4-foss-2019b', 'SAMtools/1.11-GCC-10.2.0']
+    module = ['RNA-SeQC/2.4.2-foss-2021b', 'SAMtools/1.17-GCC-12.2.0']
 
 
     tag "RNA-SeQC on ${meta.id}"

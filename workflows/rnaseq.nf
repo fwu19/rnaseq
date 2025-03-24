@@ -101,11 +101,13 @@ workflow RNASEQ {
     * run cutadapt if needed
     */
     ch_fastqc_trimmed = Channel.empty()
+    ch_cutadapt_js = Channel.empty()
     if (params.run_cut_adapt){
         CUTADAPT(
             ch_reads
         )
         ch_reads = CUTADAPT.out.fq
+        ch_cutadapt_js = CUTADAPT.out.js
 
         if (params.run_qc && params.run_fastqc){
             FASTQC_TRIMMED(
@@ -187,7 +189,7 @@ workflow RNASEQ {
         )
         ch_bam_host = STAR_HOST.out.bam
         // [ [meta], val(out_prefix), path(bam) ]
-        ch_star_host_log = STAR_HOST.out.log
+        ch_star_log_host = STAR_HOST.out.log
         // [ [meta], val(out_prefix), path(bam) ]
 
         /*
@@ -294,19 +296,19 @@ workflow RNASEQ {
             * samtools
             */
             SAMTOOLS_VIEW(
-            ch_bam
+                ch_bam
             )
             ch_bam_stat = SAMTOOLS_VIEW.out.data
 
             SAMTOOLS_VIEW_HOST(
-            ch_bam_host
+                ch_bam_host
             )
-            ch_bam_host_stat = SAMTOOLS_VIEW_HOST.out.data
+            ch_bam_stat_host = SAMTOOLS_VIEW_HOST.out.data
 
             SAMTOOLS_VIEW_XENO(
-            ch_bam_xeno
+                ch_bam_xeno
             )
-            ch_bam_xeno_stat = SAMTOOLS_VIEW_XENO.out.data
+            ch_bam_stat_xeno = SAMTOOLS_VIEW_XENO.out.data
         }
 
 
@@ -320,17 +322,18 @@ workflow RNASEQ {
     if (params.run_multiqc){
         if (params.workflow == 'pdx'){
             MULTIQC_PDX(
-            ch_star_log.map{it[2]}.flatten().collect().ifEmpty([]), 
-            ch_star_host_log.map{it[2]}.flatten().collect().ifEmpty([]), 
+            ch_multiqc_config,
             ch_fastqc.map{it[1]}.flatten().collect().ifEmpty([]),  
-            ch_fastqc_trimmed.map{it[1]}.flatten().collect().ifEmpty([]),
+            ch_cutadapt_js.map{it[1]}.flatten().collect().ifEmpty([]),  
+            ch_fastqc_trimmed.map{it[1]}.flatten().collect().ifEmpty([]),  
             ch_rseqc.map{it[1]}.flatten().collect().ifEmpty([]),  
             ch_rnaseqc.map{it[1]}.flatten().collect().ifEmpty([]),
             ch_hs_metrics.map{it[1]}.flatten().collect().ifEmpty([]),
+            ch_star_log.map{it[2]}.flatten().collect().ifEmpty([]), 
+            ch_star_log_host.map{it[2]}.flatten().collect().ifEmpty([]), 
             ch_bam_stat.map{it[1]}.flatten().collect().ifEmpty([]),
-            ch_bam_host_stat.map{it[1]}.flatten().collect().ifEmpty([]),
-            ch_bam_xeno_stat.map{it[1]}.flatten().collect().ifEmpty([]),
-            ch_counts.map{it[1]}.collect().ifEmpty([]),
+            ch_bam_stat_host.map{it[1]}.flatten().collect().ifEmpty([]),
+            ch_bam_stat_xeno.map{it[1]}.flatten().collect().ifEmpty([])
             )
             ch_multiqc = MULTIQC_PDX.out.data
             //ch_multiqc.view()
@@ -338,13 +341,13 @@ workflow RNASEQ {
         }else{
             MULTIQC(
             ch_multiqc_config,
-            ch_star_log.map{it[2]}.flatten().collect().ifEmpty([]), 
-            ch_counts.map{it[2]}.flatten().collect().ifEmpty([]), 
             ch_fastqc.map{it[1]}.flatten().collect().ifEmpty([]),  
             ch_fastqc_trimmed.map{it[1]}.flatten().collect().ifEmpty([]),  
             ch_rseqc.map{it[1]}.flatten().collect().ifEmpty([]),  
             ch_rnaseqc.map{it[1]}.flatten().collect().ifEmpty([]),
-            ch_hs_metrics.map{it[1]}.flatten().collect().ifEmpty([])
+            ch_hs_metrics.map{it[1]}.flatten().collect().ifEmpty([]),
+            ch_star_log.map{it[2]}.flatten().collect().ifEmpty([]), 
+            ch_counts.map{it[2]}.flatten().collect().ifEmpty([])
             )
             ch_multiqc = MULTIQC.out.data
             //ch_multiqc.view()
