@@ -11,13 +11,14 @@ process MULTIQC {
 
     input:
     path ( multiqc_config)
-    path ( 'star_log/*' )
-    path ( 'star_count/*' )
     path ( 'fastqc/*' )
+    path ( 'cutadapt/*' )
     path ( 'fastqc_trimmed/*' )
     path ( 'rseqc/*' )
     path ( 'rnaseqc/*' )
     path ( 'gatk/*' )
+    path ( 'star_log/*' )
+    path ( 'star_count/*' )
 
     output:
     path ('multiqc_data/*'), emit: data

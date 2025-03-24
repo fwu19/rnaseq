@@ -214,7 +214,7 @@ workflow RNASEQ {
         }
     }
 
-    if(params.workflow == 'pdx' & params.output_fastq){
+    if(params.workflow == 'pdx' & params.save_fastq){
         BAM_TO_FASTQ(
             ch_bam_xeno
         )
@@ -341,7 +341,8 @@ workflow RNASEQ {
         }else{
             MULTIQC(
             ch_multiqc_config,
-            ch_fastqc.map{it[1]}.flatten().collect().ifEmpty([]),  
+            ch_fastqc.map{it[1]}.flatten().collect().ifEmpty([]),
+            ch_cutadapt_js.map{it[1]}.flatten().collect().ifEmpty([]),  
             ch_fastqc_trimmed.map{it[1]}.flatten().collect().ifEmpty([]),  
             ch_rseqc.map{it[1]}.flatten().collect().ifEmpty([]),  
             ch_rnaseqc.map{it[1]}.flatten().collect().ifEmpty([]),
@@ -373,7 +374,7 @@ workflow RNASEQ {
     *   collect gene-level count matrix and run PCA
     */
     ch_gene_rds = Channel.empty()
-    if (params.run_alignment){
+    if (params.run_alignment & !params.only_fastq){
         GENERATE_GENE_COUNT_MATRIX(
             samplesheet, 
             ch_counts.map{it[2]}.collect().ifEmpty([]), 
@@ -406,7 +407,7 @@ workflow RNASEQ {
     *   collect transcript-level count matrix and run PCA
     */
     ch_tx_rds = Channel.empty()
-    if (params.run_alignment & params.run_salmon){
+    if (params.run_alignment & params.run_salmon & !params.only_fastq){
         GENERATE_TRANSCRIPT_COUNT_MATRIX(
             samplesheet, 
             Channel.fromPath(params.comparison, checkIfExists: true), 

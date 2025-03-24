@@ -34,7 +34,6 @@ workflow SINGLE_LIB {
     emit:
     //versions = ch_versions]
     bam_host = ch_bam_host
-    star_host_log = ch_star_host_log
     bam_xeno = ch_bam_xeno    
 
 }
