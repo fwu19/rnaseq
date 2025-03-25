@@ -149,30 +149,6 @@ workflow RNASEQ {
         // [ [meta], val(out_prefix), path("ReadsPerGene.tab") ]
     }
 
-    if (params.run_alignment & params.run_salmon){
-        SALMON(
-            ch_tx_bam,
-            params.tx_fa
-        )
-        ch_salmon = SALMON.out.sf
-        // [ [meta], val(out_prefix), path("${out_prefix}/") ]
-    }
-
-    if (params.run_alignment & params.run_arriba){
-        ARRIBA(
-            ch_reads
-                .map{ it -> [ it[0], it[0].id, it[1], it[2] ]}, 
-            params.genome, 
-            params.star, 
-            params.gtf,
-            params.genome_fa,
-            params.blacklist,
-            params.known_fusions,
-            params.protein_domains
-        )
-        
-    }
-
     if (params.run_alignment & params.workflow == 'pdx'){
         /*
         * align to host genome
@@ -219,6 +195,30 @@ workflow RNASEQ {
             ch_bam_xeno
         )
             
+    }
+
+    if (params.run_alignment & params.run_salmon){
+        SALMON(
+            ch_tx_bam,
+            params.tx_fa
+        )
+        ch_salmon = SALMON.out.sf
+        // [ [meta], val(out_prefix), path("${out_prefix}/") ]
+    }
+
+    if (params.run_alignment & params.run_arriba){
+        ARRIBA(
+            ch_reads
+                .map{ it -> [ it[0], it[0].id, it[1], it[2] ]}, 
+            params.genome, 
+            params.star, 
+            params.gtf,
+            params.genome_fa,
+            params.blacklist,
+            params.known_fusions,
+            params.protein_domains
+        )
+        
     }
 
     /*
@@ -348,7 +348,8 @@ workflow RNASEQ {
             ch_rnaseqc.map{it[1]}.flatten().collect().ifEmpty([]),
             ch_hs_metrics.map{it[1]}.flatten().collect().ifEmpty([]),
             ch_star_log.map{it[2]}.flatten().collect().ifEmpty([]), 
-            ch_counts.map{it[2]}.flatten().collect().ifEmpty([])
+            ch_counts.map{it[2]}.flatten().collect().ifEmpty([]),
+            ch_salmon.map{it[2]}.flatten().collect().ifEmpty([])
             )
             ch_multiqc = MULTIQC.out.data
             //ch_multiqc.view()

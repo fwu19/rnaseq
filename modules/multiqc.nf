@@ -19,6 +19,7 @@ process MULTIQC {
     path ( 'gatk/*' )
     path ( 'star_log/*' )
     path ( 'star_count/*' )
+    path ( 'salmon/*' )
 
     output:
     path ('multiqc_data/*'), emit: data
