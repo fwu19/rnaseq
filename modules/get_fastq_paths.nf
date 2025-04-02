@@ -9,7 +9,7 @@ process GET_FASTQ_PATHS {
     path ( "fastq/" )
 
     output:
-    path '*.csv'        , emit: csv
+    path 'input.csv'        , emit: csv
     path  "versions.yml", emit: versions
 
     when:

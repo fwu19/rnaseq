@@ -17,7 +17,7 @@ process FEATURECOUNTS {
     
     output:
     tuple val(meta), val(out_prefix), path("${out_prefix}*.txt"), emit: counts
-    path("*.{txt,summary}")
+    path("${out_prefix}*.{txt,summary}")
 
     script:
     """

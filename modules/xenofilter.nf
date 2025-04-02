@@ -25,7 +25,7 @@ process XENOFILTER {
     """
     xenofilteR.r graft/*.bam host/*.bam ${out_prefix} $mm_threshold ${task.cpus}
     mv Filtered_bams/XenofilteR.log ${out_prefix}.XenofilteR.log
-    mv Filtered_bams/* .
+    mv Filtered_bams/*.bam* .
     
     """
 }

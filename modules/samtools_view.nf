@@ -14,8 +14,8 @@ process SAMTOOLS_VIEW {
     tuple val(meta), val(out_prefix), path(bam)
     
     output:
-    tuple val(meta), path("*.{stat,flagstat}"), emit: data
-    path("*.{stat,flagstat}")
+    tuple val(meta), path("${out_prefix}.{stat,flagstat}"), emit: data
+    path("${out_prefix}.{stat,flagstat}")
 
     script:
     def suffix = task.ext.suffix ?: ""

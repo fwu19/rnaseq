@@ -145,7 +145,7 @@ plot_pca <- function(y, out.prefix, var.genes = NULL, color = NULL, plot.title =
     log2rpkm <- rpkm(y, gene.length = feature.length, normalized.lib.sizes = T, log = T)
     
     if (!is.null(var.genes)){
-        keep <- rank(-apply(log2rpkm, 1, var)) < var.genes
+        keep <- rank(-apply(log2rpkm, 1, var)) <= var.genes
         log2rpkm <- log2rpkm[keep,]
     }
     

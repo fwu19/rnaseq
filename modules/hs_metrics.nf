@@ -16,8 +16,8 @@ process HS_METRICS {
     path(target_region)
 
     output:
-    tuple val(meta), path("*.hs_metrics.txt"), emit: qc
-    tuple val(meta), path("*.hs_metrics.txt")
+    tuple val(meta), path("${meta.id}*.hs_metrics.txt"), emit: qc
+    tuple val(meta), path("${meta.id}*.hs_metrics.txt")
 
     script:
     """

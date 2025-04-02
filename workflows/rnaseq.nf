@@ -375,7 +375,7 @@ workflow RNASEQ {
     *   collect gene-level count matrix and run PCA
     */
     ch_gene_rds = Channel.empty()
-    if (params.run_alignment & !params.only_fastq){
+    if (params.run_alignment & !params.only_filter_fastq){
         GENERATE_GENE_COUNT_MATRIX(
             samplesheet, 
             ch_counts.map{it[2]}.collect().ifEmpty([]), 
@@ -408,7 +408,7 @@ workflow RNASEQ {
     *   collect transcript-level count matrix and run PCA
     */
     ch_tx_rds = Channel.empty()
-    if (params.run_alignment & params.run_salmon & !params.only_fastq){
+    if (params.run_alignment & params.run_salmon & !params.only_filter_fastq){
         GENERATE_TRANSCRIPT_COUNT_MATRIX(
             samplesheet, 
             Channel.fromPath(params.comparison, checkIfExists: true), 
@@ -448,7 +448,9 @@ workflow RNASEQ {
             params.workflow,
             samplesheet,
             ch_multiqc.ifEmpty([]),
+            ch_gene_rds.ifEmpty([]),
             ch_de.ifEmpty([]),
+            ch_tx_rds.ifEmpty([]),
             ch_dt.ifEmpty([]),
             ch_report_rmd
         )

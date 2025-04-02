@@ -17,8 +17,8 @@ process RNASEQC {
     val(read_type)
 
     output:
-    tuple val(meta), path("*.{tsv,gct}"), emit: qc
-    path("*.{tsv,gct}")
+    tuple val(meta), path("${out_prefix}*.{tsv,gct}"), emit: qc
+    path("${out_prefix}*.{tsv,gct}")
     
     script:
     """

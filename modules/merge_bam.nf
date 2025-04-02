@@ -14,9 +14,9 @@ process MERGE_BAM {
     tuple val(meta), path("input/*")
     
     output:
-    tuple val(meta), val(meta.id), path("*.bam"), emit: bam 
-    tuple val(meta), val(meta.id), path("*.bai"), emit: bai
-    path("*.{bam,bai}")
+    tuple val(meta), val(meta.id), path("${meta.id}*.bam"), emit: bam 
+    tuple val(meta), val(meta.id), path("${meta.id}*.bai"), emit: bai
+    path("${meta.id}*.{bam,bai}")
 
     script:
     def suffix = task.ext.suffix ?: ""

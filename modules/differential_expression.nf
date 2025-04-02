@@ -13,19 +13,18 @@ process DIFFERENTIAL_EXPRESSION {
     input:
     path(samplesheet)
     path(comparison)
-    path("*")
+    path(rds)
     val(fdr)
     val(fc)
     val(fdr2)
     val(fc2)
 
     output:
-    path ("differential_genes.rds"), emit: rds, optional: true
-    path ("*"), optional: true
+    path ("differential_genes.rds"), emit: rds
+    path ("*")
     
     script:
     """
-    differential_expression.r input=$samplesheet comparison=$comparison rds=y0.rds fdr=${fdr} fc=${fc} fdr2=${fdr2} fc2=${fc2}
-    
+    differential_expression.r input=$samplesheet comparison=$comparison rds=${rds} fdr=${fdr} fc=${fc} fdr2=${fdr2} fc2=${fc2}
     """
 }

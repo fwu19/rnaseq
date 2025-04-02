@@ -13,7 +13,7 @@ process DIFFERENTIAL_TRANSCRIPTS {
     input:
     path(samplesheet)
     path(comparison)
-    path("*")
+    path(rds)
     val(length_col)
     val(fdr)
     val(fc)
@@ -21,12 +21,11 @@ process DIFFERENTIAL_TRANSCRIPTS {
     val(fc2)
 
     output:
-    path ("differential_transcripts.rds"), emit: rds, optional: true
-    path ("*"), optional: true
+    path ("differential_transcripts.rds"), emit: rds
+    path ("*")
     
     script:
     """
-    differential_transcripts.r input=$samplesheet comparison=$comparison rds=y0.rds length.col=${length_col} fdr=${fdr} fc=${fc} fdr2=${fdr2} fc2=${fc2}
-    
+    differential_transcripts.r input=$samplesheet comparison=$comparison rds=${rds} length.col=${length_col} fdr=${fdr} fc=${fc} fdr2=${fdr2} fc2=${fc2}
     """
 }

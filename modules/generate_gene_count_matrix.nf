@@ -19,14 +19,13 @@ process GENERATE_GENE_COUNT_MATRIX {
     val(workflow)
 
     output:
-    path ("y0.rds"), emit: rds, optional: true
-    path ("*"), optional: true
+    path ("gene.y0.rds"), emit: rds
+    path ("*")
     
     script:
     """
     generate_gene_count_matrix.r input=$samplesheet count.dir=counts gene.txt=$gene_txt length.col=${length_col} strand=${strand} workflow=${workflow}
-    rm -r counts/
-    ln -s y0.rds gene.y0.rds
-    ln -s pca.rds gene.pca.rds
+    mv y0.rds gene.y0.rds
+    
     """
 }

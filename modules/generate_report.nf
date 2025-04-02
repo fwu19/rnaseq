@@ -9,8 +9,10 @@ process GENERATE_REPORT {
     val( workflow )
     path ( samplesheet, stageAs: "sample_sheet.csv" )
     path ( "multiqc_data/" )
-    path ( "*" )
-    path ( "*" )
+    path ( gene_rds )
+    path ( de_rds )
+    path ( txt_rds )
+    path ( dt_rds )
     path ( "*" )
 
     output:
