@@ -20,8 +20,8 @@ process DIFFERENTIAL_EXPRESSION {
     val(fc2)
 
     output:
-    path ("differential_genes.rds"), emit: rds
-    path ("*")
+    path ("differential_genes.rds"), emit: rds, optional: true
+    path ("*"), optional: true
     
     script:
     """

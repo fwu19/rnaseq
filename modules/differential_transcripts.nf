@@ -21,8 +21,8 @@ process DIFFERENTIAL_TRANSCRIPTS {
     val(fc2)
 
     output:
-    path ("differential_transcripts.rds"), emit: rds
-    path ("*")
+    path ("differential_transcripts.rds"), emit: rds, optional: true
+    path ("*"), optional: true
     
     script:
     """
