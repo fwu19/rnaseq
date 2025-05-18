@@ -26,6 +26,25 @@ run_da <- function(
     
     ## retrieve and process data ####
     if(!is.null(group)){y0$samples$group <- group}
+    j1 <- sum(y0$samples$group %in% control.group)
+    j2 <- sum(y0$samples$group %in% test.group)
+    if (j1 == 0 | j2 == 0){
+        return(list(error = data.frame(
+            control.group = paste(control.group, collapse = '+'),
+            test.group = paste(test.group, collapse = '+'),
+            control.samples = j1,
+            test.samples = j2
+        )))
+    }else if (j1 == 1 & j2 == 1){
+        return(list(error = data.frame(
+            control.group = paste(control.group, collapse = '+'),
+            test.group = paste(test.group, collapse = '+'),
+            control.samples = j1,
+            test.samples = j2
+        )))        
+    }
+    
+    
     j <- y0$samples$group %in% c(control.group, test.group)
     
     y <- y0[,j]
@@ -339,6 +358,10 @@ wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 
         feature.length = length.col,
         fdr = fdr, fc = fc, fdr2 = fdr2, fc2 = fc2
     )
+    if ('error' %in% names(lst)){
+        write.table(lst$error, file.path(out.prefix, paste0(out.prefix, '.error.txt')), sep = '\t', quote = F, row.names = F)
+        return(lst)
+    }
     
     y <- lst$y
     df <- lst$df
