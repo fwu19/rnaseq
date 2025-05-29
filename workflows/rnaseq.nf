@@ -191,35 +191,55 @@ workflow RNASEQ {
         }
     }
 
-    if(params.workflow == 'pdx' & params.save_fastq){
+    ch_graft_reads = Channel.empty()
+    if(params.run_alignment & params.workflow == 'pdx' & params.run_arriba){
         BAM_TO_FASTQ(
             ch_bam_xeno
         )
-            
+        ch_graft_reads = BAM_TO_FASTQ.out.fq    
     }
 
     ch_salmon = Channel.empty()
     if (params.run_alignment & params.run_salmon){
-        SALMON(
-            ch_tx_bam,
-            params.tx_fa
-        )
+        if (params.workflow == 'pdx'){
+            //should filter Aligned.toTranscriptome.out.bam
+        }else{
+            SALMON(
+                ch_tx_bam,
+                params.tx_fa
+            )
+        }
         ch_salmon = SALMON.out.sf
         // [ [meta], val(out_prefix), path("${out_prefix}/") ]
     }
 
     if (params.run_alignment & params.run_arriba){
-        ARRIBA(
-            ch_reads
-                .map{ it -> [ it[0], it[0].id, it[1], it[2] ]}, 
-            params.genome, 
-            params.star, 
-            params.gtf,
-            params.genome_fa,
-            params.blacklist,
-            params.known_fusions,
-            params.protein_domains
-        )
+        if (params.workflow == 'pdx'){
+            ARRIBA(
+                ch_graft_reads, 
+                params.genome, 
+                params.star, 
+                params.gtf,
+                params.genome_fa,
+                params.blacklist,
+                params.known_fusions,
+                params.protein_domains
+            )
+
+        }else{
+            ARRIBA(
+                ch_reads
+                    .map{ it -> [ it[0], it[0].id, it[1], it[2] ]}, 
+                params.genome, 
+                params.star, 
+                params.gtf,
+                params.genome_fa,
+                params.blacklist,
+                params.known_fusions,
+                params.protein_domains
+            )
+        }
+
         
     }
 
@@ -230,6 +250,9 @@ workflow RNASEQ {
     ch_rnaseqc = Channel.empty()
     ch_rseqc = Channel.empty()
     ch_hs_metrics = Channel.empty()
+    ch_bam_stat = Channel.empty()
+    ch_bam_stat_host = Channel.empty()
+    ch_bam_stat_xeno = Channel.empty()
 
     if (params.run_qc){
         /*
@@ -362,12 +385,22 @@ workflow RNASEQ {
     * run featureCounts
     */
     if (params.run_featurecounts){
-        FEATURECOUNTS(
-            ch_bam, 
-            params.gtf,
-            params.read_type,
-            params.strand
-        )
+        if(params.workflow == 'pdx'){
+            FEATURECOUNTS(
+                ch_bam_xeno, 
+                params.gtf,
+                params.read_type,
+                params.strand
+            )
+        }else{
+            FEATURECOUNTS(
+                ch_bam, 
+                params.gtf,
+                params.read_type,
+                params.strand
+            )
+        }
+        
         ch_counts = FEATURECOUNTS.out.counts
         // [ [meta], val(out_prefix), path("count.txt") ]
 

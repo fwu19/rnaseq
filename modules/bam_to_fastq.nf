@@ -14,6 +14,7 @@ process BAM_TO_FASTQ {
     tuple val(meta), val(out_prefix), path(bam)
 
     output:
+    tuple val(meta), val(out_prefix), path( "${out_prefix}_R1.fastq.gz" ), path( "${out_prefix}_R2.fastq.gz" ), emit: fq
     path("*.fastq.gz")
 
     script:
