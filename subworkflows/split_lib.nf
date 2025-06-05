@@ -99,7 +99,8 @@ workflow SPLIT_LIB {
             .map{ it -> [ it[0], it[2] ]}
             .groupTuple( by: [0] )
     )
-    ch_bam_xeno = MERGE_BAM.out.bam      
+    ch_bam_xeno = MERGE_BAM.out.bam
+    ch_bai_xeno = MERGE_BAM.out.bai     
     // ch_bam_xeno.view()
     // [ [meta], val(out_prefix), path("*.{bam,bai}") ]      
     
@@ -107,5 +108,6 @@ workflow SPLIT_LIB {
     emit:
     //versions = ch_versions
     bam_xeno = ch_bam_xeno    
+    bai_xeno = ch_bai_xeno
 
 }

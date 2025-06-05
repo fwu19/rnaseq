@@ -11,11 +11,23 @@ workflow <- args[1]
 dat <- list()
 dat$ss <- read.csv('sample_sheet.csv')
 
-## RNA-SeQC ####
+## QC metrics ####
 if (dir.exists('multiqc_data')){
-    if(file.exists('multiqc_data/multiqc_rna_seqc.txt')){
-        dat$rnaseqc <- read.delim('multiqc_data/multiqc_rna_seqc.txt')
+    fname <- 'multiqc_data/multiqc_general_stats.txt'
+    if(file.exists(fname)){
+        dat$stat <- read.delim(fname)
     }
+
+    fname <- 'multiqc_data/multiqc_star.txt'
+    if(file.exists(fname)){
+        dat$star <- read.delim(fname)
+    }
+    
+    fname <- 'multiqc_data/multiqc_rna_seqc.txt'
+    if(file.exists(fname)){
+        dat$rnaseqc <- read.delim(fname)
+    }
+    
 }
 
 ## collect_hs_metrics ####

@@ -13,6 +13,7 @@ process GENERATE_REPORT {
     path ( de_rds )
     path ( txt_rds )
     path ( dt_rds )
+    path ( "hs_metrics/" )
     path ( "*" )
 
     output:

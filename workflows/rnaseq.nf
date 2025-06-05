@@ -173,11 +173,13 @@ workflow RNASEQ {
         * filter out reads of host origin
         */
         ch_bam_xeno = Channel.empty()
+        ch_bai_xeno = Channel.empty()
         if (params.run_split_fastq){
             SPLIT_LIB(
                 ch_reads
             )
             ch_bam_xeno = SPLIT_LIB.out.bam_xeno
+            ch_bai_xeno = SPLIT_LIB.out.bai_xeno
             // [ [meta], val(out_prefix), path/to/filtered.bam ]
 
         }else{
@@ -186,17 +188,25 @@ workflow RNASEQ {
                 ch_bam_host
             )
             ch_bam_xeno = SINGLE_LIB.out.bam_xeno
+            ch_bai_xeno = SINGLE_LIB.out.bai_xeno
             // [ [meta], val(out_prefix), path/to/filtered.bam ]
 
         }
     }
 
     ch_graft_reads = Channel.empty()
-    if(params.run_alignment & params.workflow == 'pdx' & params.run_arriba){
-        BAM_TO_FASTQ(
-            ch_bam_xeno
-        )
-        ch_graft_reads = BAM_TO_FASTQ.out.fq    
+    if(params.run_alignment & params.workflow == 'pdx'){
+        if (params.arriba){
+            BAM_TO_FASTQ(
+                ch_bam_xeno
+            )
+            ch_graft_reads = BAM_TO_FASTQ.out.fq   
+        }else if (params.only_filter_fastq){
+            BAM_TO_FASTQ(
+                ch_bam_xeno
+            )
+            ch_graft_reads = BAM_TO_FASTQ.out.fq   
+        }
     }
 
     ch_salmon = Channel.empty()
@@ -273,13 +283,23 @@ workflow RNASEQ {
         * RNASeQC
         */
         if (params.run_rnaseqc){
-            RNASEQC(
-                ch_bam,
-                ch_bai,
-                params.rnaseqc_gtf,
-                params.strand,
-                params.read_type
-            )
+            if (params.workflow == 'pdx'){
+                RNASEQC(
+                    ch_bam_xeno,
+                    ch_bai_xeno,
+                    params.rnaseqc_gtf,
+                    params.strand,
+                    params.read_type
+                )
+            }else{
+                RNASEQC(
+                    ch_bam,
+                    ch_bai,
+                    params.rnaseqc_gtf,
+                    params.strand,
+                    params.read_type
+                )
+            }
             ch_rnaseqc = RNASEQC.out.qc
             // [ [meta], path("*") ]
         }
@@ -288,13 +308,23 @@ workflow RNASEQ {
         * RSeQC
         */
         if (params.run_rseqc){
-            RSEQC(
-                ch_bam,
-                ch_bai,
-                params.rseqc_bed,
-                params.tx_bed,
-                params.gene_bed
-            )
+            if (params.workflow == 'pdx'){
+                RSEQC(
+                    ch_bam_xeno,
+                    ch_bai_xeno,
+                    params.rseqc_bed,
+                    params.tx_bed,
+                    params.gene_bed
+                )
+            }else{
+                RSEQC(
+                    ch_bam,
+                    ch_bai,
+                    params.rseqc_bed,
+                    params.tx_bed,
+                    params.gene_bed
+                )
+            }
             ch_rseqc = RSEQC.out.qc
             // [ [meta], path("*") ]
         }
@@ -302,7 +332,16 @@ workflow RNASEQ {
         /*
         * GATK collect_hs_metrics
         */
-        if (params.workflow == 'exome' && params.run_hs_metrics){
+        if (params.workflow == 'pdx_exome' && params.run_hs_metrics){
+            HS_METRICS(
+                ch_bam_xeno,
+                ch_bai_xeno,
+                params.genome_fa,
+                params.target_region
+            )
+            ch_hs_metrics = HS_METRICS.out.qc
+            // [ [meta], path("*") ]
+        }else if (params.workflow == 'exome' && params.run_hs_metrics){
             HS_METRICS(
                 ch_bam,
                 ch_bai,
@@ -311,7 +350,9 @@ workflow RNASEQ {
             )
             ch_hs_metrics = HS_METRICS.out.qc
             // [ [meta], path("*") ]
+
         }
+        
 
         /*
         * pdx
@@ -487,6 +528,7 @@ workflow RNASEQ {
             ch_de.ifEmpty([]),
             ch_tx_rds.ifEmpty([]),
             ch_dt.ifEmpty([]),
+            ch_hs_metrics.map{it[1]}.flatten().collect().ifEmpty([]),
             ch_report_rmd
         )
     }

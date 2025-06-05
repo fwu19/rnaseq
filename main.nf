@@ -17,15 +17,14 @@ workflow RUN_RNASEQ {
     */
     if (params.workflow == "regular" ) {
         RNASEQ()
-    }
-    else if (params.workflow == "pdx" ) {
+    }else if (params.workflow == "pdx" ) {
         RNASEQ()
-    }
-    else if (params.workflow == "exome" ) {
+    }else if (params.workflow == "exome" ) {
         RNASEQ()
-    }
-    else {
-        err "Invalid workflow! Possible options: [regular, pdx, exome]"
+    }else if (params.workflow == "pdx_exome" ) {
+        RNASEQ()
+    }else {
+        err "Invalid workflow! Possible options: [regular, pdx, exome, pdx_exome]"
     }
 }
 

@@ -11,6 +11,7 @@ workflow SINGLE_LIB {
 
     main:    
     ch_bam_xeno = Channel.empty()
+    ch_bai_xeno = Channel.empty()
 
     ch_bam
         .map{ it -> [ [ it[0], it[1] ], it[2] ]}
@@ -29,11 +30,13 @@ workflow SINGLE_LIB {
         params.mm_threshold
     )
     ch_bam_xeno = XENOFILTER.out.bam 
+    ch_bai_xeno = XENOFILTER.out.bai
     // [ [meta], val(out_prefix), path/to/filtered.bam ]    
 
     emit:
-    //versions = ch_versions]
-    bam_host = ch_bam_host
+    //versions = ch_versions
+    
     bam_xeno = ch_bam_xeno    
+    bai_xeno = ch_bai_xeno
 
 }
