@@ -13,11 +13,13 @@ include { MERGE_BAM } from '../modules/merge_bam.nf'
 workflow SPLIT_LIB {
     take:
     ch_reads
+    split_size
 
 
     main:
     SPLIT_FASTQ(
-        ch_reads
+        ch_reads,
+        split_size
     )
     ch_reads = ch_reads
         .map{ it -> [ it[0].id, it ] }

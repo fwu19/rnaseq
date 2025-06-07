@@ -1,0 +1,32 @@
+{
+    "workflow": "regular",
+    
+    "run_de": true,
+    
+    "run_salmon": false,
+    "run_dt": false,
+    
+    "run_arriba": false,
+
+    "strand": 2,
+    "read_type": "PE",
+    
+    "outdir": "./Analysis",
+
+    "genome": "mm10",
+    "star": "/shared/biodata/reference/iGenomes/Mus_musculus/UCSC/mm10/Sequence/STAR2Index/",
+    "gtf": "/fh/fast/_SR/Genomics/proj/fwu/reference/mm10/genes/gencode.vM23.annotation.gtf",
+    "rnaseqc_gtf": "/fh/fast/_SR/Genomics/proj/fwu/reference/mm10/genes/gencode.vM23.annotation.collapsed.gtf",
+    "rseqc_bed": "/fh/fast/_SR/Genomics/proj/fwu/reference/mm10/genes/gencode.vM23.annotation.chr19.bed",
+    "gene_txt":"/fh/fast/_SR/Genomics/proj/fwu/reference/mm10/genes/gencode.vM23.annotation.gene.txt",
+    "length_col": "gene_length",
+    "gene_bed":"/fh/fast/_SR/Genomics/proj/fwu/reference/mm10/genes/gencode.vM23.annotation.gene.txt",
+    "tx_bed": "/fh/fast/_SR/Genomics/proj/fwu/reference/mm10/genes/gencode.vM23.annotation.tx.bed",
+
+    "fdr": 0.05,
+    "fc": 1.5,
+    "fdr2": 0.01,
+    "fc2": 2
+
+
+}

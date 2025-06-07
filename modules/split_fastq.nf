@@ -14,6 +14,7 @@ process SPLIT_FASTQ {
 
     input:
     tuple val(meta), path(fq1), path(fq2)
+    val(size)
 
     output:
     tuple val(meta), path( "${meta.id}.csv" ), emit: csv
@@ -21,7 +22,7 @@ process SPLIT_FASTQ {
     script:
     def args = task.ext.args ?: ""
     """
-    split_fastq.sh ${meta.id} $fq1 $fq2 "$args" 
+    split_fastq.sh ${meta.id} $fq1 $fq2 $size "$args" 
     """
     
 

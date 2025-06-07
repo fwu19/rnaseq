@@ -1,0 +1,31 @@
+{
+    "workflow": "exome",
+    "target_region": "/fh/fast/_SR/Genomics/proj/fwu/RNAseq/truseq-rna-exome-targeted-regions-manifest-v1-2.lift38.clean.interval_list",
+
+    "run_de": true,
+    "run_salmon": false,
+    "run_dt": false,
+    
+    "outdir": "./Analysis/",
+    "genome": "hg38",
+    "genome_fa": "/shared/biodata/reference/iGenomes/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa",
+    "star": "/shared/biodata/reference/iGenomes/Homo_sapiens/UCSC/hg38/Sequence/STAR2Index",
+    "gtf": "/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v38.annotation.proteinCoding_lncRNA.gtf",
+    "rnaseqc_gtf": "/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v38.annotation.collapsed.gtf",
+    "rseqc_bed": "/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v31.annotation.tx.chr22.bed",
+    "gene_txt":"/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v38.annotation.proteinCoding_lncRNA.genes.txt",
+    "length_col": "TruSeq_RNA_exome",
+    "gene_bed": "/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v38.annotation.proteinCoding_lncRNA.genes.bed",
+    "tx_bed": "/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v31.annotation.tx.bed",
+    "tx_fa": "/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v38.annotation.transcripts.fa",
+    "tx_txt": "/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v38.annotation.tx.txt",
+
+    "strand": 2,
+    "read_type": "PE",
+
+    "fdr": 0.05,
+    "fc": 1.5,
+    "fdr2": 0.01,
+    "fc2": 2
+
+}

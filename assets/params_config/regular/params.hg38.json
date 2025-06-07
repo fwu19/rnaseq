@@ -1,0 +1,36 @@
+{
+    "workflow": "regular",
+    
+    "run_de": true,
+    
+    "run_salmon": false,
+    "run_dt": false,
+    
+    "run_arriba": false,
+
+    "strand": 2,
+    "read_type": "PE",
+
+    "outdir": "./Analysis/",
+    "genome": "hg38",
+    "star": "/shared/biodata/reference/iGenomes/Homo_sapiens/UCSC/hg38/Sequence/STAR2Index",
+    "gtf": "/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v38.annotation.gtf",
+    "rnaseqc_gtf": "/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v38.annotation.collapsed.gtf",
+    "rseqc_bed": "/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v31.annotation.tx.chr22.bed",
+    "gene_txt":"/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v38.annotation.genes.txt",
+    "length_col": "full_exome",
+    "gene_bed": "/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v38.annotation.genes.bed",
+    "tx_bed": "/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v31.annotation.tx.bed",
+    "tx_fa": "/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v38.annotation.transcripts.fa",
+    "tx_txt": "/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v38.annotation.tx.txt",
+    "genome_fa": "/shared/biodata/reference/iGenomes/Homo_sapiens/UCSC/hg38/Sequence/STAR2Index/genome.fa",
+    "blacklist": "/fh/fast/_SR/Genomics/proj/dstirewa_NPM1/arriba_v2.4.0/database/blacklist_hg38_GRCh38_v2.4.0.tsv.gz",
+    "known_fusions": "/fh/fast/_SR/Genomics/proj/dstirewa_NPM1/arriba_v2.4.0/database/known_fusions_hg38_GRCh38_v2.4.0.tsv.gz",
+    "protein_domains": "/fh/fast/_SR/Genomics/proj/dstirewa_NPM1/arriba_v2.4.0/database/protein_domains_hg38_GRCh38_v2.4.0.gff3",
+    
+    "fdr": 0.05,
+    "fc": 1.5,
+    "fdr2": 0.01,
+    "fc2": 2
+    
+}

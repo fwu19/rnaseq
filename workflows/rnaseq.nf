@@ -176,7 +176,8 @@ workflow RNASEQ {
         ch_bai_xeno = Channel.empty()
         if (params.run_split_fastq){
             SPLIT_LIB(
-                ch_reads
+                ch_reads,
+                params.split_size
             )
             ch_bam_xeno = SPLIT_LIB.out.bam_xeno
             ch_bai_xeno = SPLIT_LIB.out.bai_xeno

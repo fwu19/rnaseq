@@ -1,0 +1,43 @@
+{
+    "workflow": "pdx",
+    
+    "run_split_fastq": false,
+    "split_size": 50000000,
+    "only_filter_fastq": false,
+    
+    "run_arriba": false,
+    
+    "outdir": "./Analysis/",
+    
+    "genome": "hg38",
+    "star": "/shared/biodata/reference/iGenomes/Homo_sapiens/UCSC/hg38/Sequence/STAR2Index",
+    "gtf": "/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v38.annotation.proteinCoding_lncRNA.gtf",
+    "rnaseqc_gtf": "/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v38.annotation.collapsed.gtf",
+    "rseqc_bed": "/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v31.annotation.tx.chr22.bed",
+    "gene_txt":"/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v38.annotation.proteinCoding_lncRNA.genes.txt",
+    "length_col": "full_exome",
+    "gene_bed": "/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v38.annotation.proteinCoding_lncRNA.genes.bed",
+    "tx_bed": "/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v31.annotation.tx.bed",
+    "tx_fa": "/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v38.annotation.transcripts.fa",
+    "tx_txt": "/fh/fast/_SR/Genomics/proj/fwu/reference/hg38/genes/gencode.v38.annotation.tx.txt",
+    "genome_fa": "/shared/biodata/reference/iGenomes/Homo_sapiens/UCSC/hg38/Sequence/STAR2Index/genome.fa",
+    
+    "genome_host": "mm10",
+    "star_host": "/shared/biodata/reference/iGenomes/Mus_musculus/UCSC/mm10/Sequence/STAR2Index/",
+    "gtf_host": "/fh/fast/_SR/Genomics/proj/fwu/reference/mm10/genes/gencode.vM23.annotation.proteinCoding_lncRNA.gtf",
+    "mm_threshold": 3,
+    
+    "blacklist": "/fh/fast/_SR/Genomics/proj/dstirewa_NPM1/arriba_v2.4.0/database/blacklist_hg38_GRCh38_v2.4.0.tsv.gz",
+    "known_fusions": "/fh/fast/_SR/Genomics/proj/dstirewa_NPM1/arriba_v2.4.0/database/known_fusions_hg38_GRCh38_v2.4.0.tsv.gz",
+    "protein_domains": "/fh/fast/_SR/Genomics/proj/dstirewa_NPM1/arriba_v2.4.0/database/protein_domains_hg38_GRCh38_v2.4.0.gff3",
+    
+    "strand": 2,
+    "read_type": "PE",
+    
+    "fdr": 0.05,
+    "fc": 1.5,
+    "fdr2": 0.01,
+    "fc2": 2
+
+
+}

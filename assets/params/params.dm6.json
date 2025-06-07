@@ -1,9 +1,0 @@
-{
-    "input": "samples.csv",
-    "outdir": "/hpc/temp/_SR/Genomics/users/fwu/project/kkelly2/240722_VH00319_535_AACMF3HHV/Analysis/",
-    "star": "/shared/biodata/reference/iGenomes/Drosophila_melanogaster/UCSC/dm6/Sequence/STAR2Index/",
-    "gtf": "/shared/biodata/reference/iGenomes/Drosophila_melanogaster/UCSC/dm6/Sequence/STAR2Index/genes.gtf",
-    "strand": -1,
-    "readType": "PE"
-
-}
