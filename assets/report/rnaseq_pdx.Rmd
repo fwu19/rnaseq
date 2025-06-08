@@ -272,8 +272,8 @@ ss <- dat$ss %>%
   relocate(fastq_dir, fastq_1, fastq_2, .after = last_col()) %>% 
   relocate(id)
 
-stat <- dat$stat
-colnames(stat) <- gsub('.*generalstats.', '', colnames(stat))
+# stat <- dat$stat
+# colnames(stat) <- gsub('.*generalstats.', '', colnames(stat))
 
 ms <- ss %>% 
   dplyr::select(id, sample_group) %>% 
@@ -282,25 +282,38 @@ ms <- ss %>%
 if ('stat' %in% names(dat)){
   ms <- ms %>% 
     left_join(
-      stat %>% 
-        filter(!is.na(fastqc.total_sequences) & grepl('_R1_', Sample)) %>% 
-        dplyr::select(Sample, contains('fastqc')) %>% 
-        mutate(Sample = gsub('_S[0-9]{1,}_L[0-9]{1,}.*', '', Sample)),
+      dat$stat %>% 
+      filter(is.na(FastQC_mqc.generalstats.fastqc.total_sequences)) %>% 
+      dplyr::select(Sample, !contains('fastqc') & !contains('samtools')), 
       by = 'Sample'
     ) %>% 
     left_join(
-      stat %>% 
-        filter(is.na(fastqc.total_sequences) & !grepl('stat$', Sample)) %>% 
-        dplyr::select(Sample, contains('star')),
+      dat$stat %>% 
+        filter(!is.na(FastQC_mqc.generalstats.fastqc.total_sequences) & grepl('_R1_', Sample)) %>% 
+        dplyr::select(Sample, contains('fastqc.total_sequences')) %>% 
+        mutate(Sample = gsub('_S[0-9]{1,}_L[0-9]{1,}.*|_merged_R[12]', '', Sample)) %>% 
+        group_by(Sample) %>% 
+        summarise(
+          FastQC_mqc.generalstats.fastqc.total_sequences = sum(FastQC_mqc.generalstats.fastqc.total_sequences)
+        ),
       by = 'Sample'
     ) %>% 
     left_join(
-      stat %>% 
+      dat$stat %>% 
+        filter(!is.na(FastQC_trimmed_mqc.generalstats.fastqc_trimmed.total_sequences) & grepl('_R1$', Sample)) %>% 
+        dplyr::select(Sample, contains('fastqc_trimmed.total_sequences')) %>% 
+        mutate(Sample = gsub('_S[0-9]{1,}_L[0-9]{1,}.*|_merged_R[12]', '', Sample)),
+      by = 'Sample'
+    ) %>% 
+    left_join(
+      dat$stat %>% 
         filter(grepl('stat$', Sample)) %>% 
         dplyr::select(Sample, contains('samtools')) %>% 
         mutate(Sample = gsub('.stat$', '', Sample)),
       by = 'Sample'
     )
+  
+  colnames(ms) <- gsub('.*generalstats.', '', colnames(ms))
 }
 
 if ('rnaseqc' %in% names(dat)){

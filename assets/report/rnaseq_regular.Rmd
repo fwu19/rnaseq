@@ -287,10 +287,21 @@ if ('stat' %in% names(dat)){
     left_join(
       dat$stat %>% 
         filter(!is.na(FastQC_mqc.generalstats.fastqc.total_sequences) & grepl('_R1_', Sample)) %>% 
-        dplyr::select(Sample, contains('FastQC')) %>% 
-        mutate(Sample = gsub('_S[0-9]{1,}_L[0-9]{1,}.*', '', Sample)),
+        dplyr::select(Sample, contains('fastqc.total_sequences')) %>% 
+        mutate(Sample = gsub('_S[0-9]{1,}_L[0-9]{1,}.*|_merged_R[12]', '', Sample)) %>% 
+        group_by(Sample) %>% 
+        summarise(
+          FastQC_mqc.generalstats.fastqc.total_sequences = sum(FastQC_mqc.generalstats.fastqc.total_sequences)
+        ),
       by = 'Sample'
-    )
+    ) %>% 
+    left_join(
+      dat$stat %>% 
+        filter(!is.na(FastQC_trimmed_mqc.generalstats.fastqc_trimmed.total_sequences) & grepl('_R1$', Sample)) %>% 
+        dplyr::select(Sample, contains('fastqc_trimmed.total_sequences')) %>% 
+        mutate(Sample = gsub('_S[0-9]{1,}_L[0-9]{1,}.*|_merged_R[12]', '', Sample)),
+      by = 'Sample'
+    )    
   colnames(ms) <- gsub('.*generalstats.', '', colnames(ms))
 }
 
