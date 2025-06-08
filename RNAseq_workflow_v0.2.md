@@ -1,4 +1,8 @@
-$$\\\\\[0.2in\]$$
+RNAseq analysis workflow
+================
+June 08 , 2025
+
+$$\\[0.2in]$$
 
 # 
 
@@ -52,7 +56,7 @@ sh="nextflow run $repo -c $config -params-file $params -with-report $report $@" 
 sbatch --wrap="$sh"
 ```
 
-$$\\\\\[0.2in\]$$
+$$\\[0.2in]$$
 
 Save the above script as `run.sh` and run one of the following command
 lines:
@@ -92,8 +96,8 @@ Either one is required and only one should be supplied.
 #### `--input_dir path/to/fastq/directory` 
 
 This retrieves fastq files from a directory and create a sample sheet
-with columns id, fastq_1 and fastq_2. id is obtained from fastq file
-names, e.g. **H_1**\_S50_L004_R1_001.fastq.gz. The underlying codes
+with columns id, fastq\_1 and fastq\_2. id is obtained from fastq file
+names, e.g. **H\_1**\_S50\_L004\_R1\_001.fastq.gz. The underlying codes
 assume that fastq file names follow the pattern
 `id_S[0-9]+(_L[0-9]+)?_R[12]`  
 - If fastq files are located in different folders, can point to a text
@@ -104,10 +108,10 @@ file listing all paths, one path per line
 #### `--input path/to/input.csv`
 
 A comma-delimited file with **.csv** extension . It requires 3 columns:
-id, fastq_1 and fastq_2.  
+id, fastq\_1 and fastq\_2.  
 **id** = sample ID, use for naming output files.  
-**fastq_1** = path/to/read1.fastq.gz  
-**fastq_2** = path/to/read2.fastq.gz.  
+**fastq\_1** = path/to/read1.fastq.gz  
+**fastq\_2** = path/to/read2.fastq.gz.  
 
 For samples sequenced across multiple lanes, provide each pair of fastq
 files in one row.  
@@ -118,8 +122,8 @@ if the same column names also exit in `--metadata`.
 An example below:  
   
 
-<div class="datatables html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-4c4a03d31cd919ee27be" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-4c4a03d31cd919ee27be">{"x":{"filter":"none","vertical":false,"extensions":["Buttons"],"data":[["H1048_EV_1","H1048_EV_2","H1048_BMP_1","H1048_BMP_2"],["H1048_EV_1_S115_L006_R1_001.fastq.gz","H1048_EV_2_S116_L005_R1_001.fastq.gz","H1048_BMP_1_S118_L005_R1_001.fastq.gz","H1048_BMP_2_S119_L005_R1_001.fastq.gz"],["H1048_EV_1_S115_L006_R2_001.fastq.gz","H1048_EV_2_S116_L005_R2_001.fastq.gz","H1048_BMP_1_S118_L005_R2_001.fastq.gz","H1048_BMP_2_S119_L005_R2_001.fastq.gz"],["group1","group1","group2","group2"]],"container":"<table class=\"cell-border stripe\">\n  <thead>\n    <tr>\n      <th>id<\/th>\n      <th>fastq_1<\/th>\n      <th>fastq_2<\/th>\n      <th>sample_group<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"Bfrtip","buttons":["csv"],"columnDefs":[],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-cfa032ecc1aa99cd0888" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-cfa032ecc1aa99cd0888">{"x":{"filter":"none","vertical":false,"extensions":["Buttons"],"data":[["H1048_EV_1","H1048_EV_2","H1048_BMP_1","H1048_BMP_2"],["H1048_EV_1_S115_L006_R1_001.fastq.gz","H1048_EV_2_S116_L005_R1_001.fastq.gz","H1048_BMP_1_S118_L005_R1_001.fastq.gz","H1048_BMP_2_S119_L005_R1_001.fastq.gz"],["H1048_EV_1_S115_L006_R2_001.fastq.gz","H1048_EV_2_S116_L005_R2_001.fastq.gz","H1048_BMP_1_S118_L005_R2_001.fastq.gz","H1048_BMP_2_S119_L005_R2_001.fastq.gz"],["group1","group1","group2","group2"]],"container":"<table class=\"cell-border stripe\">\n  <thead>\n    <tr>\n      <th>id<\/th>\n      <th>fastq_1<\/th>\n      <th>fastq_2<\/th>\n      <th>sample_group<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"Bfrtip","buttons":["csv"],"columnDefs":[],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
 
   
 
@@ -127,15 +131,15 @@ An example below:
 
 A comma-delimted file with **.csv** extension . Each row is one sample.
 It requires a minimum of 1 column: id. Additional columns are optional.
-If column *sample_group* exists, it will be used to group samples in QC
+If column *sample\_group* exists, it will be used to group samples in QC
 and differential expression analysis.  
-**sample_group** = condition, cell line, etc.  
+**sample\_group** = condition, cell line, etc.  
 
 An example below:  
   
 
-<div class="datatables html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-3b22640f360a5df6b038" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-3b22640f360a5df6b038">{"x":{"filter":"none","vertical":false,"extensions":["Buttons"],"data":[["H1048_BMP_1","H1048_BMP_2","H1048_EV_1","H1048_EV_2"],["group2","group2","group1","group1"]],"container":"<table class=\"cell-border stripe\">\n  <thead>\n    <tr>\n      <th>id<\/th>\n      <th>sample_group<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"Bfrtip","buttons":["csv"],"columnDefs":[],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-ef6742d1fca8890cf83a" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-ef6742d1fca8890cf83a">{"x":{"filter":"none","vertical":false,"extensions":["Buttons"],"data":[["H1048_BMP_1","H1048_BMP_2","H1048_EV_1","H1048_EV_2"],["group2","group2","group1","group1"]],"container":"<table class=\"cell-border stripe\">\n  <thead>\n    <tr>\n      <th>id<\/th>\n      <th>sample_group<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"Bfrtip","buttons":["csv"],"columnDefs":[],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
 
 -   When `--metadata` is supplied, only samples (by column id) in both
     `--metadata` and `--input`/`--input_dir` will be analyzed. This is
@@ -150,26 +154,26 @@ An example below:
 
 A table listing comparisons of interest. It requires 2 columns:
 control.group and test.group, Each row corresponds to a comparison.
-Values in both columns should be listed under column *sample_group* in
+Values in both columns should be listed under column *sample\_group* in
 –metadata or –input. The acceptable file formats are comma-delimited
 (.csv), tab-delimited (.txt, .tsv) or a data.frame in R (.rds).  
 
 An example below:  
   
 
-<div class="datatables html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-f6d67475e6d448c9b7e8" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-f6d67475e6d448c9b7e8">{"x":{"filter":"none","vertical":false,"extensions":["Buttons"],"data":[["group1"],["group2"]],"container":"<table class=\"cell-border stripe\">\n  <thead>\n    <tr>\n      <th>control.group<\/th>\n      <th>test.group<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"Bfrtip","buttons":["csv"],"columnDefs":[],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-8ead605fb4bf008a101b" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-8ead605fb4bf008a101b">{"x":{"filter":"none","vertical":false,"extensions":["Buttons"],"data":[["group1"],["group2"]],"container":"<table class=\"cell-border stripe\">\n  <thead>\n    <tr>\n      <th>control.group<\/th>\n      <th>test.group<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"Bfrtip","buttons":["csv"],"columnDefs":[],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
 
 -   It is OK to list all possible pairs of control and test groups. The
     workflow performs a comparison only when data are available from
     both control and test groups.  
 
 -   By default, output folders will be named as
-    *test.group_vs_control.group/* and plot title as *“test.group vs
+    *test.group\_vs\_control.group/* and plot title as *“test.group vs
     control.group (referene)”*. If needed, can specify them by adding
     columns *out.prefix* and *plot.title* into the table.  
 
-$$\\\\\[0.1in\]$$
+$$\\[0.1in]$$
 
 ### Pipeline options
 
@@ -245,7 +249,7 @@ The number of reads to split a fastq file by. Default: 50000000
 
   
 
-$$\\\\\[0.1in\]$$
+$$\\[0.1in]$$
 
 ### QC options
 
@@ -280,7 +284,7 @@ Run RSeQC. Default: true
 
   
 
-$$\\\\\[0.1in\]$$
+$$\\[0.1in]$$
 
 ### Flow switching options
 
@@ -305,14 +309,14 @@ Only run until generating the sample sheet. Default: false
 
 #### `--only_merge_fastq`
 
-Only run until merging fastq files if –run_cat_fastq true. Default:
+Only run until merging fastq files if –run\_cat\_fastq true. Default:
 false.
 
   
 
 #### `--only_split_fastq`
 
-Only run until split fastq files if –run_split_fastq true. Default:
+Only run until split fastq files if –run\_split\_fastq true. Default:
 false.
 
   
@@ -321,10 +325,10 @@ false.
 
 ### Example params.json and nextflow.config
 
-\`/fh/fast/\_SR/Genomics/proj/fwu/nextflow/rnaseq/assets/params_config/’
+\`/fh/fast/\_SR/Genomics/proj/fwu/nextflow/rnaseq/assets/params\_config/’
 
-`nextflow.config` - set up working environment. env.R_LIBS and
-params.local_assets are shared paths. Other paths may point to users’
+`nextflow.config` - set up working environment. env.R\_LIBS and
+params.local\_assets are shared paths. Other paths may point to users’
 space.  
 `regular/` - used for mRNAseq or total RNAseq.  
 `exome/` - used for RNA exome. It additionally runs Picard function
@@ -333,7 +337,7 @@ CollectHsMetrics to examine metrics such as off-target rates.
 genome and filters the alignment to the graft genome by removing reads
 of host origin.  
 
-$$\\\\\[0.1in\]$$
+$$\\[0.1in]$$
 
 ### Demo analyses
 
@@ -352,7 +356,7 @@ subdirectories, each demonstrating a different workflow:
 -   `params.outdir/00_RNAseq_analysis_report.html` provides a summary of
     results, description of deliverables, methods and references.  
 
-$$\\\\\[0.1in\]$$
+$$\\[0.1in]$$
 
 #### Workflow reports and debugging
 
@@ -375,4 +379,4 @@ $$\\\\\[0.1in\]$$
     modification is needed, e.g. changing figure heights and widths, or
     adding/deleting a section.  
 
-$$\\\\\[0.2in\]$$
+$$\\[0.2in]$$

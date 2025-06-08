@@ -4,6 +4,8 @@ author: ""
 date: "`r format(Sys.time(), '%B %d , %Y')`"
 always_allow_html: true
 output:
+  github_document:
+  
   md_document:
     variant: markdown_github
   html_document:
