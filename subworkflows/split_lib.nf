@@ -17,83 +17,107 @@ workflow SPLIT_LIB {
 
 
     main:
+
     SPLIT_FASTQ(
         ch_reads,
         split_size
     )
-    ch_reads = ch_reads
-        .map{ it -> [ it[0].id, it ] }
+
+    ch_reads
+        .map{ it -> [ it[1], it ] }
         .cross(
             SPLIT_FASTQ.out.csv
-                .map { it -> it[1] }
+                .map { it -> it[2] }
                 .splitCsv( header: false )
         )
         .map{ it -> [ it[0][1][0], it[1][1], it[1][2], it[1][3] ]}
+        .set{ ch_reads_in}
 
     ch_bam = Channel.empty()
     ch_bam_host = Channel.empty()
     ch_bam_xeno = Channel.empty()
+    ch_bai_xeno = Channel.empty()
 
     if (params.aligner == 'star'){
-    
         STAR(
-        ch_reads, 
-        params.genome, 
-        params.star, 
-        params.gtf
+            ch_reads_in,
+            params.genome, 
+            params.star, 
+            params.gtf
         )
         ch_bam = STAR.out.bam
         // [ [meta], val(out_prefix), path(bam) ]
 
-        STAR_HOST(
-        ch_reads, 
-        params.genome_host, 
-        params.star_host, 
-        params.gtf_host
-        )
-        ch_bam_host = STAR_HOST.out.bam
-        // [ [meta], val(out_prefix), path(bam) ]
-    }
-    else if (params.aligner == 'bwa-mem'){
+        /*
+        * align to host genome for PDX samples
+        */
+        if (params.workflow == 'pdx'){
+            STAR_HOST(
+                ch_reads_in, 
+                params.genome_host, 
+                params.star_host, 
+                params.gtf_host
+            )
+            ch_bam_host = STAR_HOST.out.bam
+            // [ [meta], val(out_prefix), path(bam) ]
+
+            ch_bam
+                .map{ it -> [ [ it[0], it[1] ], it[2] ]}
+                .join (
+                ch_bam_host
+                    .map{ it -> [ [ it[0], it[1] ], it[2] ]}
+            )
+            .map{ it -> [ it[0][0], it[0][1], it[1], it[2] ] }
+            .set { ch_bam_paired }
+            // ch_bam_paired.view()
+            // [ [meta], val(out_prefix), [path/to/graft.{bam,bai}], [path/to/host.{bam,bai}]]
+
+        }
+    }else if (params.aligner == 'bwa-mem'){
         BWA_MEM(
-        ch_reads, 
+        ch_reads_in, 
         params.genome, 
         params.bwa
         )
         ch_bam = BWA_MEM.out.bam
         // [ [meta], val(out_prefix), path(bam) ]
 
-        BWA_MEM_HOST(
-        ch_reads, 
-        params.genome_host, 
-        params.bwa_host
-        )
-        ch_bam_host = BWA_MEM_HOST.out.bam
-        // [ [meta], val(out_prefix), path(bam) ]
+        /*
+        * align to host genome for PDX samples
+        */
+        if (params.workflow == 'pdx'){
+            BWA_MEM_HOST(
+                ch_reads_in, 
+                params.genome_host, 
+                params.bwa_host
+            )
+            ch_bam_host = BWA_MEM_HOST.out.bam
+            // [ [meta], val(out_prefix), path(bam) ]
 
+            ch_bam
+                .map{ it -> [ [ it[0], it[1] ], it[2] ]}
+                .join (
+                ch_bam_host
+                    .map{ it -> [ [ it[0], it[1] ], it[2] ]}
+            )
+            .map{ it -> [ it[0][0], it[0][1], it[1], it[2] ] }
+            .set { ch_bam_paired }
+            // ch_bam_paired.view()
+            // [ [meta], val(out_prefix), [path/to/graft.{bam,bai}], [path/to/host.{bam,bai}]]
+
+        }
     }
 
-    /*
-    * Xenofilter
-    */
-    ch_bam
-        .map{ it -> [ [ it[0],it[1] ], it[2] ]}
-        .join (
-            ch_bam_host
-                .map{ it -> [ [ it[0],it[1] ], it[2] ]}
+    if (params.workflow == 'pdx' & !params.split_fastq){
+        XENOFILTER(
+            ch_bam_paired, 
+            params.genome, 
+            params.mm_threshold
         )
-        .map{ it -> [ it[0][0], it[0][1], it[1], it[2] ] }
-        .set { ch_bam_paired }
-    // ch_bam_paired.view()
-    // [ [meta], val(out_prefix), [path/to/graft.{bam,bai}], [path/to/host.{bam,bai}]]
+        ch_bam_xeno = XENOFILTER.out.bam 
+        // [ [meta], val(out_prefix), path/to/filtered.bam ]    
+    }
 
-    XENOFILTER(
-        ch_bam_paired, 
-        params.genome, 
-        params.mm_threshold
-    )
-    ch_bam_xeno = XENOFILTER.out.bam 
-    // [ [meta], val(out_prefix), path/to/filtered.bam ]
 
         
     MERGE_BAM(

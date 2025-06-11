@@ -84,17 +84,18 @@ workflow RNASEQ {
                 row -> [ row.id, row ]
             }
             .join ( CAT_FASTQ.out.reads )
-            .map { it -> [ it[1], it[2], it[3] ]}
+            .map { it -> [ it[1], it[1].id, it[2], it[3] ]}
             .set { ch_reads }
         
     }else{
         CHECK_INPUT.out.fq
                 .splitCsv(header: true)
                 .map {
-                    row -> [ row, row.fastq_1, row.fastq_2 ]
+                    row -> [ row, row.id, row.fastq_1, row.fastq_2 ]
                 }
                 .set { ch_reads}
     }
+    ch_reads_raw = ch_reads
     // ch_reads.view()
 
     /*
@@ -104,21 +105,15 @@ workflow RNASEQ {
     ch_cutadapt_js = Channel.empty()
     if (params.run_cut_adapt){
         CUTADAPT(
-            ch_reads
+            ch_reads_raw
         )
         ch_reads = CUTADAPT.out.fq
+        ch_reads_trimmed = ch_reads
         ch_cutadapt_js = CUTADAPT.out.js
-
-        if (params.run_qc && params.run_fastqc){
-            FASTQC_TRIMMED(
-                ch_reads
-            )
-            ch_fastqc_trimmed = FASTQC_TRIMMED.out.qc
-        }
 
     }
     // ch_reads.view()
-    // [ [meta], path("R1.fastq.gz"), path("R2.fastq.gz") ]
+    // [ [meta], meta.id, path("R1.fastq.gz"), path("R2.fastq.gz") ]
 
     /*
     * run STAR alignment 
@@ -131,69 +126,35 @@ workflow RNASEQ {
     ch_tx_bam = Channel.empty() // STAR's transcript bam, used for downstream quantification with Salmon
     ch_star_log = Channel.empty()
     if (params.run_alignment){
-        STAR(
-            ch_reads
-                .map{ it -> [ it[0], it[0].id, it[1], it[2] ]}, 
-            params.genome, 
-            params.star, 
-            params.gtf
-        )
-        ch_bam = STAR.out.bam
-        // [ [meta], val(out_prefix), path(bam) ]
-        ch_bai = STAR.out.bai
-        // [ [meta], val(out_prefix), path(bai) ]
-        ch_tx_bam = STAR.out.tx_bam
-        // [ [meta], val(out_prefix), path(bam) ]
-        ch_star_log = STAR.out.log
-        // [ [meta], val(out_prefix), path(log) ]
-        ch_counts = STAR.out.counts
-        // [ [meta], val(out_prefix), path("ReadsPerGene.tab") ]
-    }
+        SINGLE_LIB(
+            ch_reads,
+            params.split_fastq
+        ) // if params.split_fastq, do not run XenofilteR
+        
+        ch_bam = SINGLE_LIB.out.bam
+        ch_bai = SINGLE_LIB.out.bai
+        ch_counts = SINGLE_LIB.out.counts
+        ch_tx_bam = SINGLE_LIB.out.tx_bam
+        ch_star_log = SINGLE_LIB.out.star_log
+        ch_bam_host = SINGLE_LIB.out.bam_host
+        ch_bai_host = SINGLE_LIB.out.bai_host
+        ch_star_log_host = SINGLE_LIB.out.star_log_host
+        ch_bam_xeno = SINGLE_LIB.out.bam_xeno
+        ch_bai_xeno = SINGLE_LIB.out.bai_xeno
 
-    if (params.run_alignment & params.workflow == 'pdx'){
-        /*
-        * align to host genome
-        */
-        ch_bam_host = Channel.empty()
-        ch_star_host_log = Channel.empty()
-
-        STAR_HOST(
-            ch_reads
-                .map{ it -> [ it[0], it[0].id, it[1], it[2] ]}, 
-            params.genome_host, 
-            params.star_host, 
-            params.gtf_host
-        )
-        ch_bam_host = STAR_HOST.out.bam
-        // [ [meta], val(out_prefix), path(bam) ]
-        ch_star_log_host = STAR_HOST.out.log
-        // [ [meta], val(out_prefix), path(bam) ]
-
-        /*
-        * filter out reads of host origin
-        */
-        ch_bam_xeno = Channel.empty()
-        ch_bai_xeno = Channel.empty()
-        if (params.run_split_fastq){
+        if(params.run_split_fastq){
             SPLIT_LIB(
                 ch_reads,
                 params.split_size
             )
             ch_bam_xeno = SPLIT_LIB.out.bam_xeno
             ch_bai_xeno = SPLIT_LIB.out.bai_xeno
-            // [ [meta], val(out_prefix), path/to/filtered.bam ]
-
-        }else{
-            SINGLE_LIB(
-                ch_bam,
-                ch_bam_host
-            )
-            ch_bam_xeno = SINGLE_LIB.out.bam_xeno
-            ch_bai_xeno = SINGLE_LIB.out.bai_xeno
-            // [ [meta], val(out_prefix), path/to/filtered.bam ]
 
         }
+
+            
     }
+
 
     ch_graft_reads = Channel.empty()
     if(params.run_alignment & params.workflow == 'pdx'){
@@ -201,13 +162,12 @@ workflow RNASEQ {
             BAM_TO_FASTQ(
                 ch_bam_xeno
             )
-            ch_graft_reads = BAM_TO_FASTQ.out.fq   
         }else if (params.only_filter_fastq){
             BAM_TO_FASTQ(
                 ch_bam_xeno
             )
-            ch_graft_reads = BAM_TO_FASTQ.out.fq   
         }
+        ch_graft_reads = BAM_TO_FASTQ.out.fq 
     }
 
     ch_salmon = Channel.empty()
@@ -226,32 +186,22 @@ workflow RNASEQ {
 
     if (params.run_alignment & params.run_arriba){
         if (params.workflow == 'pdx'){
-            ARRIBA(
-                ch_graft_reads, 
-                params.genome, 
-                params.star, 
-                params.gtf,
-                params.genome_fa,
-                params.blacklist,
-                params.known_fusions,
-                params.protein_domains
-            )
-
+            ch_reads_arriba = ch_graft_reads
         }else{
-            ARRIBA(
-                ch_reads
-                    .map{ it -> [ it[0], it[0].id, it[1], it[2] ]}, 
-                params.genome, 
-                params.star, 
-                params.gtf,
-                params.genome_fa,
-                params.blacklist,
-                params.known_fusions,
-                params.protein_domains
-            )
+            ch_reads_arriba = ch_reads
+                                .map{ it -> [ it[0], it[0].id, it[1], it[2] ]}
         }
+        ARRIBA(
+            ch_reads_arriba, 
+            params.genome, 
+            params.star, 
+            params.gtf,
+            params.genome_fa,
+            params.blacklist,
+            params.known_fusions,
+            params.protein_domains
+        )
 
-        
     }
 
     /*
@@ -264,43 +214,43 @@ workflow RNASEQ {
     ch_bam_stat = Channel.empty()
     ch_bam_stat_host = Channel.empty()
     ch_bam_stat_xeno = Channel.empty()
+    if (params.workflow == 'pdx'){
+        ch_bam_qc = ch_bam_xeno
+        ch_bai_qc = ch_bai_xeno
+    }else{
+        ch_bam_qc = ch_bam
+        ch_bai_qc = ch_bai
+    }
 
     if (params.run_qc){
+
         /*
         * FastQC
         */
         if (params.run_fastqc){
             FASTQC(
-                CHECK_INPUT.out.fq
-                    .splitCsv(header: true)
-                    .map {
-                        row -> [ row, row.fastq_1, row.fastq_2]
-                    }
+                ch_reads_raw
             )
             ch_fastqc = FASTQC.out.qc
+
+            FASTQC_TRIMMED(
+                ch_reads_trimmed
+            )
+            ch_fastqc_trimmed = FASTQC_TRIMMED.out.qc
+
         }
 
         /*
         * RNASeQC
         */
         if (params.run_rnaseqc){
-            if (params.workflow == 'pdx'){
-                RNASEQC(
-                    ch_bam_xeno,
-                    ch_bai_xeno,
-                    params.rnaseqc_gtf,
-                    params.strand,
-                    params.read_type
-                )
-            }else{
-                RNASEQC(
-                    ch_bam,
+            RNASEQC(
+                    ch_bam_qc,
                     ch_bai,
                     params.rnaseqc_gtf,
                     params.strand,
                     params.read_type
-                )
-            }
+            )            
             ch_rnaseqc = RNASEQC.out.qc
             // [ [meta], path("*") ]
         }
@@ -309,23 +259,13 @@ workflow RNASEQ {
         * RSeQC
         */
         if (params.run_rseqc){
-            if (params.workflow == 'pdx'){
-                RSEQC(
-                    ch_bam_xeno,
-                    ch_bai_xeno,
+            RSEQC(
+                ch_bam_qc,
+                ch_bai_qc,
                     params.rseqc_bed,
                     params.tx_bed,
                     params.gene_bed
                 )
-            }else{
-                RSEQC(
-                    ch_bam,
-                    ch_bai,
-                    params.rseqc_bed,
-                    params.tx_bed,
-                    params.gene_bed
-                )
-            }
             ch_rseqc = RSEQC.out.qc
             // [ [meta], path("*") ]
         }
@@ -333,19 +273,10 @@ workflow RNASEQ {
         /*
         * GATK collect_hs_metrics
         */
-        if (params.workflow == 'pdx_exome' && params.run_hs_metrics){
+        if (params.run_hs_metrics){
             HS_METRICS(
-                ch_bam_xeno,
-                ch_bai_xeno,
-                params.genome_fa,
-                params.target_region
-            )
-            ch_hs_metrics = HS_METRICS.out.qc
-            // [ [meta], path("*") ]
-        }else if (params.workflow == 'exome' && params.run_hs_metrics){
-            HS_METRICS(
-                ch_bam,
-                ch_bai,
+                ch_bam_qc,
+                ch_bai_qc,
                 params.genome_fa,
                 params.target_region
             )
@@ -426,22 +357,18 @@ workflow RNASEQ {
     /*
     * run featureCounts
     */
+    if(params.workflow == 'pdx'){
+        ch_bam_fc = ch_bam_xeno
+    }else{
+        ch_bam_fc = ch_bam
+    }
     if (params.run_featurecounts){
-        if(params.workflow == 'pdx'){
-            FEATURECOUNTS(
-                ch_bam_xeno, 
+        FEATURECOUNTS(
+                ch_bam_fc, 
                 params.gtf,
                 params.read_type,
                 params.strand
-            )
-        }else{
-            FEATURECOUNTS(
-                ch_bam, 
-                params.gtf,
-                params.read_type,
-                params.strand
-            )
-        }
+        )
         
         ch_counts = FEATURECOUNTS.out.counts
         // [ [meta], val(out_prefix), path("count.txt") ]

@@ -10,7 +10,7 @@ process FASTQC {
     publishDir "${params.outdir}/QC/fastqc/", pattern: '*.{html,zip}', mode: 'copy'
 
     input:
-    tuple val(meta), path(read1), path(read2)
+    tuple val(meta), val(out_prefix), path(read1), path(read2)
     
 
     output:

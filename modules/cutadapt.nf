@@ -10,11 +10,11 @@ process CUTADAPT {
     publishDir "${params.outdir}/trimmed_fastq/", pattern: '*.gz', mode: 'copy'
 
     input:
-    tuple val(meta), path(read1), path(read2)
+    tuple val(meta), val(out_prefix), path(read1), path(read2)
     
 
     output:
-    tuple val(meta), path("output/${read1.name}"), path("output/${read2.name}"), emit: fq
+    tuple val(meta), val(out_prefix), path("output/${read1.name}"), path("output/${read2.name}"), emit: fq
     tuple val(meta), path( "${meta.id}.cutadapt.json" ), emit: js
 
     script:
