@@ -125,6 +125,13 @@ workflow RNASEQ {
     ch_bai = Channel.empty()
     ch_tx_bam = Channel.empty() // STAR's transcript bam, used for downstream quantification with Salmon
     ch_star_log = Channel.empty()
+    ch_bam_host = Channel.empty() 
+    ch_bai_host = Channel.empty()
+    ch_star_log_host = Channel.empty() 
+    ch_bam_xeno = Channel.empty()
+    ch_bai_xeno = Channel.empty()
+
+
     if (params.run_alignment){
         SINGLE_LIB(
             ch_reads,
