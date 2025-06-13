@@ -6,8 +6,7 @@ include { FASTQC  } from '../modules/fastqc.nf'
 include { FASTQC as FASTQC_TRIMMED  } from '../modules/fastqc.nf'
 include { CUTADAPT  } from '../modules/cutadapt.nf'
 include { CAT_FASTQ  } from '../modules/cat_fastq.nf'
-include { STAR } from '../modules/star.nf'
-include { STAR  as  STAR_HOST } from '../modules/star.nf'
+include { XENOFILTER } from '../modules/xenofilter.nf'
 include { BAM_TO_FASTQ } from '../modules/bam_to_fastq.nf'
 include { SALMON  } from '../modules/salmon.nf'
 include { ARRIBA  } from '../modules/arriba.nf'
@@ -28,8 +27,8 @@ include { GENERATE_REPORT } from '../modules/generate_report.nf'
 //include { OUTPUT_PARAMS  } from '../modules/output_params.nf'
 //include { TEST  } from './modules/test.nf'
 
-include { SINGLE_LIB } from '../subworkflows/single_lib.nf'
-include { SPLIT_LIB } from '../subworkflows/split_lib.nf'
+include { ALIGN_FASTQ } from '../subworkflows/align_fastq.nf'
+include { ALIGN_SPLIT_FASTQ } from '../subworkflows/align_split_fastq.nf'
 
 ch_dummy_csv = Channel.fromPath("$projectDir/assets/dummy_file.csv", checkIfExists: true)
 
@@ -133,33 +132,54 @@ workflow RNASEQ {
 
 
     if (params.run_alignment){
-        SINGLE_LIB(
-            ch_reads,
-            params.split_fastq
-        ) // if params.split_fastq, do not run XenofilteR
+        ALIGN_FASTQ(
+            ch_reads
+        )
         
-        ch_bam = SINGLE_LIB.out.bam
-        ch_bai = SINGLE_LIB.out.bai
-        ch_counts = SINGLE_LIB.out.counts
-        ch_tx_bam = SINGLE_LIB.out.tx_bam
-        ch_star_log = SINGLE_LIB.out.star_log
-        ch_bam_host = SINGLE_LIB.out.bam_host
-        ch_bai_host = SINGLE_LIB.out.bai_host
-        ch_star_log_host = SINGLE_LIB.out.star_log_host
-        ch_bam_xeno = SINGLE_LIB.out.bam_xeno
-        ch_bai_xeno = SINGLE_LIB.out.bai_xeno
+        ch_bam = ALIGN_FASTQ.out.bam
+        ch_bai = ALIGN_FASTQ.out.bai
+        ch_counts = ALIGN_FASTQ.out.counts
+        ch_tx_bam = ALIGN_FASTQ.out.tx_bam
+        ch_star_log = ALIGN_FASTQ.out.star_log
+        ch_bam_host = ALIGN_FASTQ.out.bam_host
+        ch_bai_host = ALIGN_FASTQ.out.bai_host
+        ch_star_log_host = ALIGN_FASTQ.out.star_log_host
 
-        if(params.run_split_fastq){
-            SPLIT_LIB(
-                ch_reads,
-                params.split_size
-            )
-            ch_bam_xeno = SPLIT_LIB.out.bam_xeno
-            ch_bai_xeno = SPLIT_LIB.out.bai_xeno
+        if(params.workflow == 'pdx'){
+            if(params.run_split_fastq){
+                ALIGN_SPLIT_FASTQ(
+                    ch_reads,
+                    params.split_size
+                )
+                ch_bam_xeno = ALIGN_SPLIT_FASTQ.out.bam_xeno
+                ch_bai_xeno = ALIGN_SPLIT_FASTQ.out.bai_xeno
 
+            } else {
+                XENOFILTER(
+                    ch_bam
+                        .map{ it -> [ [ it[0], it[1] ], it[2] ]}
+                        .join (
+                            ch_bai
+                                .map{ it -> [ [ it[0], it[1] ], it[2] ]}
+                        )
+                        .join (
+                            ch_bam_host
+                                .map{ it -> [ [ it[0], it[1] ], it[2] ]}
+                        )
+                        .join (
+                            ch_bai_host
+                                .map{ it -> [ [ it[0], it[1] ], it[2] ]}
+                        )
+                        .map{ it -> [ it[0][0], it[0][1], it[1], it[2], it[3], it[4] ] }, 
+                    params.genome, 
+                    params.mm_threshold
+                )
+                ch_bam_xeno = XENOFILTER.out.bam 
+                ch_bai_xeno = XENOFILTER.out.bai
+                // [ [meta], val(out_prefix), path/to/filtered.bam ]    
+            }
         }
-
-            
+    
     }
 
 
@@ -221,12 +241,41 @@ workflow RNASEQ {
     ch_bam_stat = Channel.empty()
     ch_bam_stat_host = Channel.empty()
     ch_bam_stat_xeno = Channel.empty()
+
+    ch_bam
+        .map{ it -> [ [ it[0], it[1] ], it[2] ]}
+        .join (
+            ch_bai
+                .map{ it -> [ [ it[0], it[1] ], it[2] ]}
+        )
+        .map { it -> [ it[0][0], it[0][1], it[1], it[2] ]}
+        .set { ch_bam_bai }
+                    
+    
     if (params.workflow == 'pdx'){
-        ch_bam_qc = ch_bam_xeno
-        ch_bai_qc = ch_bai_xeno
+        ch_bam_host
+            .map{ it -> [ [ it[0], it[1] ], it[2] ]}
+            .join (
+                ch_bai_host
+                    .map{ it -> [ [ it[0], it[1] ], it[2] ]}
+            )
+            .map { it -> [ it[0][0], it[0][1], it[1], it[2] ]}
+            .set { ch_bam_bai_host }
+
+        ch_bam_xeno
+            .map{ it -> [ [ it[0], it[1] ], it[2] ]}
+            .join (
+                ch_bai_xeno
+                    .map{ it -> [ [ it[0], it[1] ], it[2] ]}
+            )
+            .map { it -> [ it[0][0], it[0][1], it[1], it[2] ]}
+            .set { ch_bam_bai_xeno }
+
+        ch_bam_bai_qc = ch_bam_bai_xeno
+        
     }else{
-        ch_bam_qc = ch_bam
-        ch_bai_qc = ch_bai
+        ch_bam_bai_qc = ch_bam_bai
+        
     }
 
     if (params.run_qc){
@@ -252,8 +301,7 @@ workflow RNASEQ {
         */
         if (params.run_rnaseqc){
             RNASEQC(
-                    ch_bam_qc,
-                    ch_bai,
+                    ch_bam_bai_qc,
                     params.rnaseqc_gtf,
                     params.strand,
                     params.read_type
@@ -267,8 +315,7 @@ workflow RNASEQ {
         */
         if (params.run_rseqc){
             RSEQC(
-                ch_bam_qc,
-                ch_bai_qc,
+                ch_bam_bai_qc,
                     params.rseqc_bed,
                     params.tx_bed,
                     params.gene_bed
@@ -282,8 +329,7 @@ workflow RNASEQ {
         */
         if (params.run_hs_metrics){
             HS_METRICS(
-                ch_bam_qc,
-                ch_bai_qc,
+                ch_bam_bai_qc,
                 params.genome_fa,
                 params.target_region
             )
@@ -296,22 +342,22 @@ workflow RNASEQ {
         /*
         * pdx
         */
-        if (params.workflow == 'pdx'){
+        if (params.run_samtools){
             /*
             * samtools
             */
             SAMTOOLS_VIEW(
-                ch_bam
+                ch_bam_bai
             )
             ch_bam_stat = SAMTOOLS_VIEW.out.data
 
             SAMTOOLS_VIEW_HOST(
-                ch_bam_host
+                ch_bam_bai_host
             )
             ch_bam_stat_host = SAMTOOLS_VIEW_HOST.out.data
 
             SAMTOOLS_VIEW_XENO(
-                ch_bam_xeno
+                ch_bam_bai_xeno
             )
             ch_bam_stat_xeno = SAMTOOLS_VIEW_XENO.out.data
         }

@@ -10,8 +10,7 @@ process RSEQC {
     publishDir "${params.outdir}/QC/rseqc/", pattern: "*.{txt,pdf,r,bed,log,xls,xlsx}", mode: 'copy'
 
     input:
-    tuple val(meta), val(out_prefix), path(bam)
-    tuple val(meta), val(out_prefix), path(bai)
+    tuple val(meta), val(out_prefix), path(bam), path(bai)
     path(rseqc_bed)
     path(tx_bed)
     path(gene_bed)

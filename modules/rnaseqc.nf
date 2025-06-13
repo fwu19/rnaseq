@@ -10,8 +10,7 @@ process RNASEQC {
     publishDir "${params.outdir}/QC/rnaseqc/", pattern: "*.{tsv,gct}", mode: 'copy'
 
     input:
-    tuple val(meta), val(out_prefix), path(bam)
-    tuple val(meta), val(out_prefix), path(bai)
+    tuple val(meta), val(out_prefix), path(bam), path(bai)
     path(gtf)
     val(strand)
     val(read_type)

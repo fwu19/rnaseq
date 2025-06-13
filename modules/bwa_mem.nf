@@ -16,9 +16,9 @@ process BWA_MEM {
     path (bwa_index)
     
     output:
-    tuple val(meta), val(out_prefix), path( "*.bam" ), emit: bam 
-    tuple val(meta), val(out_prefix), path( "*.bai" ), emit: bai
-    path("*.{bam,bai}")
+    tuple val(meta), val(out_prefix), path( "${out_prefix}.bam" ), emit: bam 
+    tuple val(meta), val(out_prefix), path( "${out_prefix}.bam.bai" ), emit: bai
+    path("${out_prefix}.{bam,bam.bai}")
 
     script:
     def args = task.ext.args ?: ""

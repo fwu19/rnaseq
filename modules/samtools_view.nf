@@ -11,7 +11,7 @@ process SAMTOOLS_VIEW {
     publishDir "${params.outdir}/BAM/", mode: 'copy'
 
     input:
-    tuple val(meta), val(out_prefix), path(bam)
+    tuple val(meta), val(out_prefix), path(bam), path(bai)
     
     output:
     tuple val(meta), path("${out_prefix}.{stat,flagstat}"), emit: data

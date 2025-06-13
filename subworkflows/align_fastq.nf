@@ -6,12 +6,11 @@ include { BWA_MEM } from '../modules/bwa_mem.nf'
 include { BWA_MEM  as  BWA_MEM_HOST } from '../modules/bwa_mem.nf'
 include { STAR } from '../modules/star.nf'
 include { STAR  as  STAR_HOST } from '../modules/star.nf'
-include { XENOFILTER } from '../modules/xenofilter.nf'
 
-workflow SINGLE_LIB {
+
+workflow ALIGN_FASTQ {
     take:
     ch_reads
-    split_fastq
 
     main: 
     ch_bam = Channel.empty()
@@ -21,8 +20,6 @@ workflow SINGLE_LIB {
     ch_star_log = Channel.empty()
     ch_bam_host = Channel.empty()
     ch_star_log_host = Channel.empty()
-    ch_bam_xeno = Channel.empty()
-    ch_bai_xeno = Channel.empty()
 
 
     if (params.aligner == 'star'){
@@ -97,30 +94,9 @@ workflow SINGLE_LIB {
             ch_bai_host = BWA_MEM_HOST.out.bai
             // [ [meta], val(out_prefix), path(bam) ]
 
-            ch_bam
-                .map{ it -> [ [ it[0], it[1] ], it[2] ]}
-                .join (
-                ch_bam_host
-                    .map{ it -> [ [ it[0], it[1] ], it[2] ]}
-            )
-            .map{ it -> [ it[0][0], it[0][1], it[1], it[2] ] }
-            .set { ch_bam_paired }
-            // ch_bam_paired.view()
-            // [ [meta], val(out_prefix), [path/to/graft.{bam,bai}], [path/to/host.{bam,bai}]]
-
         }
     }
 
-    if (params.workflow == 'pdx' & !params.split_fastq){
-        XENOFILTER(
-            ch_bam_paired, 
-            params.genome, 
-            params.mm_threshold
-        )
-        ch_bam_xeno = XENOFILTER.out.bam 
-        ch_bai_xeno = XENOFILTER.out.bai
-        // [ [meta], val(out_prefix), path/to/filtered.bam ]    
-    }
 
     emit:
     //versions = ch_versions
@@ -132,8 +108,6 @@ workflow SINGLE_LIB {
     bam_host = ch_bam_host
     bai_host = ch_bai_host
     star_log_host = ch_star_log_host
-    bam_xeno = ch_bam_xeno    
-    bai_xeno = ch_bai_xeno
 
 
 }

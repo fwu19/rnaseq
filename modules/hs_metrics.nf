@@ -10,8 +10,7 @@ process HS_METRICS {
     publishDir "${params.outdir}/QC/gatk/", pattern: "*.{tsv,gct}", mode: 'copy'
 
     input:
-    tuple val(meta), val(out_prefix), path(bam)
-    tuple val(meta), val(out_prefix), path(bai)
+    tuple val(meta), val(out_prefix), path(bam), path(bai)
     val(genome_fa)
     path(target_region)
 
