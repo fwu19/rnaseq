@@ -23,7 +23,7 @@ process ARRIBA {
     
     output:
     path("${out_prefix}/", type: 'dir')
-    path("${out_prefix}.{bam,bam.bai}")
+    path("${out_prefix}.{bam,bam.bai,fusions.tsv}")
 
     script:
     def args = task.ext.args ?: ""
@@ -33,5 +33,6 @@ process ARRIBA {
     run_arriba.sh ../${star_index} ../${gtf} ../${genome_fa} ../${blacklist} ../${known_fusions} ../${protein_domains} ${task.cpus} ../${read1} ../${read2}
     mv Aligned.sortedByCoord.out.bam ../${out_prefix}.bam
     mv Aligned.sortedByCoord.out.bam.bai ../${out_prefix}.bam.bai
+    mv fusions.tsv ../${out_prefix}.fusions.tsv 
     """
 }

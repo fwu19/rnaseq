@@ -184,12 +184,8 @@ workflow RNASEQ {
 
 
     ch_graft_reads = Channel.empty()
-    if(params.run_alignment & params.workflow == 'pdx'){
-        if (params.arriba){
-            BAM_TO_FASTQ(
-                ch_bam_xeno
-            )
-        }else if (params.only_filter_fastq){
+    if(params.run_alignment && params.workflow == 'pdx'){
+        if (params.run_arriba || params.only_filter_fastq){
             BAM_TO_FASTQ(
                 ch_bam_xeno
             )
@@ -198,7 +194,7 @@ workflow RNASEQ {
     }
 
     ch_salmon = Channel.empty()
-    if (params.run_alignment & params.run_salmon){
+    if (params.run_alignment && params.run_salmon){
         if (params.workflow == 'pdx'){
             //should filter Aligned.toTranscriptome.out.bam
         }else{
@@ -211,15 +207,9 @@ workflow RNASEQ {
         // [ [meta], val(out_prefix), path("${out_prefix}/") ]
     }
 
-    if (params.run_alignment & params.run_arriba){
-        if (params.workflow == 'pdx'){
-            ch_reads_arriba = ch_graft_reads
-        }else{
-            ch_reads_arriba = ch_reads
-                                .map{ it -> [ it[0], it[0].id, it[1], it[2] ]}
-        }
+    if (params.run_alignment && params.run_arriba){
         ARRIBA(
-            ch_reads_arriba, 
+            params.workflow == 'pdx' ? ch_graft_reads : ch_reads, 
             params.genome, 
             params.star, 
             params.gtf,
@@ -465,7 +455,7 @@ workflow RNASEQ {
     *   collect transcript-level count matrix and run PCA
     */
     ch_tx_rds = Channel.empty()
-    if (params.run_alignment & params.run_salmon & !params.only_filter_fastq){
+    if (params.run_alignment && params.run_salmon && !params.only_filter_fastq){
         GENERATE_TRANSCRIPT_COUNT_MATRIX(
             samplesheet, 
             Channel.fromPath(params.comparison, checkIfExists: true), 
@@ -481,7 +471,7 @@ workflow RNASEQ {
     * differential transcripts
     */
     ch_dt = Channel.empty()
-    if (params.run_dt & params.run_salmon){
+    if (params.run_dt && params.run_salmon){
         DIFFERENTIAL_TRANSCRIPTS(
             samplesheet, 
             Channel.fromPath(params.comparison, checkIfExists: true), 
