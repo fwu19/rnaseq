@@ -1,4 +1,5 @@
 
+max_table_rows: 1000000
 export_plots: true
 
 use_filename_as_sample_name:

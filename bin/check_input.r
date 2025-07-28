@@ -70,7 +70,7 @@ ssv <- add_metadata(ss, meta_csv)
 ssv %>% 
     write.table('samplesheet.valid.csv', sep = ',', quote = F, row.names = F)
 
-## write sample sheet ####
+## write fastq paths ####
 ss %>% 
     filter(id %in% ssv$id) %>% 
     write.table('fq.csv', sep = ',', quote = F, row.names = F)
