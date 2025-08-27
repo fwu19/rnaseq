@@ -446,7 +446,9 @@ workflow RNASEQ {
             params.fdr,
             params.fc,
             params.fdr2,
-            params.fc2
+            params.fc2,
+            params.de_gene_txt?:params.gene_txt,
+            params.de_gene_type?:'all'
         )
         ch_de = DIFFERENTIAL_EXPRESSION.out.rds
     }
@@ -480,7 +482,9 @@ workflow RNASEQ {
             params.fdr,
             params.fc,
             params.fdr2,
-            params.fc2
+            params.fc2,
+            params.de_gene_txt?:params.gene_txt,
+            params.de_gene_type?:'all'
         )
         ch_dt = DIFFERENTIAL_TRANSCRIPTS.out.rds
     }

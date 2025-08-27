@@ -336,7 +336,7 @@ normalize_counts <- function(y, out.prefix, return = c('rpkm','cpm'), gene.lengt
 }
 
 ## wrapper
-wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2){
+wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2, genes2keep = NULL, gene_types = NULL){
 
     out.prefix <- icmp$out.prefix[1]
     control.group <- icmp$control.group[[1]]
@@ -347,6 +347,15 @@ wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 
     }else{
         group <- NULL
     }
+
+    ## filter genes if needed ####
+    if (!is.null(genes2keep)){
+        y0 <- y0[y0$genes$gene_id %in% genes2keep$gene_id, ]
+    }
+    if (!is.null(gene_types)){
+        y0 <- y0[y0$genes$gene_type %in% gene_types, ]
+    }
+    
     
     ## run DGE ####
     lst <- run_da(
@@ -423,11 +432,19 @@ fdr <- as.numeric(fdr)
 fc <- as.numeric(fc)
 fdr2 <- as.numeric(fdr2)
 fc2 <- as.numeric(fc2)
+if (file.exists(gene_txt)){
+    genes2keep <- read.delim(gene_txt)
+}else{
+    genes2keep <- NULL
+}
 
-## detect differential expression ####
+gene_types <- unlist(strsplit(gene_type, split = ','))
+if(setequal(gene_types, 'all')){gene_types <- NULL}
+
+## detect differential transcripts ####
 cmp <- cmp %>% 
-    add_colv('out.prefix', paste(cmp$test, cmp$control, sep = '_vs_')) %>% 
-    add_colv('plot.title', paste(cmp$test, cmp$control, sep = ' vs ')) %>% 
+    add_colv('out.prefix', paste(cmp$test.group, cmp$control.group, sep = '_vs_')) %>% 
+    add_colv('plot.title', paste(cmp$test.group, cmp$control.group, sep = ' vs ')) %>% 
     add_colv('sample.group', '')
 
 de.list <- list()

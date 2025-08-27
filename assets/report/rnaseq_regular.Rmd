@@ -91,9 +91,9 @@ plot_pca <- function(y, var.genes = NULL, color = NULL, plot.title = '', sample.
     }
     
     if(length(unique(df$color))>1){
-        p <- ggplot(df,aes(x=PC1,y=PC2,label=label,color=color))
+        p <- ggplot(df,aes(x=PC1,y=PC2,label=label,color=color, text=label))
     }else{
-        p <- ggplot(df,aes(x=PC1,y=PC2,label=label))
+        p <- ggplot(df,aes(x=PC1,y=PC2,label=label, text=label))
     }
     p <- p +
         geom_point(shape = 1)
@@ -257,7 +257,66 @@ dot_plot <- function(df, xvar, xlab, xsf = 1, yvar = 'sample_group'){
   }
 }
 
-
+## scatter plot
+scatter_plot <- function(
+  df, 
+  xvar, xlab, xsf = 1, 
+  yvar, ylab, ysf = 1, 
+  color.var = 'sample_group', color.lab = '',
+  text.var = 'Sample',
+  size.var = NULL, size.lab = ''
+){
+  if (!xvar %in% colnames(df) | !yvar %in% colnames(df)){return(plot_spacer())}
+  
+  df <- df %>% 
+    mutate(
+      x = df[,xvar] * xsf, 
+      y = df[,yvar] * ysf,
+      color = df[,color.var],
+      text = df[,text.var]
+    )
+  
+  if (is.null(size.var)){
+    p <- ggplot(df, aes(
+      x = x, 
+      y = y,
+      color = color,
+      text = text
+    ))
+  }else if (size.var %in% colnames(df)){
+    df <- df %>% mutate(size = df[,size.var])
+    p <- ggplot(df, aes(
+      x = x, 
+      y = y,
+      color = color,
+      text = text,
+      size = size
+    ))   
+  }else{
+    p <- ggplot(df, aes(
+      x = x, 
+      y = y,
+      color = color,
+      text = text
+    ))    
+  }
+  
+  p+
+    geom_point()+
+    scale_size_continuous(range = c(1,3))+
+    labs( 
+      x = xlab, y = ylab,
+      color = color.lab, size = size.lab
+    )+
+    theme_bw(base_size = 10)+
+    theme(
+      plot.margin = unit(rep(10,4), units = 'pt'),
+      text = element_text(size = 12),
+      axis.text.x = element_text(hjust = 1, angle = 90),
+      axis.title = element_text(size = 10),
+      legend.text = element_text(size = 10)
+    )
+}
 ```
 
 ```{r read_input}
@@ -273,7 +332,8 @@ ss <- dat$ss %>%
   relocate(id)
 
 ms <- ss %>% 
-    dplyr::select(id, sample_group) %>% 
+    mutate(fastq_id = sub('.fastq.gz$', '', fastq_1)) %>% 
+    dplyr::select(id, sample_group, fastq_id) %>% 
     dplyr::rename("Sample" ="id")
 
 if ('stat' %in% names(dat)){
@@ -282,25 +342,21 @@ if ('stat' %in% names(dat)){
       dat$stat %>% 
       filter(is.na(FastQC_mqc.generalstats.fastqc.total_sequences)) %>% 
       dplyr::select(Sample, !contains('FastQC')), 
-      by = 'Sample'
+      by = c('Sample')
     ) %>% 
     left_join(
       dat$stat %>% 
-        filter(!is.na(FastQC_mqc.generalstats.fastqc.total_sequences) & grepl('_R1_', Sample)) %>% 
+        filter(!is.na(FastQC_mqc.generalstats.fastqc.total_sequences) & grepl('_R1_|_merged_R1', Sample)) %>% 
         dplyr::select(Sample, contains('fastqc.total_sequences')) %>% 
-        mutate(Sample = gsub('_S[0-9]{1,}_L[0-9]{1,}.*|_merged_R[12]', '', Sample)) %>% 
-        group_by(Sample) %>% 
-        summarise(
-          FastQC_mqc.generalstats.fastqc.total_sequences = sum(FastQC_mqc.generalstats.fastqc.total_sequences)
-        ),
-      by = 'Sample'
+        mutate(Sample = Sample),
+      by = c('fastq_id' = 'Sample')
     ) %>% 
     left_join(
       dat$stat %>% 
-        filter(!is.na(FastQC_trimmed_mqc.generalstats.fastqc_trimmed.total_sequences) & grepl('_R1$', Sample)) %>% 
+        filter(!is.na(FastQC_trimmed_mqc.generalstats.fastqc_trimmed.total_sequences) & grepl('_R1_|_merged_R1', Sample)) %>% 
         dplyr::select(Sample, contains('fastqc_trimmed.total_sequences')) %>% 
-        mutate(Sample = gsub('_S[0-9]{1,}_L[0-9]{1,}.*|_merged_R[12]', '', Sample)),
-      by = 'Sample'
+        mutate(Sample = Sample),
+      by = c('fastq_id' = 'Sample')
     )    
   colnames(ms) <- gsub('.*generalstats.', '', colnames(ms))
 }
@@ -334,25 +390,60 @@ qc_plot <- dot_plot
 
 figs <- list()
 
-figs$total.reads <- qc_plot(ms, "fastqc.total_sequences", 'Total sequenced reads in million', 1e-6, 'sample_group')
+## reads ####
+df <- ms %>% 
+  mutate(
+    size = 1 - fastqc_trimmed.total_sequences/fastqc.total_sequences
+  ) %>% 
+  mutate(
+    text = paste(Sample, ':', round(size*100), '% trimmed')
+  )
+figs$reads <- scatter_plot(
+  df, 
+  xvar = 'fastqc.total_sequences', xsf = 1e-6, xlab = 'Total sequenced reads in million',
+  yvar = 'fastqc_trimmed.total_sequences', ysf = 1e-6, ylab = 'Adapter-trimmed reads in million',
+  size.var = 'size', text.var = 'text'
+)
 
-figs$trimmed.reads <- qc_plot(ms, "fastqc_trimmed.total_sequences", 'Adapter-trimmed Reads in million', 1e-6, 'sample_group')
+## alignment ####
+df <- ms %>% 
+  mutate(
+    text = paste(Sample, ':', round(star.uniquely_mapped_percent), '% uniquely mapped')
+  )
+
+figs$alignment <- scatter_plot(
+ df,
+ xvar = 'star.uniquely_mapped', xsf = 1e-6, xlab = 'Uniquely mapped reads in million',
+  yvar = 'star.uniquely_mapped_percent', ysf = 1, ylab = 'Uniquely mapped reads %',
+  size.var = NULL, text.var = 'text'
+)
+
+## genes vs intergenic regions ####
+figs$genes <- scatter_plot(
+ ms,
+ xvar = 'Genes.Detected', xsf = 1, xlab = 'Genes detected',
+  yvar = 'Intergenic.Rate', ysf = 1, ylab = 'Intergenic rate',
+  size.var = NULL, text.var = 'text'
+)
+
+## exonic vs intron ####
+figs$exon <- scatter_plot(
+ ms,
+ xvar = 'Exonic.Rate', xsf = 1, xlab = 'Exonic rate',
+  yvar = 'Intronic.Rate', ysf = 1, ylab = 'Intronic rate',
+  size.var = NULL, text.var = 'text'
+)
+
+## off-target vs zero-coverage ####
+if ('PCT_OFF_BAI' %in% colnames(ms) & 'ZERO_CVG_TARGETS_PCT' %in% colnames(ms)){
+  figs$coverage <- scatter_plot(
+    ms,
+    xvar = 'PCT_OFF_BAIT', xsf = 1, xlab = 'Off-target rate',
+    yvar = ' ZERO_CVG_TARGETS_PCT', ysf = 1, ylab = 'Zero coverage rate',
+    size.var = NULL, text.var = 'text'
+  )
   
-figs$uniquely.mapped.reads <- qc_plot(ms, "star.uniquely_mapped", 'Uniquely mapped reads in million', 1e-6)
-
-figs$unique.mapping.pct <- qc_plot(ms, "star.uniquely_mapped_percent", 'Unique mapping percent')
-
-figs$off.target.rate <- qc_plot(ms, "PCT_OFF_BAIT", 'Off-target rate')
-
-figs$zero.cvg.rate <- qc_plot(ms, "ZERO_CVG_TARGETS_PCT", 'Zero coverage rate')
-
-figs$gene.detected <- qc_plot(ms, "Genes.Detected", "Genes detected")
-
-figs$exonic.rate <- qc_plot(ms, "Exonic.Rate", 'Exonic rate')
-
-figs$intronic.rate <- qc_plot(ms, "Intronic.Rate", 'Intronic rate')
-
-figs$intergenic.rate <- qc_plot(ms, "Intergenic.Rate", 'Intergenic rate')
+}
 
 
 ```
@@ -361,7 +452,7 @@ figs$intergenic.rate <- qc_plot(ms, "Intergenic.Rate", 'Intergenic rate')
 if (file.exists('gene.y0.rds')){
   y0 <- readRDS('gene.y0.rds')
   gene.pca <- plot_pca(y0, var.genes = 500, color = y0$samples$group, sample.label = F)
-  if (length(unique(y0$samples$group))>9){
+  if (length(unique(y0$samples$group))>30){
     y0$samples$group <- 1
     gene.pca <- plot_pca(y0, var.genes = 500, color = y0$samples$group, sample.label = F)
   }
@@ -371,7 +462,7 @@ if (file.exists('gene.y0.rds')){
 if (file.exists('transcript.y0.rds')){
   y0 <- readRDS('transcript.y0.rds')
   transcript.pca <-plot_pca(y0, var.genes = 500, color = y0$samples$group, sample.label = F, feature.length = 'EffectiveLength')
-  if (length(unique(y0$samples$group))>9){
+  if (length(unique(y0$samples$group))>30){
     y0$samples$group <- 1
     ranscript.pca <-plot_pca(y0, var.genes = 500, color = y0$samples$group, sample.label = F, feature.length = 'EffectiveLength')
   }
@@ -486,53 +577,33 @@ $$\\[0.5in]$$
 
 ## QC {.tabset .tabset-pills}
 
-### Total sequenced reads
+### Input reads
 ```{r}
-p <- figs$total.reads
+p <- figs$reads
 plotly::ggplotly(p, tooltip = 'text')
 ```
 
-### Adapter-trimmed reads
+
+### Read alignment
 ```{r}
-p <- figs$trimmed.reads
+p <- figs$alignment
+plotly::ggplotly(p, tooltip = 'text')
+
+```
+
+
+### Gene detected and intergenic rate
+```{r}
+p <- figs$genes
 plotly::ggplotly(p, tooltip = 'text')
 ```
 
-### Uniquely mapped reads
+### Exonic vs intronic rates
 ```{r}
-p <- figs$uniquely.mapped.reads
+p <- figs$exon
 plotly::ggplotly(p, tooltip = 'text')
 ```
 
-### Unique mapping percent
-```{r}
-p <- figs$unique.mapping.pct
-plotly::ggplotly(p, tooltip = 'text')
-```
-
-### Gene detected
-```{r}
-p <- figs$gene.detected
-plotly::ggplotly(p, tooltip = 'text')
-```
-
-### Exonic rates
-```{r}
-p <- figs$exonic.rate
-plotly::ggplotly(p, tooltip = 'text')
-```
-
-### Intronic rates
-```{r}
-p <- figs$intronic.rate
-plotly::ggplotly(p, tooltip = 'text')
-```
-
-### Intergenic rates
-```{r}
-p <- figs$intergenic.rate
-plotly::ggplotly(p, tooltip = 'text')
-```
 
 ### Metric table
 Click a button to save as csv or Excel file. \
