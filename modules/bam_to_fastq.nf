@@ -3,8 +3,8 @@ process BAM_TO_FASTQ {
     time = '1d'
     cpus = 6
     memory = '24G'
-    module = ['BEDTools/2.30.0-GCC-12.2.0', 'SAMtools/1.17-GCC-12.2.0']
-
+    //module = ['BEDTools/2.30.0-GCC-12.2.0', 'SAMtools/1.17-GCC-12.2.0']
+    container "quay.io/biocontainers/mulled-v2-8186960447c5cb2faa697666dc1e6d919ad23f3e:96081f93c4cf2811a53d5112d138ad07ebe1b815-0" // bedtools 2.27.1 samtools 1.9
 
     tag "convert bam to fastq on ${out_prefix}"
 

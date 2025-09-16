@@ -4,7 +4,7 @@ process BWA_MEM {
     cpus = 12
     memory = '48G'
     module = ['BWA/0.7.17-GCCcore-12.2.0', 'SAMtools/1.17-GCC-12.2.0']
-
+    container "quay.io/biocontainers/mulled-v2-fe8faa35dbf6dc65a0f7f5d4ea12e31a79f73e40:adf6dbcd664c38605c6653b8ffcc270d54faceb9-0" // samtools 1.5 bwa 0.7.17
 
     tag "BWA_MEM on ${out_prefix}"
 

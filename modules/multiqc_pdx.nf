@@ -2,8 +2,8 @@ process MULTIQC_PDX {
     time = '1d'
     cpus = 6
     memory = '36G'
-    module = ['MultiQC/1.21-foss-2023a']
-
+    //module = ['MultiQC/1.21-foss-2023a']
+    container "quay.io/biocontainers/multiqc:1.21--pyhdfd78af_0" // multiqc 1.21
 
     tag "MultiQC on all samples"
 

@@ -3,8 +3,8 @@ process ARRIBA {
     time = '1d'
     cpus = 8
     memory = '48G'
-    module = [ 'Arriba/2.4.0-GCC-12.2.0', 'SAMtools/1.17-GCC-12.2.0' ]
-
+    //module = [ 'Arriba/2.4.0-GCC-12.2.0', 'SAMtools/1.17-GCC-12.2.0' ]
+    container "docker pull quay.io/biocontainers/arriba:2.4.0--h0033a41_2"
 
     tag "Arriba on ${out_prefix}"
 

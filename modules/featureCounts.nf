@@ -2,8 +2,8 @@ process FEATURECOUNTS {
     time = '1d'
     cpus = 6
     memory = '36G'
-    module = ['Subread/2.0.0-GCC-8.3.0']
-
+    //module = ['Subread/2.0.0-GCC-8.3.0']
+    container "quay.io/biocontainers/subread:2.0.0--hed695b0_0" // subread 2.0.0
 
     tag "featureCounts on ${meta.id}"
 

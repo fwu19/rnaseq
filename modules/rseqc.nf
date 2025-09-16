@@ -2,8 +2,8 @@ process RSEQC {
     time = '1d'
     cpus = 6
     memory = '36G'
-    module = ['RSeQC/5.0.1-foss-2021b', 'SAMtools/1.17-GCC-12.2.0', 'R/4.1.2-foss-2021b']
-
+    //module = ['RSeQC/5.0.1-foss-2021b', 'SAMtools/1.17-GCC-12.2.0', 'R/4.1.2-foss-2021b']
+    container "quay.io/biocontainers/rseqc:5.0.1--py38hbff2b2d_0" // rseqc 5.0.1
 
     tag "RSeQC on ${meta.id}"
 

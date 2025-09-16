@@ -3,8 +3,8 @@ process STAR {
     time = '1d'
     cpus = 8
     memory = '48G'
-    module = ['STAR/2.7.10b-GCC-12.2.0', 'SAMtools/1.17-GCC-12.2.0']
-
+    //module = ['STAR/2.7.10b-GCC-12.2.0', 'SAMtools/1.17-GCC-12.2.0']
+    container "quay.io/biocontainers/mulled-v2-2f4d4e7150bfb28621e88e8148cc0d0a8d93258c:023cceb1722b5d7c6e872dc9c68e6f27a8d5f28e-0" // STAR 2.7.11b, samtools 1.18
 
     tag "STAR on ${out_prefix}"
 

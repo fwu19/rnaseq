@@ -4,7 +4,7 @@
 
 options(stringsAsFactors = F)
 options(scipen = 99)
-library(dplyr)
+library(tidyverse)
 
 ## functions ####
 add_col <- function(df, col, default.value){

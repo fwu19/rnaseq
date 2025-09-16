@@ -2,8 +2,8 @@ process CUTADAPT {
     time = '1d'
     cpus = 6
     memory = '36G'
-    module = ['cutadapt/4.9-GCCcore-12.3.0']
-
+    //module = ['cutadapt/4.9-GCCcore-12.3.0']
+    container "quay.io/biocontainers/cutadapt:4.9--py38h0020b31_0" //cutadapt 4.9 with Python 3.8.19
 
     tag "CUTADAPT on ${meta.id}"
 

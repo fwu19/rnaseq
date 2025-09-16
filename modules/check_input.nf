@@ -1,9 +1,10 @@
 process CHECK_INPUT {
-    module = ['fhR/4.1.2-foss-2021b']
 
     label 'process_single'
 
     tag "Generate $samplesheet"
+
+    container "docker://fwu19/r-libs:4.1.2" 
 
     input:
     path ( samplesheet )
@@ -20,7 +21,7 @@ process CHECK_INPUT {
     script:
     """
     check_input.r $samplesheet $metadata
-
+    R -e "sessionInfo()" > session_info.txt
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         R: \$(R --version | head -n 1)
