@@ -3,7 +3,7 @@ process DIFFERENTIAL_TRANSCRIPTS {
     time = '1d'
     cpus = 1
     memory = '24G'
-    module = ['fhR/4.1.2-foss-2021b']
+    container "docker://fwu19/r-libs:4.1.2" 
 
 
     tag "Differential transcripts"

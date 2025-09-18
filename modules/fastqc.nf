@@ -10,7 +10,7 @@ process FASTQC {
     publishDir "${params.outdir}/QC/fastqc/", pattern: '*.{html,zip}', mode: 'copy'
 
     input:
-    tuple val(meta), val(out_prefix), path(read1), path(read2)
+    tuple val(meta), val(out_prefix), path("${meta.id}_R1.fastq.gz"), path("${meta.id}_R2.fastq.gz")
     
 
     output:
@@ -18,6 +18,6 @@ process FASTQC {
 
     script:
     """
-    fastqc -o ./ --casava $read1 $read2
+    fastqc -o ./ --casava ${meta.id}_R1.fastq.gz ${meta.id}_R2.fastq.gz
     """
 }

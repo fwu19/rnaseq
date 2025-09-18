@@ -189,8 +189,8 @@ workflow RNASEQ {
             BAM_TO_FASTQ(
                 ch_bam_xeno
             )
+            ch_graft_reads = BAM_TO_FASTQ.out.fq
         }
-        ch_graft_reads = BAM_TO_FASTQ.out.fq 
     }
 
     ch_salmon = Channel.empty()
