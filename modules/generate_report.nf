@@ -3,7 +3,7 @@ process GENERATE_REPORT {
 
     label "process_single"
 
-    tag "Make plots of read and peak metrics "
+    tag "Generate an analysis report "
 
     input:
     val( workflow )
@@ -14,14 +14,14 @@ process GENERATE_REPORT {
     path ( txt_rds )
     path ( dt_rds )
     path ( "hs_metrics/" )
-    path ( "*" )
+    path ( report_dir )
 
     output:
     path( "*.{rds,html,Rmd}" )
 
     script:
     """
-    prepare_report.r $workflow
+    prepare_report.r $workflow ${report_dir}
     render_report.r *.Rmd
 
     """

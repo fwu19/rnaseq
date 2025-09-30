@@ -11,9 +11,7 @@ process RSEQC {
 
     input:
     tuple val(meta), val(out_prefix), path(bam), path(bai)
-    path(rseqc_bed)
     path(tx_bed)
-    path(gene_bed)
 
     output:
     tuple val(meta), path("${out_prefix}*.{txt,pdf,r,bed,log,xls,xlsx}"), emit: qc
@@ -21,7 +19,7 @@ process RSEQC {
 
     script:
     """
-    rseqc.sh ${out_prefix} ${rseqc_bed} ${tx_bed} ${gene_bed} $bam 
+    rseqc.sh ${out_prefix} ${bam} ${tx_bed} 
 
     """
 }

@@ -12,7 +12,6 @@ process GENERATE_TRANSCRIPT_COUNT_MATRIX {
     
     input:
     path(samplesheet)
-    path(comparison)
     path("*", stageAs: "counts/*")
     path(gene_txt)
     val(length_col)
@@ -23,7 +22,7 @@ process GENERATE_TRANSCRIPT_COUNT_MATRIX {
     
     script:
     """
-    generate_transcript_count_matrix.r input=$samplesheet comparison=$comparison count.dir=counts gene.txt=$gene_txt length.col=${length_col}
+    generate_transcript_count_matrix.r input=$samplesheet count.dir=counts gene.txt=$gene_txt length.col=${length_col}
     mv y0.rds transcript.y0.rds
     """
 }

@@ -15,15 +15,24 @@ generate_count_matrix_salmon <- function(gene.txt, count.dirs){
     catch <- catchSalmon(paths = count.dirs)
     scaled.counts <- catch$counts/catch$annotation$Overdispersion
     colnames(scaled.counts) <- basename(colnames(scaled.counts))
-    cts <- cbind(data.frame(transcript_id = rownames(scaled.counts), catch$annotation) %>% 
+    lst <- list(
+        features = data.frame(transcript_id = rownames(scaled.counts), catch$annotation) %>% 
             left_join(ann, by = 'transcript_id'), 
-        scaled.counts
+        counts = scaled.counts
     )
-    return(cts) 
+    return(lst) 
     
 }
 
-count2dgelist <- function(counts.tsv=NULL, return.counts = T, pattern2remove="^X|.bam$", counts=NULL, out.dir=NULL, feature.cols=1:8, samples = NULL, group.col = 'sample_group'){
+count2dgelist <- function(
+    counts.tsv = NULL, return.counts = T, 
+    pattern2remove="^X|.bam$", 
+    counts = NULL, features = NULL,
+    feature.cols=NULL, 
+    samples = NULL, 
+    group.col = 'sample_group',
+    out.dir=NULL
+){
     options(stringsAsFactors = F)
     require(edgeR)
     
@@ -34,7 +43,17 @@ count2dgelist <- function(counts.tsv=NULL, return.counts = T, pattern2remove="^X
         colnames(counts) <- gsub(pattern2remove, '', colnames(counts))
     }
     
-    y0 <- DGEList(counts=counts[-(feature.cols)], genes=counts[feature.cols], remove.zeros = T, samples = samples) 
+    if (!is.null(feature.cols)){
+        counts <- counts[-(feature.cols)]
+        features <- cbind(features, counts[feature.cols])
+    }
+    
+    y0 <- DGEList(
+        counts = counts, 
+        genes = features, 
+        remove.zeros = T, 
+        samples = samples
+        ) 
     if(!is.null(samples) & group.col %in% colnames(samples)){
         y0$samples$group <- samples[,group.col]
     }
@@ -96,17 +115,18 @@ ss <- read.csv(input) %>%
 
 ## generate count matrix ####
 count.dirs <- list.dirs(count.dir, full.names = T, recursive = F)
-cts <- generate_count_matrix_salmon(gene.txt, count.dirs)
-cts %>% 
+lst <- generate_count_matrix_salmon(gene.txt, count.dirs)
+lst  %>% 
+    bind_cols() %>% 
     write.table('all_samples.transcript_raw_counts.txt', sep = '\t', quote = F, row.names = F)
 
 ## create DGElist ####
 y0 <- count2dgelist(
-    counts = cts, 
+    counts = lst$counts, features = lst$features,
     out.dir = NULL, 
-    feature.cols = 1:11, 
+    feature.cols = NULL, 
     samples = ss %>% 
-        arrange(factor(id, levels = colnames(cts)[12:ncol(cts)])),
+        arrange(factor(id, levels = colnames(lst$counts))),
     group.col = 'sample_group'
 )
 
