@@ -36,13 +36,19 @@ include { WRITE_CSV as WRITE_CSV_ALIGN_FASTQ} from '../modules/write_csv.nf'
 
 include { MAKE_INDEX } from '../subworkflows/make_index.nf'
 include { ALIGN_FASTQ } from '../subworkflows/align_fastq.nf'
-include { ALIGN_SPLIT_FASTQ } from '../subworkflows/align_split_fastq.nf'
+include { PROCESS_FASTQ } from '../subworkflows/process_fastq.nf'
 
-ch_dummy_csv = Channel.fromPath("$projectDir/assets/dummy_file.csv", checkIfExists: true)
-
-ch_metadata = params.metadata ? Channel.fromPath( params.metadata, checkIfExists: true ) : ch_dummy_csv
-
-ch_multiqc_config = params.multiqc_config ? Channel.fromPath(params.multiqc_config, checkIfExists: true ) : Channel.fromPath("$projectDir/assets/multiqc_config.yml")
+samplesheet = null
+tools = params.tools.split(',').collect()
+skip_tools = params.skip_tools.split(',').join()
+if ('arriba' in skip_tools){
+    params.run_arriba = false
+}
+if ('salmon' in skip_tools){
+    params.run_salmon = false
+    params.run_tx_count = false
+    params.run_de = false
+}
 
 workflow RNASEQ {
     /*
