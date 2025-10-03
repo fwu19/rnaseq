@@ -14,8 +14,8 @@ process MAKE_BWA {
     path ("genome/*") 
     
     output:
-    path( "BWA/", emit: dir)
-    path( "BWA/", type: 'dir')
+    path( "BWAIndex/", emit: dir)
+    path( "BWAIndex/", type: 'dir')
     path  "versions.yml", emit: versions
 
     when:
@@ -25,8 +25,8 @@ process MAKE_BWA {
     def args = task.ext.args ?: ""
     """
     cat genome/* > genome.fa
-    mkdir BWA
-    bwa index $args -p BWA/genome genome.fa
+    mkdir BWAIndex
+    bwa index $args -p BWAIndex/genome genome.fa
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

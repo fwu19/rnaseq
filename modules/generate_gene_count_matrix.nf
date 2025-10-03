@@ -12,7 +12,8 @@ process GENERATE_GENE_COUNT_MATRIX {
     
     input:
     path(samplesheet)
-    path("*", stageAs: "counts/*")
+    //tuple val(meta) val(id) path("counts/*")
+    path("counts/*")
     path(gene_txt)
     val(length_col)
     val(strand)

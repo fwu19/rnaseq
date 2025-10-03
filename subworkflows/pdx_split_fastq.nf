@@ -10,10 +10,12 @@ include { STAR  as  STAR_HOST } from '../modules/star.nf'
 include { XENOFILTER } from '../modules/xenofilter.nf'
 include { MERGE_BAM } from '../modules/merge_bam.nf'
 
-workflow ALIGN_SPLIT_FASTQ {
+workflow PDX_SPLIT_FASTQ {
     take:
     ch_reads
     split_size
+    aligner_index
+    aligner_index_host
 
 
     main:
@@ -42,7 +44,7 @@ workflow ALIGN_SPLIT_FASTQ {
         STAR(
             ch_reads_in,
             params.genome, 
-            params.star, 
+            aligner_index, 
             params.gtf
         )
         ch_bam = STAR.out.bam
@@ -52,23 +54,23 @@ workflow ALIGN_SPLIT_FASTQ {
         /*
         * align to host genome for PDX samples
         */
-        if (params.workflow == 'pdx'){
-            STAR_HOST(
+        STAR_HOST(
                 ch_reads_in, 
                 params.genome_host, 
-                params.star_host, 
+                aligner_index_host, 
                 params.gtf_host
-            )
-            ch_bam_host = STAR_HOST.out.bam
-            ch_bai_host = STAR_HOST.out.bai
-            // [ [meta], val(out_prefix), path(bam) ]
+        )
+        ch_bam_host = STAR_HOST.out.bam
+        ch_bai_host = STAR_HOST.out.bai
+        // [ [meta], val(out_prefix), path(bam) ]
 
-        }
-    }else if (params.aligner == 'bwa-mem'){
+    }
+    
+    if (params.aligner == 'bwa-mem'){
         BWA_MEM(
         ch_reads_in, 
         params.genome, 
-        params.bwa
+        aligner_index
         )
         ch_bam = BWA_MEM.out.bam
         ch_bai = BWA_MEM.out.bai
@@ -77,21 +79,19 @@ workflow ALIGN_SPLIT_FASTQ {
         /*
         * align to host genome for PDX samples
         */
-        if (params.workflow == 'pdx'){
-            BWA_MEM_HOST(
+        BWA_MEM_HOST(
                 ch_reads_in, 
                 params.genome_host, 
-                params.bwa_host
-            )
-            ch_bam_host = BWA_MEM_HOST.out.bam
-            ch_bai_host = BWA_MEM_HOST.out.bai
-            // [ [meta], val(out_prefix), path(bam) ]
+                aligner_index_host
+        )
+        ch_bam_host = BWA_MEM_HOST.out.bam
+        ch_bai_host = BWA_MEM_HOST.out.bai
+        // [ [meta], val(out_prefix), path(bam) ]
 
-        }
+        
     }
 
-    if (params.workflow == 'pdx'){
-        ch_bam
+    ch_bam
                 .map{ it -> [ [ it[0], it[1] ], it[2] ]}
                 .join (
                     ch_bai
@@ -107,32 +107,31 @@ workflow ALIGN_SPLIT_FASTQ {
                 )
                 .map{ it -> [ it[0][0], it[0][1], it[1], it[2], it[3], it[4] ] }
                 .set { ch_bam_bai_paired }
-        // ch_bam_bai_paired.view()
-        // [ [meta], val(out_prefix), [path/to/graft.{bam,bai}], [path/to/host.{bam,bai}]]
+    // ch_bam_bai_paired.view()
+    // [ [meta], val(out_prefix), [path/to/graft.{bam,bai}], [path/to/host.{bam,bai}]]
 
-        XENOFILTER(
+    XENOFILTER(
                 ch_bam_bai_paired, 
                 params.genome, 
                 params.mm_threshold
-        )
-        ch_bam_xeno = XENOFILTER.out.bam 
-        // [ [meta], val(out_prefix), path/to/filtered.bam ]    
+    )
+    ch_bam_xeno = XENOFILTER.out.bam 
+    // [ [meta], val(out_prefix), path/to/filtered.bam ]    
 
-        MERGE_BAM(
+    MERGE_BAM(
                 ch_bam_xeno
                 .map{ it -> [ it[0], it[2] ]}
                 .groupTuple( by: [0] )
-        )
-        ch_bam_xeno = MERGE_BAM.out.bam
-        ch_bai_xeno = MERGE_BAM.out.bai     
-        // ch_bam_xeno.view()
-        // [ [meta], val(out_prefix), path("*.{bam,bai}") ]      
+    )
+    ch_bam_xeno = MERGE_BAM.out.bam
+    ch_bai_xeno = MERGE_BAM.out.bai     
+    // ch_bam_xeno.view()
+    // [ [meta], val(out_prefix), path("*.{bam,bai}") ]      
         
-    }
 
     emit:
     //versions = ch_versions
-    bam_xeno = ch_bam_xeno    
-    bai_xeno = ch_bai_xeno
+    bam = ch_bam_xeno    
+    bai = ch_bai_xeno
 
 }

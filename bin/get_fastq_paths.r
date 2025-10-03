@@ -18,19 +18,42 @@ get_fastqs <- function(fq_dirs){
         stop ('No read 1 files found!')
     }
     
-    if (nfq1 > 0 & nfq2 > 0 & nfq1 != nfq2){
-        stop ('Found different numbers of read 1 and read 2 files!')
-    }
+    # if (nfq1 > 0 & nfq2 > 0 & nfq1 != nfq2){
+    #     stop ('Found different numbers of read 1 and read 2 files!')
+    # }
     
     ## generate a sample sheet without metadata
     ss <- data.frame(
-        fastq_1 = fqs1,
-        single_end = ifelse(nfq2 == 0, 'true', 'false')
-    ) %>% 
-        mutate(
-            id = gsub("_S[0-9]+(_L[0-9]+)?_R1_.*", "", basename(fastq_1)),
-            fastq_2 = ifelse(single_end, "", fqs2)
-        ) %>% 
+        id = gsub("_S[0-9]+(_L[0-9]+)?_R1_.*", "", basename(fqs1)),
+        fastq_1 = fqs1
+    )
+    
+    if (nfq2 > 0){
+        ss <- ss %>% 
+            mutate(
+                match_id = gsub("_S[0-9]+(_L[0-9]+)?_R1_.*", "", fastq_1)
+            ) %>% 
+            left_join(
+                data.frame(
+                    fastq_2 = fqs2,
+                    match_id = gsub("_S[0-9]+(_L[0-9]+)?_R2_.*", "", fqs2)
+                ),
+                by = 'match_id'
+            ) %>% 
+            mutate(
+                single_end = ifelse(is.na(fastq_2), 'true', 'false'),
+                fastq_2 = ifelse(is.na(fastq_2), "", fastq_2)
+            ) %>% 
+            dplyr::select(-match_id)
+    } else{
+        ss <- ss %>% 
+            mutate(
+                fastq_2 = "",
+                single_end = 'true'
+            )
+    }
+    
+    ss <- ss %>% 
         mutate(
             sample_group = id
         )

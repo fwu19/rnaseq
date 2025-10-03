@@ -17,13 +17,19 @@ gtf=$1; shift
 nthread=$1; shift
 fq1=$1; shift
 fq2=$1; shift
+ext_rg="$1"; shift
 ext_args="$1"; shift
 
 [[ -d $sample_id ]] || mkdir -p $sample_id
 cd $sample_id 
 
-RG="ID:$sample_id SM:$sample_id LB:$sample_id PL:illumina PU:$sample_id CN:FredHutch"
-STAR $ext_args \
+RG="ID:$sample_id SM:$sample_id LB:$sample_id PL:illumina PU:$sample_id $ext_rg"
+if [[ -s ../$gtf ]]; then
+	more_args="--quantMode TranscriptomeSAM GeneCounts 	--sjdbGTFfile ../${gtf}"
+else
+	more_args=""
+fi
+STAR $ext_args $more_args \
 	--genomeLoad NoSharedMemory \
 	--genomeDir "../${star_ref}" \
 	--readFilesIn ../${fq1} ../${fq2} \
@@ -42,7 +48,6 @@ STAR $ext_args \
 	--alignIntronMax 500000 \
 	--alignMatesGapMax 1000000 \
 	--alignSJDBoverhangMin 1 \
-	--sjdbGTFfile "../${gtf}" \
 	--sjdbScore 2 \
 	--twopassMode Basic \
 	--runThreadN ${nthread} 

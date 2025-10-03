@@ -338,8 +338,8 @@ normalize_counts <- function(y, out.prefix, return = c('rpkm','cpm'), gene.lengt
 }
 
 ## wrapper
-wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2, genes2keep = NULL, gene_types = NULL){
-
+wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2, genes2keep = NULL, gene_types = NULL, outdir = './'){
+    
     out.prefix <- icmp$out.prefix[1]
     control.group <- icmp$control.group[[1]]
     test.group <- icmp$test.group[[1]]
@@ -349,6 +349,7 @@ wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 
     }else{
         group <- NULL
     }
+    design.object <- as.formula(icmp$design.object[1])
     
     ## filter gene if needed ####
     if (!is.null(genes2keep)){
@@ -361,44 +362,45 @@ wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 
     ## run DGE ####
     lst <- run_da(
         y0, 
-        out.prefix = file.path(out.prefix, out.prefix),
+        out.prefix = file.path(outdir, out.prefix, out.prefix),
         control.group = control.group, 
         test.group = test.group, 
         group = group, 
         feature.length = 'gene_length',
-        fdr = fdr, fc = fc, fdr2 = fdr2, fc2 = fc2
+        fdr = fdr, fc = fc, fdr2 = fdr2, fc2 = fc2,
+        design.object = design.object
     )
     
     if ('error' %in% names(lst)){
-        write.table(lst$error, file.path(out.prefix, paste0(out.prefix, '.error.txt')), sep = '\t', quote = F, row.names = F)
+        write.table(lst$error, file.path(outdir, out.prefix, paste0(out.prefix, '.error.txt')), sep = '\t', quote = F, row.names = F)
         return(lst)
-        }
+    }
     
     y <- lst$y
     df <- lst$df
     lst$plots <- list(
         PCA = plot_pca(
             y, 
-            file.path(out.prefix, out.prefix), 
+            file.path(outdir, out.prefix, out.prefix), 
             color = y$samples$group, 
             sample.label = T, 
             plot.title = "", 
             var.genes = 500, 
             feature.length = "gene_length"),
         MD = plot_MD(
-            df, out.prefix = file.path(out.prefix, out.prefix),
+            df, out.prefix = file.path(outdir, out.prefix, out.prefix),
             plot.title = plot.title
         ),
         volcano = plot_volcano(
-            df, out.prefix = file.path(out.prefix, out.prefix),
+            df, out.prefix = file.path(outdir, out.prefix, out.prefix),
             plot.title = plot.title
         )
     )
     
     ##
     return(lst)
-
-
+    
+    
 }
 
 ## add default value if a column is missing
@@ -447,7 +449,8 @@ if(setequal(gene_types, 'all')){gene_types <- NULL}
 cmp <- cmp %>% 
     add_colv('out.prefix', paste(cmp$test.group, cmp$control.group, sep = '_vs_')) %>% 
     add_colv('plot.title', paste(cmp$test.group, cmp$control.group, sep = ' vs ')) %>% 
-    add_colv('sample.group', '')
+    add_colv('sample.group', '') %>% 
+    add_colv('design.object', '~0+group')
 
 de.list <- list()
 for (i in 1:nrow(cmp)){

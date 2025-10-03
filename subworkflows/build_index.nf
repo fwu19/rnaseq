@@ -6,11 +6,11 @@ include { MAKE_STAR } from '../modules/make_star.nf'
 include { MAKE_BWA  } from '../modules/make_bwa.nf'
 
 
-workflow MAKE_INDEX {
+workflow BUILD_INDEX {
     take:
     genome_fa
     gtf
-    aligner_indices
+    aligner_index
 
     main: 
     star_dir = Channel.empty()
@@ -20,23 +20,23 @@ workflow MAKE_INDEX {
     salmon_dir = Channel.empty()
 
     // Init aligners
-    def aligner_indices_list = ["bowtie", "bowtie2", "bwa", "salmon", "star"]
-
-    if ((aligner_indices_list + aligner_indices).unique().size() != aligner_indices_list.size()) {
-        exit 1, "Invalid aligner option: ${aligner_indices}. Valid options: ${aligner_indices_list.join(', ')}"
+    def aligner_index_list = ["bowtie", "bowtie2", "bwa", "salmon", "star"]
+    index_list = aligner_index.split(',').collect{ it.trim().toLowerCase()}
+    if ((aligner_index_list + index_list).unique().size() != aligner_index_list.size()) {
+        exit 1, "Invalid aligner option found in ${aligner_index}. Valid options: ${aligner_index_list.join(', ')}"
     }
 
-    if ("star" in aligner_indices){
+    if ("star" in index_list){
         MAKE_STAR(
-            genome_fa,
+            genome_fa.split(',').collect(),
             gtf
         )
         star_dir = MAKE_STAR.out.dir
     }
 
-    if ("bwa" in aligner_indices){
+    if ("bwa" in index_list){
         MAKE_BWA(
-            genome_fa
+            genome_fa.split(',').collect()
         )
         bwa_dir = MAKE_BWA.out.dir
     }

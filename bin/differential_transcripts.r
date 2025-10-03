@@ -347,7 +347,8 @@ wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 
     }else{
         group <- NULL
     }
-
+    design.object <- as.formula(icmp$design.object[1])
+    
     ## filter genes if needed ####
     if (!is.null(genes2keep)){
         y0 <- y0[y0$genes$gene_id %in% genes2keep$gene_id, ]
@@ -445,11 +446,12 @@ if(setequal(gene_types, 'all')){gene_types <- NULL}
 cmp <- cmp %>% 
     add_colv('out.prefix', paste(cmp$test.group, cmp$control.group, sep = '_vs_')) %>% 
     add_colv('plot.title', paste(cmp$test.group, cmp$control.group, sep = ' vs ')) %>% 
-    add_colv('sample.group', '')
+    add_colv('sample.group', '') %>% 
+    add_colv('design.object', '~0+group')
 
 de.list <- list()
 for (i in 1:nrow(cmp)){
-    de.list[[i]] <- wrap_one_cmp(y0, cmp[i,], ss, fdr, fc, fdr2, fc2)
+    de.list[[i]] <- wrap_one_cmp(y0, cmp[i,], ss, fdr, fc, fdr2, fc2, genes2keep, gene_types)
 }
 names(de.list) <- basename(cmp$out.prefix)
 saveRDS(de.list, 'differential_transcripts.rds')

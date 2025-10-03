@@ -7,10 +7,10 @@ library(ggplot2)
 library(patchwork)
 
 ## functions ####
-generate_count_matrix_salmon <- function(gene.txt, count.dirs){
+generate_count_matrix_salmon <- function(tx.txt, count.dirs){
     require(edgeR)
     
-    ann <- read.delim(gene.txt) 
+    ann <- read.delim(tx.txt) 
     
     catch <- catchSalmon(paths = count.dirs)
     scaled.counts <- catch$counts/catch$annotation$Overdispersion
@@ -107,7 +107,7 @@ args <- as.vector(commandArgs(T))
 lst <- strsplit(args, split = '=')
 for (x in lst){
     assign(x[1],x[2])
-} # read arguments: ss, comparison, count.dir, gene.txt, length.col
+} # read arguments: ss, comparison, count.dir, tx.txt, length.col
 
 ss <- read.csv(input) %>% 
     relocate(fastq_1, fastq_2, .after = last_col()) %>% 
@@ -115,7 +115,7 @@ ss <- read.csv(input) %>%
 
 ## generate count matrix ####
 count.dirs <- list.dirs(count.dir, full.names = T, recursive = F)
-lst <- generate_count_matrix_salmon(gene.txt, count.dirs)
+lst <- generate_count_matrix_salmon(tx.txt, count.dirs)
 lst  %>% 
     bind_cols() %>% 
     write.table('all_samples.transcript_raw_counts.txt', sep = '\t', quote = F, row.names = F)
