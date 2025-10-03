@@ -24,7 +24,7 @@ tx <- as.data.frame(gtf[gtf$type == 'transcript']) %>%
     mutate(star = start - 1) %>% 
     dplyr::rename("chrom" = "seqnames") 
 tx <- tx[intersect(colnames(tx), c('chrom', 'start', 'end', 'strand', 'gene_id', 'gene_name', 'gene_biotype', 'gene_type', 'transcript_id', 'transcript_type'))]
-write.table(tx, gsub('gtf$','transcripts.txt', basename(gtf_file)), sep = '\t', quote = F, row.names = F)
+write.table(tx, 'transcripts.txt',  sep = '\t', quote = F, row.names = F)
 
 
 

@@ -33,20 +33,23 @@ workflow ALIGN_FASTQ {
 
     if (params.aligner == 'star'){
         /* check index */
-        if (params.star == null){
+        File ref = new File("${params.outdir}/references/${params.genome}/STAR2Index/")
+        if (params.star){
+            aligner_index = file(params.star, checkIfExists: true)
+        }else if (ref.exists()){
+            aligner_index = file(ref, checkIfExists: true)
+        }else{
             if (params.genome_fa == null || params.gtf == null){
                 exit 1, "Need to specify valid paths to --genome_fa and --gtf"
-            }else{
-                BUILD_INDEX(
+            } 
+            BUILD_INDEX(
                     file(params.genome_fa, checkIfExists: true),
                     file(params.gtf, checkIfExists: true),
                     "star"
                 )
-                aligner_index = BUILD_INDEX.out.star
-            }
-        }else{
-            aligner_index = file(params.star, checkIfExists: true)
+            aligner_index = BUILD_INDEX.out.star
         }
+            
 
         STAR(
             ch_reads,
@@ -115,19 +118,22 @@ workflow ALIGN_FASTQ {
     }
     
     if (params.aligner == 'bwa-mem'){
-        if (params.bwa == null){
-            if (params.genome_fa == null){
-                exit 1, "Need to specify valid paths to --genome_fa"
-            }else{
-                BUILD_INDEX(
-                    file(params.genome_fa, checkIfExists: true),
-                    "$projectDir/assets/dummy_file.csv",
-                    "bwa"
-                )
-                aligner_index = BUILD_INDEX.out.bwa
-            }
-        }else{
+        File ref = new File("${params.outdir}/references/${params.genome}/BWAIndex/")
+        if (params.bwa){
             aligner_index = file(params.bwa, checkIfExists: true)
+        }else if (ref.exists()){
+            aligner_index = file(ref, checkIfExists: true)
+        }else{
+            if (!params.genome_fa){
+                exit 1, "Need to specify valid paths to --genome_fa"
+            }
+            BUILD_INDEX(
+                file(params.genome_fa, checkIfExists: true),
+                "$projectDir/assets/dummy_file.csv",
+                "bwa"
+            )
+            aligner_index = BUILD_INDEX.out.bwa
+            
         }
 
         BWA_MEM(

@@ -20,6 +20,7 @@ include { MAP_TRANSCRIPTS } from '../subworkflows/map_transcripts.nf'
 include { QUANT_TRANSCRIPTS } from '../subworkflows/quant_transcripts.nf'
 
 
+// define variables/channels
 ch_metadata = params.metadata ? Channel.fromPath( params.metadata, checkIfExists: true ) : Channel.fromPath("$projectDir/assets/dummy_file.csv", checkIfExists: true)
 
 ch_multiqc_config = params.multiqc_config ? Channel.fromPath(params.multiqc_config, checkIfExists: true ) : Channel.fromPath("$projectDir/assets/multiqc_config.yml")
@@ -164,18 +165,6 @@ workflow RNASEQ {
 
 
     /*
-    * get gene records from gtf
-    */
-    if (params.step in [ "mapping", "expression_quantification" ] && (params.run_gene_count || params.run_dt)){
-        if (params.gene_txt){
-            gene_txt = file(params.gene_txt, checkIfExists:true)
-        }else if (params.gtf){
-            GTF2GENES(params.gtf)
-            gene_txt = GTF2GENES.out.txt
-        }
-    }
-
-    /*
     *   collect gene-level count matrix and call differential expression
     */
     ch_gene_rds = Channel.empty()
@@ -184,15 +173,14 @@ workflow RNASEQ {
         QUANT_GENES(
             params.workflow == 'pdx' ? ch_bam_xeno.ifEmpty([]) : ch_bam.ifEmpty([]),
             ch_counts.ifEmpty([]),
-            params.step == "mapping" ? samplesheet : file("${params.outdir}/csv/align_fastq.csv", checkIfExists: true), 
-            gene_txt
+            params.step == "mapping" ? samplesheet : file("${params.outdir}/csv/align_fastq.csv", checkIfExists: true)
         )
         
         ch_gene_rds = QUANT_GENES.out.gene_rds
         ch_de = QUANT_GENES.out.de
-        // update ch_counts if necessary
+        gene_txt = QUANT_GENES.out.gene_txt
         if (params.step in [ "expression_quantification", "differential_expression" ] || params.run_featurecounts){
-            ch_counts = QUANT_GENES.out.counts
+            ch_counts = QUANT_GENES.out.counts // update ch_counts
         }
 
     }

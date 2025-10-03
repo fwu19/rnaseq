@@ -39,5 +39,5 @@ genes <- as.data.frame(gtf[gtf$type == 'gene']) %>%
         gene_lens, by = 'gene_id'
     )
 genes <- genes[intersect(colnames(genes), c('chrom', 'start', 'end', 'strand', 'gene_id', 'gene_name', 'gene_biotype', 'gene_type', 'gene_length'))]
-write.table(genes, gsub('gtf$','genes.txt', basename(gtf_file)), sep = '\t', quote = F, row.names = F)
+write.table(genes, 'genes.txt', sep = '\t', quote = F, row.names = F)
 

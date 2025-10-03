@@ -12,9 +12,22 @@ workflow QUANT_GENES {
     ch_bam
     ch_counts
     samplesheet
-    gene_txt 
+
 
     main: 
+    ch_gene_rds = Channel.empty()
+    ch_de = Channel.empty()
+
+    // generate genes.gtf
+    File ref = new File("${params.outdir}/references/${params.genome}/genes.txt")
+    if (params.gene_txt){
+        gene_txt = file(params.gene_txt, checkIfExists: true)
+    } else if (ref.exists()){
+        gene_txt = file(ref, checkIfExists: true)
+    } else if (params.gtf){
+        GTF2GENES(params.gtf)
+        gene_txt = GTF2GENES.out.txt
+    }
 
     /*
     * Parse saved alignments
@@ -81,7 +94,6 @@ workflow QUANT_GENES {
     /*
     * differential genes
     */
-    ch_de = Channel.empty()
     if (params.run_de && params.comparison){
         DIFFERENTIAL_EXPRESSION(
             samplesheet, 
@@ -102,5 +114,6 @@ workflow QUANT_GENES {
     gene_rds = ch_gene_rds
     de = ch_de
     counts = ch_counts
+    gene_txt = gene_txt
 
 }
