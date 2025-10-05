@@ -24,7 +24,7 @@ workflow BUILD_INDEX {
     index_list = aligner_index.split(',').collect{ it.trim().toLowerCase()}
     if ((aligner_index_list + index_list).unique().size() != aligner_index_list.size()) {
         exit 1, "Invalid aligner option found in ${aligner_index}. Valid options: ${aligner_index_list.join(', ')}"
-    }
+    } 
 
     if ("star" in index_list){
         MAKE_STAR(

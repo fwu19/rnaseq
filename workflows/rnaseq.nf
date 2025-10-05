@@ -1,32 +1,26 @@
 #!/usr/bin/env nextflow 
 
-include { GET_FASTQ_PATHS } from '../modules/get_fastq_paths'
-include { CHECK_INPUT  } from '../modules/check_input.nf'
-include { CUTADAPT  } from '../modules/cutadapt.nf'
+include { GET_REFERENCE } from '../subworkflows/get_reference.nf'
+include { GET_INPUT } from '../subworkflows/get_input.nf'
+include { PROCESS_FASTQ } from '../subworkflows/process_fastq.nf'
+include { ALIGN_FASTQ } from '../subworkflows/align_fastq.nf'
+include { QUANT_GENES } from '../subworkflows/quant_genes.nf'
+include { MAP_TRANSCRIPTS } from '../subworkflows/map_transcripts.nf'
+include { QUANT_TRANSCRIPTS } from '../subworkflows/quant_transcripts.nf'
+include { QC_FASTQ } from '../subworkflows/qc_fastq.nf'
+include { QC_ALIGNMENT } from '../subworkflows/qc_alignment.nf'
+
 include { BAM_TO_FASTQ } from '../modules/bam_to_fastq.nf'
 include { ARRIBA  } from '../modules/arriba.nf'
-include { GTF2GENES  } from '../modules/gtf2genes.nf'
 include { MULTIQC  } from '../modules/multiqc.nf'
 include { MULTIQC_PDX  } from '../modules/multiqc_pdx.nf'
 include { GENERATE_REPORT } from '../modules/generate_report.nf'
 
-include { BUILD_INDEX } from '../subworkflows/build_index.nf'
-include { ALIGN_FASTQ } from '../subworkflows/align_fastq.nf'
-include { PROCESS_FASTQ } from '../subworkflows/process_fastq.nf'
-include { QC_FASTQ } from '../subworkflows/qc_fastq.nf'
-include { QC_ALIGNMENT } from '../subworkflows/qc_alignment.nf'
-include { QUANT_GENES } from '../subworkflows/quant_genes.nf'
-include { MAP_TRANSCRIPTS } from '../subworkflows/map_transcripts.nf'
-include { QUANT_TRANSCRIPTS } from '../subworkflows/quant_transcripts.nf'
-
-
 // define variables/channels
-ch_metadata = params.metadata ? Channel.fromPath( params.metadata, checkIfExists: true ) : Channel.fromPath("$projectDir/assets/dummy_file.csv", checkIfExists: true)
-
 ch_multiqc_config = params.multiqc_config ? Channel.fromPath(params.multiqc_config, checkIfExists: true ) : Channel.fromPath("$projectDir/assets/multiqc_config.yml")
 
 samplesheet = file("$projectDir/assets/dummy_file.csv", checkIfExists: true)
-gene_txt = file("$projectDir/assets/dummy_file.csv", checkIfExists: true)
+dummy_file = "$projectDir/assets/dummy_file.csv"
 
 //tools = params.tools.split(',').collect()
 skip_tools = params.skip_tools.split(',').join()
@@ -39,81 +33,74 @@ if ('salmon' in skip_tools){
     params.run_de = false
 }
 
+if ( params.genome_fa == null ){
+    exit 1, "Need to provide a valid path with --genome_fa path/to/genome/fasta."
+}
+
+if ( params.gtf == null ){
+    exit 1, "Need to provide a valid path with --gtf path/to/genes/gtf."
+}
+
 workflow RNASEQ {
     /*
-    * Make references only
+    * Run reference check
     */
-    if (params.build_index) {
-        if (params.genome_fa && params.gtf){
-            BUILD_INDEX(
-                params.genome_fa,
-                params.gtf,
-                params.aligner_index ?: params.aligner 
-            )
+    index_dir =  file("$projectDir/assets/dummy_dir", checkIfExists: true)
+    gene_txt = file(dummy_file, checkIfExists: true)
+    tx_bed = file(dummy_file, checkIfExists: true)
+    tx_txt = file(dummy_file, checkIfExists: true)
+    tx_fa = file(dummy_file, checkIfExists: true)
+    collapsed_gtf = file(dummy_file, checkIfExists: true)
 
-        }else{
-            exit 1, "Need to provide valid paths to genome fastq file and gene gtf file via --genome_fa and --gtf."
-        }
+
+    if (params.run_reference_check) {
+        GET_REFERENCE(
+            params.genome_fa,
+            params.gtf,
+            params.aligner,
+            params.aligner_index ?: params.aligner 
+        )
+        index_dir = GET_REFERENCE.out.index_dir // match params.aligner
+        gene_txt = GET_REFERENCE.out.gene_txt
+        tx_txt = GET_REFERENCE.out.tx_txt
+        tx_bed = GET_REFERENCE.out.tx_bed
+        tx_fa = GET_REFERENCE.out.tx_fa
+        collapsed_gtf = GET_REFERENCE.out.collapsed_gtf
+
     }
+
 
     /*
     * Run input check
     */
     ch_input = Channel.fromPath( params.input, checkIfExists: true )
-    if (params.step == "mapping" && params.run_input_check){
-        if ( params.input_dir =~ 'dummy' ){
-            if ( params.input =~ 'dummy' ){
-                exit 1, 'Neither --input nor --input_dir is specified!'
-            }
-        }else {
-            GET_FASTQ_PATHS (
-                Channel.fromPath("${params.input_dir}", checkIfExists: true)
-            )
-            ch_input = GET_FASTQ_PATHS.out.csv
-        }
-
-        CHECK_INPUT(
-            ch_input,
-            ch_metadata
+    if (params.run_input_check){
+        GET_INPUT(
+            params.input,
+            params.input_dir,
+            params.metadata
         )
-        samplesheet = CHECK_INPUT.out.csv
-        fq = CHECK_INPUT.out.fq
-        // final samplesheet, one row per id
-        //CHECK_INPUT.out.fq.view()
-        // samplesheet, one row per pair of fastq
+        samplesheet = GET_INPUT.out.samplesheet
+        fq = GET_INPUT.out.fq
+
     }
 
     /*
     * cat fastq files
     */
     ch_reads = Channel.empty()
-    if (params.step == "mapping" && params.run_process_fastq){
+    ch_reads_trimmed = Channel.empty()
+    if (params.run_process_fastq){
         PROCESS_FASTQ(
             samplesheet,
             fq,
             params.cat_fastq
         )
         ch_reads = PROCESS_FASTQ.out.reads
-        ch_reads_raw = ch_reads
-        // ch_reads.view()
+        ch_reads_trimmed = PROCESS_FASTQ.out.reads_trimmed
+        ch_cutadapt_js = PROCESS_FASTQ.out.cutadapt_js
     }
 
-    /*
-    * run cutadapt
-    */
-    ch_fastqc_trimmed = Channel.empty()
-    ch_cutadapt_js = Channel.empty()
-    if (params.step == "mapping" && params.run_cut_adapt){
-        CUTADAPT(
-            ch_reads_raw
-        )
-        ch_reads = CUTADAPT.out.fq
-        ch_reads_trimmed = ch_reads
-        ch_cutadapt_js = CUTADAPT.out.js
-
-    }
-    // ch_reads.view()
-    // [ [meta], meta.id, path("R1.fastq.gz"), path("R2.fastq.gz") ]
 
     /*
     * run STAR alignment 
@@ -132,10 +119,11 @@ workflow RNASEQ {
     ch_bai_xeno = Channel.empty()
 
 
-    if (params.step == "mapping" && params.run_alignment){
+    if (params.run_alignment){
         ALIGN_FASTQ(
-            ch_reads,
-            params.run_split_fastq // if true, dont run xenofilteR
+            params.run_cut_adapt ? ch_reads_trimmed : ch_reads,
+            params.run_split_fastq, // if true, dont run xenofilteR
+            index_dir
         )
         
         ch_bam = ALIGN_FASTQ.out.bam
@@ -149,78 +137,81 @@ workflow RNASEQ {
         ch_bam_xeno = ALIGN_FASTQ.out.bam_xeno 
         ch_bai_xeno = ALIGN_FASTQ.out.bai_xeno
     
-    }
 
-
-    // save graft-only reads
-    ch_graft_reads = Channel.empty()
-    if(params.step == "mapping" && params.run_alignment && params.workflow == 'pdx'){
-        if (params.run_arriba || params.only_filter_fastq){
+        // save graft-only reads
+        ch_graft_reads = Channel.empty()
+        if(params.workflow == 'pdx' && (params.run_arriba || params.only_filter_fastq)){
             BAM_TO_FASTQ(
                 ch_bam_xeno
             )
             ch_graft_reads = BAM_TO_FASTQ.out.fq
         }
-    }
 
+    }
+    
 
     /*
     *   collect gene-level count matrix and call differential expression
     */
     ch_gene_rds = Channel.empty()
     ch_de = Channel.empty()
-    if (params.step in [ "mapping", "expression_quantification", "differential_expression" ] && ( params.run_gene_count || params.run_de)){
+    if (( params.run_gene_count || params.run_de)){
         QUANT_GENES(
+            params.step == "mapping" ? samplesheet : file("${params.outdir}/csv/align_fastq.csv", checkIfExists: true),
             params.workflow == 'pdx' ? ch_bam_xeno.ifEmpty([]) : ch_bam.ifEmpty([]),
             ch_counts.ifEmpty([]),
-            params.step == "mapping" ? samplesheet : file("${params.outdir}/csv/align_fastq.csv", checkIfExists: true)
+            gene_txt
         )
         
         ch_gene_rds = QUANT_GENES.out.gene_rds
         ch_de = QUANT_GENES.out.de
         gene_txt = QUANT_GENES.out.gene_txt
-        if (params.step in [ "expression_quantification", "differential_expression" ] || params.run_featurecounts){
-            ch_counts = QUANT_GENES.out.counts // update ch_counts
-        }
+        ch_counts = QUANT_GENES.out.counts // if params.run_featurecounts, ch_counts is updated
 
     }
 
-
-    // Transcript-level analysis
-    ch_salmon = Channel.empty()
-    if (params.step in [ "mapping", "expression_quanification" ] && params.run_alignment ){
-        MAP_TRANSCRIPTS(
-            ch_tx_bam
-        )
-        ch_salmon = MAP_TRANSCRIPTS.out.salmon
-        // [ [meta], val(out_prefix), path("${out_prefix}/") ]
-    }
 
     /*
-    *   Collect transcript-level counts and call differential transcripts
+    * Transcript-level analysis
     */
+    ch_salmon = Channel.empty()
     ch_tx_rds = Channel.empty()
     ch_dt = Channel.empty()
-    if (params.step in [ "mapping", "expression_quantification", "differential_expression" ] && (params.run_tx_count || params.run_dt)){
-        QUANT_TRANSCRIPTS(
-            ch_salmon,
-            params.step == "mapping" ? samplesheet : file("${params.outdir}/csv/align_fastq.csv", checkIfExists: true),
-            gene_txt
-        )
+    if (params.transcript_expression ){
+        /* Map to transcripts */
+        if (params.run_alignment){
+            MAP_TRANSCRIPTS(
+                ch_tx_bam,
+                tx_fa
+            )
+            ch_salmon = MAP_TRANSCRIPTS.out.salmon
+            // [ [meta], val(out_prefix), path("${out_prefix}/") ]
+        }
 
-        ch_tx_rds = QUANT_TRANSCRIPTS.out.tx_rds
-        ch_dt = QUANT_TRANSCRIPTS.out.dt
+        /*  Collect transcript-level counts and call differential transcripts */
+        if ((params.run_tx_count || params.run_dt)){
+            QUANT_TRANSCRIPTS(
+                ch_salmon,
+                params.step == "mapping" ? samplesheet : file("${params.outdir}/csv/align_fastq.csv", checkIfExists: true),
+                gene_txt,
+                tx_txt
+            )
+
+            ch_tx_rds = QUANT_TRANSCRIPTS.out.tx_rds
+            ch_dt = QUANT_TRANSCRIPTS.out.dt
+        }
     }
 
 
     /*
     * Identify gene fusions
     */
-    if ((params.step == "mapping" || params.gene_fusion) && params.run_arriba){
+    if (params.gene_fusion){
+        // can build a subworkflow for gene_fusion analysis
         ARRIBA(
-            params.workflow == 'pdx' ? ch_graft_reads : ch_reads, 
+            params.workflow == 'pdx' ? ch_graft_reads : (params.run_cut_adapt ? ch_reads_trimmed : ch_reads), 
             params.genome, 
-            params.star, 
+            index_dir, 
             params.gtf,
             params.genome_fa,
             params.blacklist,
@@ -236,9 +227,9 @@ workflow RNASEQ {
     */
     ch_fastqc = Channel.empty()
     ch_fastqc_trimmed = Channel.empty()
-    if ((params.step == "mapping" || params.qc_fastq ) && params.run_qc_fastq){
+    if (params.run_qc_fastq){
         QC_FASTQ(
-            ch_reads_raw,
+            ch_reads,
             ch_reads_trimmed
         )
         ch_fastqc = QC_FASTQ.out.fastqc
@@ -255,7 +246,7 @@ workflow RNASEQ {
     ch_bam_stat_host = Channel.empty()
     ch_bam_stat_xeno = Channel.empty()
 
-    if ((params.step == "mapping" || params.qc_alignment ) && params.run_qc_alignment){
+    if (params.run_qc_alignment){
         // need to add a parser to align_fastq.csv
         QC_ALIGNMENT(
             ch_bam,
@@ -264,6 +255,8 @@ workflow RNASEQ {
             ch_bai_host,
             ch_bam_xeno,
             ch_bai_xeno,
+            collapsed_gtf,
+            tx_bed
         )
         ch_rnaseqc = QC_ALIGNMENT.out.rnaseqc
         ch_rseqc = QC_ALIGNMENT.out.rnaseqc
@@ -279,7 +272,7 @@ workflow RNASEQ {
     * MultiQC
     */
     ch_multiqc = Channel.empty()
-    if ((params.step == "mapping" || params.qc_fastq || params.qc_alignment) && params.run_multiqc){
+    if (params.run_multiqc){
         if (params.workflow == 'pdx'){
             MULTIQC_PDX(
             ch_multiqc_config,
@@ -321,7 +314,7 @@ workflow RNASEQ {
     /*
     * Generate a report
     */
-    if ((params.step in [ "mapping", "bam_qc", "expression_quantification", "differential_expression" ] || params.qc_reads || params.qc_alignment || params.transcript_expression) && params.run_report){
+    if (params.run_report){
         GENERATE_REPORT(
             params.workflow,
             params.step == "mapping" ? samplesheet : file("${params.outdir}/csv/align_fastq.csv", checkIfExists: true), 

@@ -3,6 +3,7 @@
 */
 
 include { CAT_FASTQ } from '../modules/cat_fastq.nf'
+include { CUTADAPT  } from '../modules/cutadapt.nf'
 
 workflow PROCESS_FASTQ {
     take:
@@ -11,6 +12,10 @@ workflow PROCESS_FASTQ {
     cat_fastq
 
     main: 
+    ch_reads = Channel.empty()
+    ch_reads_trimmed = Channel.empty()
+    ch_cutadapt_js = Channel.empty()
+
     if (cat_fastq){
         CAT_FASTQ(
             fq
@@ -39,7 +44,24 @@ workflow PROCESS_FASTQ {
             .set { ch_reads}
     }
 
+    /*
+    * run cutadapt
+    */
+    if (params.run_cut_adapt){
+        CUTADAPT(
+            ch_reads
+        )
+        ch_reads_trimmed = CUTADAPT.out.fq
+        ch_cutadapt_js = CUTADAPT.out.js
+
+    }
+    // ch_reads.view()
+    // [ [meta], meta.id, path("R1.fastq.gz"), path("R2.fastq.gz") ]
+
+
     emit:
     reads = ch_reads
+    reads_trimmed = ch_reads_trimmed
+    cutadapt_js = ch_cutadapt_js
 
 }

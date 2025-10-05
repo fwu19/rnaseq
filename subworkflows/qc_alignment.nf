@@ -2,9 +2,7 @@
 * QC alignment
 */
 
-include { COLLAPSE_GTF  } from '../modules/collapse_gtf.nf'
 include { RNASEQC  } from '../modules/rnaseqc.nf'
-include { GTF2BED  } from '../modules/gtf2bed.nf'
 include { RSEQC  } from '../modules/rseqc.nf'
 include { HS_METRICS  } from '../modules/hs_metrics'
 include { SAMTOOLS_VIEW} from '../modules/samtools_view.nf'
@@ -20,6 +18,8 @@ workflow QC_ALIGNMENT {
     bai_host
     bam_xeno
     bai_xeno
+    collapsed_gtf
+    tx_bed
 
     main: 
     ch_rnaseqc = Channel.empty()
@@ -67,17 +67,11 @@ workflow QC_ALIGNMENT {
     * RNASeQC
     */
     if (params.run_rnaseqc){
-        if (params.rnaseqc_gtf){
-                collapsed_gtf = file(params.rnaseqc_gtf, checkIfExists:true)
-        }else{
-                COLLAPSE_GTF(params.gtf)
-                collapsed_gtf = COLLAPSE_GTF.out.gtf
-        }
         RNASEQC(
-                    params.workflow == 'pdx' ? ch_bam_bai_xeno : ch_bam_bai,
-                    collapsed_gtf,
-                    params.strand,
-                    params.read_type
+            params.workflow == 'pdx' ? ch_bam_bai_xeno : ch_bam_bai,
+            collapsed_gtf,
+            params.strand,
+            params.read_type
         )            
         ch_rnaseqc = RNASEQC.out.qc
         // [ [meta], path("*") ]
@@ -87,15 +81,9 @@ workflow QC_ALIGNMENT {
     * RSeQC
     */
     if (params.run_rseqc){
-        if (params.rseqc_bed){
-                tx_bed = file(params.tx_bed, checkIfExists:true)
-        }else{
-                GTF2BED(params.gtf)
-                tx_bed = GTF2BED.out.bed
-        }
         RSEQC(
-                params.workflow == 'pdx' ? ch_bam_bai_xeno : ch_bam_bai,
-                tx_bed
+            params.workflow == 'pdx' ? ch_bam_bai_xeno : ch_bam_bai,
+            tx_bed
         )
         ch_rseqc = RSEQC.out.qc
         // [ [meta], path("*") ]

@@ -9,7 +9,6 @@ include { STAR  as  STAR_HOST } from '../modules/star.nf'
 include { XENOFILTER } from '../modules/xenofilter.nf'
 include { WRITE_CSV as WRITE_CSV_ALIGN_FASTQ} from '../modules/write_csv.nf'
 
-include { BUILD_INDEX } from './build_index.nf'
 include { BUILD_INDEX as BUILD_INDEX_HOST } from './build_index.nf'
 include { PDX_SPLIT_FASTQ } from './pdx_split_fastq.nf'
 
@@ -17,6 +16,7 @@ workflow ALIGN_FASTQ {
     take:
     ch_reads
     split_fastq // if true, don't run xenofilteR
+    aligner_index
 
     main: 
     ch_bam = Channel.empty()
@@ -32,25 +32,7 @@ workflow ALIGN_FASTQ {
 
 
     if (params.aligner == 'star'){
-        /* check index */
-        File ref = new File("${params.outdir}/references/${params.genome}/STAR2Index/")
-        if (params.star){
-            aligner_index = file(params.star, checkIfExists: true)
-        }else if (ref.exists()){
-            aligner_index = file(ref, checkIfExists: true)
-        }else{
-            if (params.genome_fa == null || params.gtf == null){
-                exit 1, "Need to specify valid paths to --genome_fa and --gtf"
-            } 
-            BUILD_INDEX(
-                    file(params.genome_fa, checkIfExists: true),
-                    file(params.gtf, checkIfExists: true),
-                    "star"
-                )
-            aligner_index = BUILD_INDEX.out.star
-        }
             
-
         STAR(
             ch_reads,
             params.genome, 
@@ -118,23 +100,6 @@ workflow ALIGN_FASTQ {
     }
     
     if (params.aligner == 'bwa-mem'){
-        File ref = new File("${params.outdir}/references/${params.genome}/BWAIndex/")
-        if (params.bwa){
-            aligner_index = file(params.bwa, checkIfExists: true)
-        }else if (ref.exists()){
-            aligner_index = file(ref, checkIfExists: true)
-        }else{
-            if (!params.genome_fa){
-                exit 1, "Need to specify valid paths to --genome_fa"
-            }
-            BUILD_INDEX(
-                file(params.genome_fa, checkIfExists: true),
-                "$projectDir/assets/dummy_file.csv",
-                "bwa"
-            )
-            aligner_index = BUILD_INDEX.out.bwa
-            
-        }
 
         BWA_MEM(
             ch_reads, 

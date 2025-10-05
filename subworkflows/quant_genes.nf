@@ -3,31 +3,19 @@
 */
 
 include { FEATURECOUNTS } from '../modules/featureCounts.nf'
-include { DIFFERENTIAL_EXPRESSION } from '../modules/differential_expression.nf'
 include { GENERATE_GENE_COUNT_MATRIX } from '../modules/generate_gene_count_matrix.nf'
-
+include { DIFFERENTIAL_EXPRESSION } from '../modules/differential_expression.nf'
 
 workflow QUANT_GENES {
     take:
+    samplesheet
     ch_bam
     ch_counts
-    samplesheet
-
+    gene_txt
 
     main: 
     ch_gene_rds = Channel.empty()
     ch_de = Channel.empty()
-
-    // generate genes.gtf
-    File ref = new File("${params.outdir}/references/${params.genome}/genes.txt")
-    if (params.gene_txt){
-        gene_txt = file(params.gene_txt, checkIfExists: true)
-    } else if (ref.exists()){
-        gene_txt = file(ref, checkIfExists: true)
-    } else if (params.gtf){
-        GTF2GENES(params.gtf)
-        gene_txt = GTF2GENES.out.txt
-    }
 
     /*
     * Parse saved alignments
@@ -76,6 +64,7 @@ workflow QUANT_GENES {
             ch_counts = FEATURECOUNTS.out.counts
             // [ [meta], val(out_prefix), path("count.txt") ]
     }
+
 
     /*
     * Generate read count matrix
