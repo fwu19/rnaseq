@@ -17,6 +17,8 @@ workflow ALIGN_FASTQ {
     ch_reads
     split_fastq // if true, don't run xenofilteR
     aligner_index
+    workflow
+    write_csv
 
     main: 
     ch_bam = Channel.empty()
@@ -54,7 +56,7 @@ workflow ALIGN_FASTQ {
         /*
         * align to host genome for PDX samples
         */
-        if (params.workflow == 'pdx'){
+        if (workflow == 'pdx'){
             /* check index */
             if (params.star_host == null){
                 if (params.genome_fa_host == null){
@@ -114,7 +116,7 @@ workflow ALIGN_FASTQ {
         /*
         * align to host genome for PDX samples
         */
-        if (params.workflow == 'pdx'){
+        if (workflow == 'pdx'){
             if (params.bwa_host == null){
                 if (params.genome_fa_host == null){
                     exit 1, "Need to specify valid paths to --genome_fa_host"
@@ -143,7 +145,7 @@ workflow ALIGN_FASTQ {
     }
 
     /* filter host reads */
-    if (params.workflow == 'pdx'){
+    if (workflow == 'pdx'){
         if (split_fastq){
             PDX_SPLIT_FASTQ(
                 ch_reads,
@@ -181,7 +183,7 @@ workflow ALIGN_FASTQ {
     /* write csv */
     def my_dir = new File("${params.outdir}")
     def outdir = my_dir.absolutePath
-    if(params.workflow == 'pdx'){
+    if(workflow == 'pdx' && write_csv){
         subdir_aln_fq = params.aligner.toUpperCase()
         WRITE_CSV_ALIGN_FASTQ(
                 ch_bam
@@ -194,7 +196,7 @@ workflow ALIGN_FASTQ {
                 "align_fastq.csv"        
         )
 
-    }else if (params.aligner == 'star'){
+    }else if (params.aligner == 'star' && write_csv){
         subdir_aln_fq = params.aligner.toUpperCase()
         WRITE_CSV_ALIGN_FASTQ(
                 ch_bam
@@ -204,7 +206,7 @@ workflow ALIGN_FASTQ {
                     .collect(),
                 "align_fastq.csv"        
         )
-    }else if (params.aligner == 'bwa-mem'){
+    }else if (params.aligner == 'bwa-mem' && write_csv){
         subdir_aln_fq = params.aligner.toUpperCase()
         WRITE_CSV_ALIGN_FASTQ(
                 ch_bam

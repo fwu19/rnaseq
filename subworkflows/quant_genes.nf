@@ -2,6 +2,7 @@
 * Analyze gene-level expression 
 */
 
+include { INFER_STRAND } from '../modules/infer_strand.nf'
 include { FEATURECOUNTS } from '../modules/featureCounts.nf'
 include { GENERATE_GENE_COUNT_MATRIX } from '../modules/generate_gene_count_matrix.nf'
 include { DIFFERENTIAL_EXPRESSION } from '../modules/differential_expression.nf'
@@ -10,8 +11,10 @@ workflow QUANT_GENES {
     take:
     samplesheet
     ch_bam
+    ch_bai
     ch_counts
     gene_txt
+    tx_bed
 
     main: 
     ch_gene_rds = Channel.empty()
@@ -51,6 +54,27 @@ workflow QUANT_GENES {
     }
 
     /*
+    * Infer strand
+    */
+    INFER_STRAND(
+        ch_bam
+            .map{ it -> [ [ it[0], it[1] ], it[2] ]}
+            .join (
+                ch_bai
+                    .map{ it -> [ [ it[0], it[1] ], it[2] ]}
+            )
+            .map { it -> [ it[0][0], it[0][1], it[1], it[2] ]}
+            .first(),
+        tx_bed
+    )
+    // should make the below more efficient
+    strand = INFER_STRAND.out.strand
+        .splitCsv(header: false)
+        .map {it[0]}
+        .first()
+
+
+    /*
     * run featureCounts if needed
     */
     if (params.run_featurecounts){
@@ -58,7 +82,7 @@ workflow QUANT_GENES {
                 ch_bam, 
                 params.gtf,
                 params.read_type,
-                params.strand
+                strand
             )
         
             ch_counts = FEATURECOUNTS.out.counts
@@ -74,7 +98,7 @@ workflow QUANT_GENES {
             ch_counts.map{it[2]}.flatten().collect(),
             gene_txt,
             params.length_col?:"gene_length",
-            params.strand,
+            strand,
             params.workflow
     )
     ch_gene_rds = GENERATE_GENE_COUNT_MATRIX.out.rds

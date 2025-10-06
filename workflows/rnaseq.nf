@@ -85,8 +85,9 @@ workflow RNASEQ {
 
     }
 
+
     /*
-    * cat fastq files
+    * cat/split fastq files
     */
     ch_reads = Channel.empty()
     ch_reads_trimmed = Channel.empty()
@@ -123,7 +124,9 @@ workflow RNASEQ {
         ALIGN_FASTQ(
             params.run_cut_adapt ? ch_reads_trimmed : ch_reads,
             params.run_split_fastq, // if true, dont run xenofilteR
-            index_dir
+            index_dir,
+            params.workflow,
+            true
         )
         
         ch_bam = ALIGN_FASTQ.out.bam
@@ -159,8 +162,10 @@ workflow RNASEQ {
         QUANT_GENES(
             params.step == "mapping" ? samplesheet : file("${params.outdir}/csv/align_fastq.csv", checkIfExists: true),
             params.workflow == 'pdx' ? ch_bam_xeno.ifEmpty([]) : ch_bam.ifEmpty([]),
+            params.workflow == 'pdx' ? ch_bai_xeno.ifEmpty([]) : ch_bai.ifEmpty([]),
             ch_counts.ifEmpty([]),
-            gene_txt
+            gene_txt,
+            tx_bed
         )
         
         ch_gene_rds = QUANT_GENES.out.gene_rds

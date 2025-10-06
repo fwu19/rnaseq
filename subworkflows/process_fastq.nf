@@ -44,6 +44,8 @@ workflow PROCESS_FASTQ {
             .set { ch_reads}
     }
 
+    /* consider to add splitting fastq here ? */
+
     /*
     * run cutadapt
     */
