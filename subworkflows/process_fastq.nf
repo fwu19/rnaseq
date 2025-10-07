@@ -16,6 +16,45 @@ workflow PROCESS_FASTQ {
     ch_reads_trimmed = Channel.empty()
     ch_cutadapt_js = Channel.empty()
 
+    fq
+        .splitCsv(header: true)
+        .map {
+            row -> [ row.id, row.fastq_1, row.fastq_2 ]
+        }
+        .groupTuple (by: [0])
+        .branch {
+            id, fastq_1, fastq_2 ->
+                single  : fastq_1.size() == 1
+                    return [ id, fastq_1, fastq_2 ]
+                multiple: fastq_1.size() > 1
+                    return [ id, fastq_1, fastq_2 ]
+        }
+        .set { ch_fastq }
+
+    merged_fastq = Channel.empty()
+    if ( cat_fastq ){
+        CAT_FASTQ(
+            ch_fastq.multiple
+        )  
+        merged_fastq = CAT_FASTQ.out.reads      
+    }else{
+        // add a suffix to meta.id to make unique
+    }
+    
+    samplesheet
+            .splitCsv( header: true )
+            .map {
+                row -> [ row.id, row ]
+            }
+            .join ( 
+                merged_fastq 
+                    .mix(ch_fastq.single)
+            )
+            .map { it -> [ it[1], it[1].id, it[2], it[3] ]}
+            .set { ch_reads }
+
+    /*
+    * old codes
     if (cat_fastq){
         CAT_FASTQ(
             fq
@@ -43,6 +82,9 @@ workflow PROCESS_FASTQ {
             }
             .set { ch_reads}
     }
+
+    */
+
 
     /* consider to add splitting fastq here ? */
 
