@@ -4,6 +4,8 @@
 
 include { BUILD_INDEX } from './build_index.nf'
 
+include { CAT as CAT_GENOME_FA } from '../modules/cat.nf'
+include { CAT as CAT_GTF } from '../modules/cat.nf'
 include { GTF2GENES  } from '../modules/gtf2genes.nf'
 include { GTF2TRANSCRIPTS  } from '../modules/gtf2transcripts.nf'
 include { COLLAPSE_GTF  } from '../modules/collapse_gtf.nf'
@@ -13,8 +15,8 @@ include { GTF2FASTA  } from '../modules/gtf2fasta.nf'
 
 workflow GET_REFERENCE {
     take:
-    genome_fa
-    gtf
+    fa_str
+    gtf_str
     aligner
     aligner_index // could be null
 
@@ -25,6 +27,44 @@ workflow GET_REFERENCE {
     tx_txt = Channel.empty()
     tx_bed = Channel.empty()
     collapsed_gtf = Channel.empty()
+
+    genome_fa = fa_str
+    gtf = gtf_str
+    
+    /*
+    * Concatenate multiple fasta and gtf files
+    */
+    /*
+    def fa_list = fa_str.split(',')
+    def fa_no = fa_list.size()
+    def gtf_list = gtf_str.split(',')
+    def gtf_no = gtf_list.size()
+
+    genome_fa = "$projectDir/assets/dummy_file.csv"
+    gtf = "$projectDir/assets/dummy_file.csv"
+    
+    if ( fa_no > 1){
+        CAT_GENOME_FA(
+            Channel.fromList(fa_list).collect(),
+            "genome.fa",
+            "fa"
+        )
+        genome_fa = CAT_GENOME_FA.out.file
+    }else{
+        genome_fa = file(fa_str, checkIfExists: true)
+    }
+
+    if ( gtf_no > 1 ){
+        CAT_GTF(
+            Channel.fromList(gtf_list).collect(),
+            "genes.gtf",
+            "gtf"
+        )
+        gtf = CAT_GTF.out.file
+    }else{
+        gtf = gtf_str
+    }
+    */
 
     /*
     *   Process GTF
@@ -126,6 +166,8 @@ workflow GET_REFERENCE {
     }else{
         exit 1, "Use --aligner to provide an aligner. Possible values are star, bwa."
     }
+
+
 
     emit:
     index_dir = index_dir

@@ -46,7 +46,7 @@ workflow QC_ALIGNMENT {
         bam_host
             .map{ it -> [ [ it[0], it[1] ], it[2] ]}
             .join (
-                ch_bai_host
+                bai_host
                     .map{ it -> [ [ it[0], it[1] ], it[2] ]}
             )
             .map { it -> [ it[0][0], it[0][1], it[1], it[2] ]}
@@ -55,7 +55,7 @@ workflow QC_ALIGNMENT {
         bam_xeno
             .map{ it -> [ [ it[0], it[1] ], it[2] ]}
             .join (
-                ch_bai_xeno
+                bai_xeno
                     .map{ it -> [ [ it[0], it[1] ], it[2] ]}
             )
             .map { it -> [ it[0][0], it[0][1], it[1], it[2] ]}

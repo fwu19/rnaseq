@@ -28,6 +28,11 @@ if (dir.exists('multiqc_data')){
     if(file.exists(fname)){
         dat$rnaseqc <- read.delim(fname)
     }
+  
+    fname <- 'multiqc_data/rseqc_gene_body_cov.txt'
+    if(file.exists(fname)){
+        dat$rseqc_gene_body_cov <- read.delim(fname)
+    }
     
 }
 

@@ -14,7 +14,8 @@ include { BAM_TO_FASTQ } from '../modules/bam_to_fastq.nf'
 include { ARRIBA  } from '../modules/arriba.nf'
 include { MULTIQC  } from '../modules/multiqc.nf'
 include { MULTIQC_PDX  } from '../modules/multiqc_pdx.nf'
-include { GENERATE_REPORT } from '../modules/generate_report.nf'
+include { PREPARE_REPORT } from '../modules/prepare_report.nf'
+include { RENDER_REPORT } from '../modules/render_report.nf'
 
 // define variables/channels
 ch_multiqc_config = params.multiqc_config ? Channel.fromPath(params.multiqc_config, checkIfExists: true ) : Channel.fromPath("$projectDir/assets/multiqc_config.yml")
@@ -264,7 +265,7 @@ workflow RNASEQ {
             tx_bed
         )
         ch_rnaseqc = QC_ALIGNMENT.out.rnaseqc
-        ch_rseqc = QC_ALIGNMENT.out.rnaseqc
+        ch_rseqc = QC_ALIGNMENT.out.rseqc
         ch_hs_metrics = QC_ALIGNMENT.out.hs_metrics
         ch_bam_stat = QC_ALIGNMENT.out.bam_stat
         ch_bam_stat_host = QC_ALIGNMENT.out.bam_stat_host  
@@ -319,8 +320,9 @@ workflow RNASEQ {
     /*
     * Generate a report
     */
+    report_data = Channel.empty()
     if (params.run_report){
-        GENERATE_REPORT(
+        PREPARE_REPORT(
             params.workflow,
             params.step == "mapping" ? samplesheet : file("${params.outdir}/csv/align_fastq.csv", checkIfExists: true), 
             ch_multiqc.ifEmpty([]),
@@ -330,6 +332,10 @@ workflow RNASEQ {
             ch_dt.ifEmpty([]),
             ch_hs_metrics.map{it[1]}.flatten().collect().ifEmpty([]),
             params.report_dir ? Channel.fromPath(params.report_dir, type: 'dir', checkIfExists: true) : Channel.fromPath("$projectDir/assets/report/", type: 'dir', checkIfExists: true)
+        )
+        report_data = PREPARE_REPORT.out.data
+        RENDER_REPORT(
+            report_data
         )
     }
 }

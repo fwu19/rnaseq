@@ -97,7 +97,7 @@ workflow QUANT_GENES {
             samplesheet, 
             ch_counts.map{it[2]}.flatten().collect(),
             gene_txt,
-            params.length_col?:"gene_length",
+            params.length_col, // default: gene_length
             strand,
             params.workflow
     )
