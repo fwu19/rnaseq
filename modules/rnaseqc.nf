@@ -1,7 +1,5 @@
 process RNASEQC {
-    time = '1d'
-    cpus = 6
-    memory = '36G'
+    label "process_high"
     module = ['RNA-SeQC/2.4.2-foss-2021b', 'SAMtools/1.17-GCC-12.2.0']
 
 

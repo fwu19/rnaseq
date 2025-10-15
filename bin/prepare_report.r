@@ -7,7 +7,6 @@ library(dplyr)
 
 args <- as.vector(commandArgs(T))
 workflow <- args[1]
-report_dir <- args[2]
 
 dat <- list()
 dat$ss <- read.csv('sample_sheet.csv')
@@ -28,7 +27,7 @@ if (dir.exists('multiqc_data')){
     if(file.exists(fname)){
         dat$rnaseqc <- read.delim(fname)
     }
-  
+
     fname <- 'multiqc_data/rseqc_gene_body_cov.txt'
     if(file.exists(fname)){
         dat$rseqc_gene_body_cov <- read.delim(fname)
@@ -54,11 +53,11 @@ saveRDS(dat, 'data.rds')
 
 ## copy Rmd files ####
 if (workflow == 'regular'){
-    file.copy(file.path(report_dir, "rnaseq_regular.Rmd"), "00_RNAseq_analysis_report.Rmd")
+    file.copy("report/rnaseq_regular.Rmd", "00_RNAseq_analysis_report.Rmd")
 }else if (workflow == 'exome'){
-    file.copy(file.path(report_dir, "rnaseq_exome.Rmd"), "00_RNAexome_analysis_report.Rmd")
+    file.copy("report/rnaseq_exome.Rmd", "00_RNAexome_analysis_report.Rmd")
 }else if (workflow == 'pdx'){
-    file.copy(file.path(report_dir, "rnaseq_pdx.Rmd"), "00_PDX_RNAseq_analysis_report.Rmd")
+    file.copy("report/rnaseq_pdx.Rmd", "00_PDX_RNAseq_analysis_report.Rmd")
 }else{
     cat(workflow, ' is not recognized!')
 }

@@ -55,6 +55,7 @@ get_fastqs <- function(fq_dirs){
     
     ss <- ss %>% 
         mutate(
+            id = gsub('-| +|&', '.', id),
             sample_group = id
         )
     

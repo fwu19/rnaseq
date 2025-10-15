@@ -4,9 +4,7 @@
 
 
 process SPLIT_FASTQ {
-    time = '1d'
-    cpus = 6
-    memory = '36G'
+    label "process_medium"
 
     tag "Split fastq on ${out_prefix}"
 

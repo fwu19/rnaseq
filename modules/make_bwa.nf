@@ -1,8 +1,6 @@
 
 process MAKE_BWA {
-    time = '1d'
-    cpus = 12
-    memory = '48G'
+    label "process_high"
     module = ['BWA/0.7.17-GCCcore-12.2.0', 'SAMtools/1.17-GCC-12.2.0']
 
 

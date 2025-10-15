@@ -1,8 +1,6 @@
 
 process XENOFILTER {
-    time = '1d'
-    cpus = 8
-    memory = '48G'
+    label "process_high"
     container "docker://fwu19/r-libs:4.1.2" 
 
 

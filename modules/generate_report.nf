@@ -1,9 +1,9 @@
-process PREPARE_REPORT {
+process GENERATE_REPORT {
     container "docker://fwu19/r-libs:4.1.2" 
 
     label "process_single"
 
-    tag "Prepare an analysis report "
+    tag "Make plots of read and peak metrics "
 
     input:
     val( workflow )
@@ -14,14 +14,15 @@ process PREPARE_REPORT {
     path ( txt_rds )
     path ( dt_rds )
     path ( "hs_metrics/" )
-    path ( report_dir )
+    path ( "*" )
 
     output:
-    path( "*.{rds,Rmd}", emit: report )
+    path( "*.{rds,html,Rmd}" )
 
     script:
     """
-    prepare_report.r $workflow ${report_dir}
-    
+    prepare_report.r $workflow
+    render_report.r *.Rmd
+
     """
 }

@@ -1,8 +1,6 @@
 
 process SAMTOOLS_VIEW {
-    time = '1d'
-    cpus = 8
-    memory = '48G'
+    label "process_medium"
     module = ['SAMtools/1.17-GCC-12.2.0']
 
 

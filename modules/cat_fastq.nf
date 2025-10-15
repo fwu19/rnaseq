@@ -1,8 +1,6 @@
 
 process CAT_FASTQ {
-    time = '1d'
-    cpus = 1
-    memory = '12G'
+    label "process_single"
 
 
     tag "CAT_FASTQ on $id"

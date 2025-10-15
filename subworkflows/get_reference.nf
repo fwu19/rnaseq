@@ -136,17 +136,6 @@ workflow GET_REFERENCE {
     * Build index 
     */
     if (params.run_build_index){
-        if (params.build_index){
-            if (aligner_index == null){
-                exit 1, "--aligner_index is not provided."
-            }
-            
-        }else if (aligner == 'star' && !params.star){
-            aligner_index = 'star'
-        }else if (aligner == 'bwa-mem' && !params.bwa){
-            aligner_index = 'bwa'
-        }
-
         BUILD_INDEX(
             genome_fa,
             gtf,
@@ -160,9 +149,27 @@ workflow GET_REFERENCE {
         }
 
     }else if (aligner == 'star'){
-        index_dir = file(params.star, checkIfExists: true)
+        if (params.star){
+            index_dir = file(params.star, checkIfExists: true)
+        }else{
+            BUILD_INDEX(
+                genome_fa,
+                gtf,
+                "star"
+            )
+            index_dir = BUILD_INDEX.out.star
+        }
     }else if (aligner == 'bwa-mem'){
-        index_dir = file(params.bwa, checkIfExists: true)
+        if (params.bwa){
+            index_dir = file(params.bwa, checkIfExists: true)
+        }else{
+            BUILD_INDEX(
+                genome_fa,
+                gtf,
+                "bwa"
+            )
+            index_dir = BUILD_INDEX.out.bwa
+        }
     }else{
         exit 1, "Use --aligner to provide an aligner. Possible values are star, bwa."
     }

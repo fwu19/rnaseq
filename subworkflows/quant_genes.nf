@@ -5,7 +5,7 @@
 include { INFER_STRAND } from '../modules/infer_strand.nf'
 include { FEATURECOUNTS } from '../modules/featureCounts.nf'
 include { GENERATE_GENE_COUNT_MATRIX } from '../modules/generate_gene_count_matrix.nf'
-include { DIFFERENTIAL_EXPRESSION } from '../modules/differential_expression.nf'
+include { DIFFERENTIAL_GENES } from '../modules/differential_genes.nf'
 
 workflow QUANT_GENES {
     take:
@@ -108,18 +108,19 @@ workflow QUANT_GENES {
     * differential genes
     */
     if (params.run_de && params.comparison){
-        DIFFERENTIAL_EXPRESSION(
+        DIFFERENTIAL_GENES(
             samplesheet, 
             file(params.comparison, checkIfExists: true),
             ch_gene_rds, 
+            "gene_length",
             params.fdr,
             params.fc,
             params.fdr2,
             params.fc2,
-            params.gene_txt ?: gene_txt,
-            params.de_gene_type ?: 'all'
+            gene_txt,
+            params.de_gene_type
         )
-        ch_de = DIFFERENTIAL_EXPRESSION.out.rds
+        ch_de = DIFFERENTIAL_GENES.out.rds
     }
 
     

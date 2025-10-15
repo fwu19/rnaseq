@@ -1,7 +1,5 @@
 process MULTIQC_PDX {
-    time = '1d'
-    cpus = 6
-    memory = '36G'
+    label "process_medium"
     module = ['MultiQC/1.21-foss-2023a']
 
 

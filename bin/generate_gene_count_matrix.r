@@ -126,6 +126,9 @@ y0 <- count2dgelist(
         arrange(factor(id, levels = colnames(lst$cts))),
     group = 'sample_group'
 )
+rpkm <- rpkm(y0, gene.length = "gene_length", normalized.lib.sizes = T, log = F)
+cbind(y0$genes, rpkm) %>% 
+    write.table('all_samples.gene_FPKM.txt', sep = '\t', quote = F, row.names = F)
 
 
 

@@ -1,8 +1,6 @@
 
 process BAM_TO_FASTQ {
-    time = '1d'
-    cpus = 6
-    memory = '24G'
+    label "process_medium"
     module = ['BEDTools/2.30.0-GCC-12.2.0', 'SAMtools/1.17-GCC-12.2.0']
 
 

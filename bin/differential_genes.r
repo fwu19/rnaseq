@@ -10,73 +10,56 @@ library(patchwork)
 
 ## for all
 run_da <- function(
-    y0, file.base, 
-    control.group, test.group, group=NULL, 
+    y0, out_prefix, 
+    control_group, test_group, group=NULL, 
+    exclude_samples = NULL, include_samples = NULL,
     fdr=0.01, fc=2, fdr2=NULL, fc2=NULL, 
-    report.cpm=F, report.rpkm=T, 
+    report_cpm=F, report_rpkm=T, 
     TMM=T, method = 'QL', 
-    rename.feature = NULL, 
-    feature.length = 'gene_length', 
-    design.object = ~0+group,
-    target = NULL, 
-    exclude.samples = NULL, include.samples = NULL,
-    exclude.genes = NULL, include.genes = NULL
+    rename_feature = NULL, feature_length = 'gene_length', 
+    design_object = ~0+group,
+    target = NULL
 ){
     require(edgeR)
     
     ## create output directory ####
-    out.dir <- dirname(file.base)
+    out.dir <- dirname(out_prefix)
     if(!dir.exists(out.dir)){dir.create(out.dir, recursive = T)}
     
-    ## filter samples ####
+    ## retrieve and process data ####
     if(!is.null(group)){y0$samples$group <- group}
     
-    j1 <- sum(y0$samples$group %in% control.group)
-    j2 <- sum(y0$samples$group %in% test.group)
+    j1 <- sum(y0$samples$group %in% control_group)
+    j2 <- sum(y0$samples$group %in% test_group)
     if (j1 == 0 | j2 == 0){
         return(list(error = data.frame(
-            control.group = paste(control.group, collapse = '+'),
-            test.group = paste(test.group, collapse = '+'),
-            control.samples = j1,
-            test.samples = j2
+            control_group = paste(control_group, collapse = ';'),
+            test_group = paste(test_group, collapse = ';'),
+            control_samples = j1,
+            test_samples = j2
         )))
     }else if (j1 == 1 & j2 == 1){
         return(list(error = data.frame(
-            control.group = paste(control.group, collapse = '+'),
-            test.group = paste(test.group, collapse = '+'),
-            control.samples = j1,
-            test.samples = j2
+            control_group = paste(control_group, collapse = ';'),
+            test_group = paste(test_group, collapse = ';'),
+            control_samples = j1,
+            test_samples = j2
         )))        
     }
     
-    j <- y0$samples$group %in% c(control.group, test.group)
-    
-    if (!is.null(exclude.samples)){
-        j <- j & !rownames(y0$samples) %in% exclude.samples
+    j <- y0$samples$group %in% c(control_group, test_group)
+    if (!is.null(exclude_samples)){
+        j <- j & !rownames(y0$samples) %in% exclude_samples
     }
     
-    if (!is.null(include.samples)){
-        j <- j & rownames(y0$samples) %in% include.samples
+    if (!is.null(include_samples)){
+        j <- j & rownames(y0$samples) %in% include_samples
     }
     
-    
-    ## filter genes ####
-    i <- rep(T, length(y0$genes$gene_id ))
-    
-    if (!is.null(include.genes)){
-        i <- i & y0$genes$gene_id %in% include.genes
-    }
-    
-    if (!is.null(exclude.genes)){
-        i <- i & !y0$genes$gene_id %in% exclude.genes
-    }
-    
-    ## filter DGElist
-    y <- y0[i,j]
-    y$samples$group <- ifelse(y$samples$group %in% control.group, 'control', 'test')
+    y <- y0[,j]
+    y$samples$group <- ifelse(y$samples$group %in% control_group, 'control', 'test')
     
     
-    ## normalize data ####
     if(TMM){
         keep <- filterByExpr(y, group = y$samples$group, min.count=10, min.total.count = 15)
         
@@ -86,7 +69,7 @@ run_da <- function(
     
     
     ## Create design matrix ####
-    design <- model.matrix(design.object,data = y$samples)
+    design <- model.matrix(design_object,data = y$samples)
     colnames(design) <- gsub('^group','',colnames(design))
     
     ## Make contrasts ####
@@ -118,39 +101,39 @@ run_da <- function(
     df$is.sig <- as.vector(is.sig)
     
     ## revert y$group ####
-    y$samples$group <- ifelse(y$samples$group %in% 'control', control.group, test.group)
+    y$samples$group <- ifelse(y$samples$group %in% 'control', control_group, test_group)
     
     ## write out results ####
     
-    if(!is.null(rename.feature)){colnames(test$genes)[1] <- rename.feature}
+    if(!is.null(rename_feature)){colnames(test$genes)[1] <- rename_feature}
     df <- cbind(test$genes,df[c('logFC','logCPM','PValue','FDR','is.sig')])
     if(!is.null(fdr2) & !is.null(fc2)){
         df$is.sig2 <- (df$FDR < fdr2) * sign(df$logFC) * (abs(df$logFC) > log2(fc2))
     }
-    if(report.cpm){
+    if(report_cpm){
         cpm <- cpm(y, normalized.lib.sizes = T, log = F)
         colnames(cpm) <- paste('CPM.TMMnormalized', colnames(cpm), sep = '.')
         df <- cbind(df, cpm)
     }  
-    if(report.rpkm){
-        rpkm <- rpkm(y, gene.length = feature.length, normalized.lib.sizes = T, log = F)
+    if(report_rpkm){
+        rpkm <- rpkm(y, gene.length = feature_length, normalized.lib.sizes = T, log = F)
         colnames(rpkm) <- paste('FPKM.TMMnormalized', colnames(rpkm), sep = '.')
         df <- cbind(df, rpkm)
     }  
-    write.table(df,paste(file.base,'txt',sep = '.'), sep = '\t',quote = F,row.names = F)
+    write.table(df,paste(out_prefix,'txt',sep = '.'), sep = '\t',quote = F,row.names = F)
     
     ## return results ####
     df_sum <- data.frame(
-        output.folder = basename(out.dir), 
-        control.group = paste(control.group, collapse = '+'),
-        test.group = paste(test.group, collapse = '+'),
-        control.samples = sum(y$samples$group %in% control.group),
-        test.samples = sum(y$samples$group %in% test.group),
-        features.tested = nrow(y),
-        features.up = sum(is.sig %in% 1),
-        features.down = sum(is.sig %in% -1),
-        FDR.cutoff = fdr,
-        FC.cutoff = fc
+        output_folder = gsub('.*differential_peaks/', '', out.dir), 
+        test_group = paste(test_group, collapse = '+'),
+        control_group = paste(control_group, collapse = '+'),
+        features_tested = nrow(y),
+        features_up = sum(is.sig %in% 1),
+        features_down = sum(is.sig %in% -1),
+        FDR_cutoff = fdr,
+        FC_cutoff = fc,
+        test_samples = sum(y$samples$group %in% test_group),
+        control_samples = sum(y$samples$group %in% control_group)
     )
     if(!is.null(target)){
         df_sum$target <- target  
@@ -160,10 +143,10 @@ run_da <- function(
         df_sum <- cbind(
             df_sum,
             data.frame(
-                features.up2 = sum(df$is.sig2 %in% 1),
-                features.down2 = sum(df$is.sig2 %in% -1),
-                FDR.cutoff2 = fdr2,
-                FC.cutoff2 = fc2
+                features_up2 = sum(df$is.sig2 %in% 1),
+                features_down2 = sum(df$is.sig2 %in% -1),
+                FDR_cutoff2 = fdr2,
+                FC_cutoff2 = fc2
             )
         )
     }
@@ -174,20 +157,20 @@ run_da <- function(
 
 
 ## PCA
-plot_pca <- function(y, file.base, var.genes = NULL, color = NULL, plot.title = '', sample.label = T, feature.length = 'gene_length', scree.plot = F){
+plot_pca <- function(y, out_prefix, var.genes = NULL, color = NULL, plot_title = '', sample.label = T, feature_length = 'gene_length', scree.plot = F){
     options(stringsAsFactors = F)
     require(ggrepel)
     require(edgeR)
     
     ## Create outdir if needed
-    out.dir <- dirname(file.base)
+    out.dir <- dirname(out_prefix)
     if(!dir.exists(out.dir)){dir.create(out.dir,recursive = T)}
     
     if('chrom' %in% colnames(y$genes)){
         y <- y[!y$genes$chrom %in% c('chrX', 'chrY', 'chrM'), ]
     }
     
-    log2rpkm <- rpkm(y, gene.length = feature.length, normalized.lib.sizes = T, log = T)
+    log2rpkm <- rpkm(y, gene.length = feature_length, normalized.lib.sizes = T, log = T)
     
     if (!is.null(var.genes)){
         keep <- rank(-apply(log2rpkm, 1, var)) <= var.genes
@@ -240,7 +223,7 @@ plot_pca <- function(y, file.base, var.genes = NULL, color = NULL, plot.title = 
     
     p <- p +
         labs(
-            title = plot.title,
+            title = plot_title,
             color = '', 
             x = paste0('PC1 (',round(pca.variance.prop[1],1),'%)'),
             y = paste0('PC2 (',round(pca.variance.prop[2],1),'%)')
@@ -249,7 +232,7 @@ plot_pca <- function(y, file.base, var.genes = NULL, color = NULL, plot.title = 
         theme(
             legend.position = 'top'
         )
-    ggsave(paste(file.base,'PCA.pdf',sep='.'),width = 5,height = 5)
+    ggsave(paste(out_prefix,'PCA.pdf',sep='.'),width = 5,height = 5)
     
     ## return data
     return(p)
@@ -257,11 +240,11 @@ plot_pca <- function(y, file.base, var.genes = NULL, color = NULL, plot.title = 
 }
 
 ## Plot MD
-plot_MD <- function(df, file.base, plot.title = ""){
+plot_MD <- function(df, out_prefix, plot_title = ""){
     require(ggplot2)
     
     ## Create outdir if needed
-    out.dir <- dirname(file.base)
+    out.dir <- dirname(out_prefix)
     if(!dir.exists(out.dir)){dir.create(out.dir,recursive = T)}
     
     p <- ggplot(df, aes(x = logCPM, y = logFC, color=factor(is.sig)))+
@@ -275,7 +258,7 @@ plot_MD <- function(df, file.base, plot.title = ""){
         labs( 
             x = "Average log CPM", 
             y = "log-fold-of-change",
-            title = plot.title
+            title = plot_title
         )+
         theme_bw()+
         theme(
@@ -283,16 +266,16 @@ plot_MD <- function(df, file.base, plot.title = ""){
             legend.position = 'top'
         )
     
-    ggsave(paste(file.base,'MD.pdf',sep = '.'),width = 4,height = 5)
+    ggsave(paste(out_prefix,'MD.pdf',sep = '.'),width = 4,height = 5)
     return(p)
 } 
 
 ## Plot volcano 
-plot_volcano <- function(df, file.base, plot.title = ""){
+plot_volcano <- function(df, out_prefix, plot_title = ""){
     require(ggplot2)
     
     ## Create outdir if needed
-    out.dir <- dirname(file.base)
+    out.dir <- dirname(out_prefix)
     if(!dir.exists(out.dir)){dir.create(out.dir,recursive = T)}
     
     p <- ggplot(df,aes(x=logFC,y=-log10(FDR),color=factor(is.sig)))+
@@ -307,7 +290,7 @@ plot_volcano <- function(df, file.base, plot.title = ""){
             x='log2(fold change)',
             y='-log10(FDR)',
             color='',
-            title = plot.title
+            title = plot_title
         )+
         theme_bw()+
         theme(
@@ -315,7 +298,7 @@ plot_volcano <- function(df, file.base, plot.title = ""){
             legend.position = 'top'
         )
     
-    ggsave(paste(file.base,'Volcano.pdf',sep = '.'),width = 4,height = 5)
+    ggsave(paste(out_prefix,'Volcano.pdf',sep = '.'),width = 4,height = 5)
     return(p)
 }
 
@@ -338,10 +321,10 @@ recal_sig <- function(txt, col.sig, fdr, fc){
 }
 
 ## compute normalized counts 
-normalize_counts <- function(y, file.base, return = c('rpkm','cpm'), gene.length = "gene_length", log = F){
+normalize_counts <- function(y, out_prefix, return = c('rpkm','cpm'), gene.length = "gene_length", log = F){
     require(edgeR)
     
-    out.dir <- dirname(file.base)
+    out.dir <- dirname(out_prefix)
     if (!dir.exists(out.dir)){
         dir.create(out.dir, recursive = T)
     }
@@ -350,55 +333,67 @@ normalize_counts <- function(y, file.base, return = c('rpkm','cpm'), gene.length
         colnames(cpm) <- paste('CPM.TMMnormalized', colnames(cpm), sep = '.')
         df <- cbind(y$genes, cpm)
         out.suffix <- ifelse(log, 'log2CPM.txt', 'CPM.txt')
-        write.table(df,paste(file.base, out.suffix, sep = '.'), sep = '\t',quote = F,row.names = F)
+        write.table(df,paste(out_prefix, out.suffix, sep = '.'), sep = '\t',quote = F,row.names = F)
     }  
     if(return[1] == 'rpkm'){
         rpkm <- rpkm(y, gene.length = gene.length, normalized.lib.sizes = T, log = log)
         colnames(rpkm) <- paste('FPKM.TMMnormalized', colnames(rpkm), sep = '.')
         df <- cbind(y$genes, rpkm)
         out.suffix <- ifelse(log, 'log2FPKM.txt', 'FPKM.txt')
-        write.table(df,paste(file.base, out.suffix, sep = '.'), sep = '\t',quote = F,row.names = F)
+        write.table(df,paste(out_prefix, out.suffix, sep = '.'), sep = '\t',quote = F,row.names = F)
     }  
     
 }
 
 ## wrapper
-wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2){
+wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2, genes2keep = NULL, gene_types = NULL, outdir = './'){
     
-    file.base <- icmp$file.base[1]
-    control.group <- icmp$control.group[[1]]
-    test.group <- icmp$test.group[[1]]
-    plot.title <- icmp$plot.title[1]
-    if (icmp$sample.group[1] %in% colnames(y0$samples)){
-        group <- y0$samples[,icmp$sample.group[1]]
+    file_base <- icmp$file_base[1]
+    control_group <- unlist(strsplit(as.character(icmp$control_group[[1]]), split = ';'))
+    test_group <- unlist(strsplit(as.character(icmp$test_group[[1]]), split = ';'))
+    plot_title <- icmp$plot_title[1]
+    if (icmp$comparison_group[1] %in% colnames(ss)){
+        group <- ss[,icmp$comparison_group[1]][match(rownames(y0$samples), ss$id)]
+    }else if (icmp$comparison_group[1] %in% colnames(y0$samples)){
+        group <- y0$samples[,icmp$comparison_group[1]]
     }else{
         group <- NULL
     }
-    design.object <- as.formula(icmp$design.object[1])
-    if (is.na(icmp$include.samples[1])){
-        include.samples <- NULL
+    design_object <- as.formula(icmp$design_object[1])
+    
+    ## filter samples ####
+    if (is.na(icmp$include_samples[1])){
+        include_samples <- NULL
     }else{
-        include.samples <- unlist(strsplit(icmp$include.samples[1], split = ';'))
+        include_samples <- unlist(strsplit(icmp$include_samples[1], split = ';'))
     }
     
-    if (is.na(icmp$exclude.samples[1])){
-        exclude.samples <- NULL
+    if (is.na(icmp$exclude_samples[1])){
+        exclude_samples <- NULL
     }else{
-        exclude.samples <- unlist(strsplit(icmp$exclude.samples[1], split = ';'))
+        exclude_samples <- unlist(strsplit(icmp$exclude_samples[1], split = ';'))
+    }
+    
+    ## filter gene if needed ####
+    if (!is.null(genes2keep)){
+        y0 <- y0[y0$genes$gene_id %in% genes2keep$gene_id, ]
+    }
+    if (!is.null(gene_types)){
+        y0 <- y0[y0$genes$gene_type %in% gene_types, ]
     }
     
     ## run DGE ####
     lst <- run_da(
         y0, 
-        file.base = file.base,
-        control.group = control.group, 
-        test.group = test.group, 
+        out_prefix = file_base,
+        control_group = control_group, 
+        test_group = test_group, 
         group = group, 
-        feature.length = 'gene_length',
+        include_samples = include_samples,
+        exclude_samples = exclude_samples,
+        feature_length = length_col,
         fdr = fdr, fc = fc, fdr2 = fdr2, fc2 = fc2,
-        design.object = design.object,
-        include.samples = include.samples,
-        exclude.samples = exclude.samples
+        design_object = design_object
     )
     
     if ('error' %in% names(lst)){
@@ -411,21 +406,19 @@ wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 
     lst$plots <- list(
         PCA = plot_pca(
             y, 
-            file.base, 
+            file_base, 
             color = y$samples$group, 
             sample.label = T, 
-            plot.title = "", 
+            plot_title = "", 
             var.genes = 500, 
-            feature.length = "gene_length"),
+            feature_length = length_col),
         MD = plot_MD(
-            df, 
-            file.base,
-            plot.title = plot.title
+            df, out_prefix = file_base,
+            plot_title = plot_title
         ),
         volcano = plot_volcano(
-            df, 
-            file.base,
-            plot.title = plot.title
+            df, out_prefix = file_base,
+            plot_title = plot_title
         )
     )
     
@@ -446,9 +439,7 @@ args <- as.vector(commandArgs(T))
 lst <- strsplit(args, split = '=')
 for (x in lst){
     assign(x[1],x[2])
-} # read arguments: input, comparison, rds, fdr, fc, fdr2, fc2
-
-outdir = ifelse(exists('outdir'), outdir, './')
+} # read arguments: ss, comparison, rds, fdr, fc, fdr2, fc2
 
 ss <- read.csv(input) %>% 
     relocate(fastq_1, fastq_2, .after = last_col()) %>% 
@@ -470,53 +461,50 @@ fdr <- as.numeric(fdr)
 fc <- as.numeric(fc)
 fdr2 <- as.numeric(fdr2)
 fc2 <- as.numeric(fc2)
-
-if(!exists('gene_txt')){
-    genes2keep <- NULL
-}else if (file.exists(gene_txt)){
+if (!exists('length_col')){
+    length_col <- 'gene_length'
+}
+if (!exists('outdir')){
+    outdir <- '.'
+}
+if (file.exists(gene_txt)){
     genes2keep <- read.delim(gene_txt)
 }else{
     genes2keep <- NULL
 }
 
-## filter gene if needed ####
 gene_types <- unlist(strsplit(gene_type, split = ','))
 if(setequal(gene_types, 'all')){gene_types <- NULL}
-include.genes <- y0$genes$gene_id
-if (!is.null(genes2keep)){
-    include.genes <- intersect(y0$genes$gene_id, genes2keep$gene_id)
-}
-if (!is.null(gene_types)){
-    include.genes <- y0$genes$gene_id[y0$genes$gene_type %in% gene_types]
-}
-y0 <- y0[y0$genes$gene_id %in% include.genes, ]
-cts <- cbind(y0$genes, y0$counts)
-write.table(cts, file.path(outdir, 'all_samples.filtered_gene_raw_counts.txt'), sep = '\t', quote = F, row.names = F)
+
 
 ## detect differential expression ####
+colnames(cmp) <- gsub('\\.', '_', colnames(cmp))
 cmp <- cmp %>% 
-    add_colv('plot.title', paste(cmp$test.group, 'vs', cmp$control.group, '(reference)')) %>% 
-    add_colv('sample.group', '') %>% 
-    add_colv('design.object', '~0+group') %>% 
-    add_colv('exclude.samples', NA) %>%
-    add_colv('include.samples', NA) %>%
-    add_colv('out.prefix', paste(cmp$test.group, cmp$control.group, sep = '_vs_')) %>% 
-    arrange(!is.na(exclude.samples), !is.na(include.samples), exclude.samples, include.samples) %>%
-    group_by(out.prefix) %>% 
+    mutate(
+        test_group = gsub('-| +|&', '.', test_group),
+        control_group = gsub('-| +|&', '.', control_group)
+    ) %>% 
+    add_colv('out_prefix', paste(gsub(';','-', cmp$test_group), gsub(';','-', cmp$control_group), sep = '_vs_')) %>% 
+    add_colv('plot_title', paste(gsub(';','+', cmp$test_group), gsub(';','+', cmp$control_group), sep = ' vs ')) %>% 
+    add_colv('comparison_group', '') %>% 
+    add_colv('design_object', '~0+group') %>% 
+    add_colv('include_samples', NA) %>% 
+    add_colv('exclude_samples', NA) %>% 
+    arrange(out_prefix, is.na(exclude_samples), is.na(include_samples)) %>% 
+    group_by(out_prefix) %>% 
     mutate(
         n = 1:n()
     ) %>% 
     mutate(
-        file.base = file.path(outdir, ifelse(n>1, paste0(out.prefix, '_run', n), out.prefix), out.prefix)
-    ) %>% 
-    ungroup()
+        file_base = file.path(outdir, paste0(out_prefix, ifelse(n>1, paste0('_run',n), '')), out_prefix)
+    )
 
 de.list <- list()
 for (i in 1:nrow(cmp)){
     de.list[[i]] <- wrap_one_cmp(
-        y0, cmp[i,], ss, fdr, fc, fdr2, fc2
+        y0, cmp[i,], ss, fdr, fc, fdr2, fc2, genes2keep, gene_types, outdir = outdir
     )
 }
-names(de.list) <- basename(dirname(cmp$file.base))
-saveRDS(de.list, file.path(outdir, 'differential_genes.rds'))
+names(de.list) <- basename(cmp$out_prefix)
+saveRDS(de.list, 'differential_genes.rds')
 

@@ -1,7 +1,5 @@
 process HS_METRICS {
-    time = '1d'
-    cpus = 1
-    memory = '24G'
+    label "process_medium"
     module = ['GATK/4.4.0.0-GCCcore-12.2.0-Java-17', 'SAMtools/1.17-GCC-12.2.0']
 
 

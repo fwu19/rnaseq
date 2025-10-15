@@ -43,7 +43,7 @@ workflow QUANT_TRANSCRIPTS {
             params.fdr2,
             params.fc2,
             gene_txt,
-            params.de_gene_type?:'all'
+            params.de_gene_type
         )
         ch_dt = DIFFERENTIAL_TRANSCRIPTS.out.rds
     }

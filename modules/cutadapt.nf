@@ -1,7 +1,5 @@
 process CUTADAPT {
-    time = '1d'
-    cpus = 6
-    memory = '36G'
+    label "process_high"
     module = ['cutadapt/4.9-GCCcore-12.3.0']
 
 

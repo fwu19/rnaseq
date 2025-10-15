@@ -7,11 +7,9 @@ options(scipen = 99)
 library(dplyr)
 
 ## functions ####
-add_col <- function(df, col, default.value){
-    if(!col %in% colnames(df)){
-        df[,col] <- default.value
-    }
-    return(df[,col])
+add_colv <- function(df, colv, value){
+    if (!colv %in% colnames(df)){df[,colv] <- value}
+    return(df)
 }
 
 add_metadata <- function(ss, meta_csv){
@@ -26,9 +24,6 @@ add_metadata <- function(ss, meta_csv){
             ) %>% 
             dplyr::select(!ends_with(".x")) 
     }
-    
-    ## add missing columns
-    ss$sample_group <- add_col(ss, 'sample_group', ss$id)
     
     if (sum(duplicated(ss$id)) > 0){
         ss <- ss %>% 
@@ -58,11 +53,15 @@ if (!'id' %in% colnames(ss)){
     stop ( 'Missing column id!' )
 }else if ( ! 'fastq_1' %in% colnames(ss)){
     stop ( 'Missing column fastq_1!' )
-}else if ( ! 'fastq_2' %in% colnames(ss)){
-    ss$fastq_2 <- ''
 }
-ss$fastq_2 <- add_col(ss, 'fastq_2', "")
-ss$single_end <- ifelse(ss$fastq_2 == "", 'true', 'false')
+ss <- ss %>% 
+    add_colv('sample_group', ss$id) %>% 
+    add_colv('fastq_2', "") %>% 
+    mutate(
+        id = gsub('-| +|&', '.', id),
+        sample_group = gsub('-| +|&', '.', sample_group),
+        single_end = ifelse(fastq_2 == "", 'true', 'false')
+    )
 
 
 ## add metadata and collapse by id if necessary ####

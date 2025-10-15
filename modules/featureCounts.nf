@@ -1,7 +1,5 @@
 process FEATURECOUNTS {
-    time = '1d'
-    cpus = 6
-    memory = '36G'
+    label "process_high"
     module = ['Subread/2.0.0-GCC-8.3.0']
 
 

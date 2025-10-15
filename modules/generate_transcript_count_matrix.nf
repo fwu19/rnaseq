@@ -1,8 +1,6 @@
 
 process GENERATE_TRANSCRIPT_COUNT_MATRIX {
-    time = '1d'
-    cpus = 1
-    memory = '24G'
+    label "process_single"
     container "docker://fwu19/r-libs:4.1.2" 
 
 

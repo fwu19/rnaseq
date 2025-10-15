@@ -1,8 +1,6 @@
 
 process DIFFERENTIAL_TRANSCRIPTS {
-    time = '1d'
-    cpus = 1
-    memory = '24G'
+    label "process_single"
     container "docker://fwu19/r-libs:4.1.2" 
 
 
@@ -28,6 +26,6 @@ process DIFFERENTIAL_TRANSCRIPTS {
     
     script:
     """
-    differential_transcripts.r input=$samplesheet comparison=$comparison rds=${rds} length.col=${length_col} fdr=${fdr} fc=${fc} fdr2=${fdr2} fc2=${fc2} gene_txt=$gene_txt gene_type=$gene_type
+    differential_transcripts.r input=$samplesheet comparison=$comparison rds=${rds} length_col=${length_col} fdr=${fdr} fc=${fc} fdr2=${fdr2} fc2=${fc2} gene_txt=$gene_txt gene_type=$gene_type
     """
 }

@@ -1,8 +1,6 @@
 
 process MAKE_STAR {
-    time = '1d'
-    cpus = 8
-    memory = '48G'
+    label "process_high"
     module = ['STAR/2.7.10b-GCC-12.2.0', 'SAMtools/1.17-GCC-12.2.0']
 
 
