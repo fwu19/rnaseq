@@ -20,7 +20,9 @@ workflow QC_ALIGNMENT {
     bai_xeno
     collapsed_gtf
     tx_bed
-
+    strand
+    read_type
+    
     main: 
     ch_rnaseqc = Channel.empty()
     ch_rseqc = Channel.empty()
@@ -70,8 +72,8 @@ workflow QC_ALIGNMENT {
         RNASEQC(
             params.workflow == 'pdx' ? ch_bam_bai_xeno : ch_bam_bai,
             collapsed_gtf,
-            params.strand,
-            params.read_type
+            strand,
+            read_type
         )            
         ch_rnaseqc = RNASEQC.out.qc
         // [ [meta], path("*") ]

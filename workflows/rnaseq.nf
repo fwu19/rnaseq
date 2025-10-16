@@ -11,6 +11,7 @@ include { QC_FASTQ } from '../subworkflows/qc_fastq.nf'
 include { QC_ALIGNMENT } from '../subworkflows/qc_alignment.nf'
 
 include { BAM_TO_FASTQ } from '../modules/bam_to_fastq.nf'
+include { INFER_EXPERIMENT } from '../modules/infer_experiment.nf'
 include { ARRIBA  } from '../modules/arriba.nf'
 include { MULTIQC  } from '../modules/multiqc.nf'
 include { MULTIQC_PDX  } from '../modules/multiqc_pdx.nf'
@@ -152,6 +153,32 @@ workflow RNASEQ {
 
     }
     
+    /*
+    * Infer strandedness and read type
+    */
+    if (params.run_alignment || params.run_gene_count || params.run_qc_alignment ){
+        INFER_EXPERIMENT(
+            ch_bam
+            .map{ it -> [ [ it[0], it[1] ], it[2] ]}
+            .join (
+                ch_bai
+                    .map{ it -> [ [ it[0], it[1] ], it[2] ]}
+            )
+            .map { it -> [ it[0][0], it[0][1], it[1], it[2] ]}
+            .first(),
+            tx_bed
+        )
+        // should make the below more efficient
+        strand = INFER_EXPERIMENT.out.strand
+            .splitCsv(header: false)
+            .map {it[0]}
+            .first()
+        read_type = INFER_EXPERIMENT.out.read_type
+            .splitCsv(header: false)
+            .map {it[0]}
+            .first()
+
+    }
 
     /*
     *   collect gene-level count matrix and call differential expression
@@ -165,7 +192,9 @@ workflow RNASEQ {
             params.workflow == 'pdx' ? ch_bai_xeno.ifEmpty([]) : ch_bai.ifEmpty([]),
             ch_counts.ifEmpty([]),
             gene_txt,
-            tx_bed
+            tx_bed,
+            strand,
+            read_type
         )
         
         ch_gene_rds = QUANT_GENES.out.gene_rds
@@ -261,7 +290,9 @@ workflow RNASEQ {
             ch_bam_xeno,
             ch_bai_xeno,
             collapsed_gtf,
-            tx_bed
+            tx_bed,
+            strand,
+            read_type
         )
         ch_rnaseqc = QC_ALIGNMENT.out.rnaseqc
         ch_rseqc = QC_ALIGNMENT.out.rseqc

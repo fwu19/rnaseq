@@ -346,7 +346,7 @@ normalize_counts <- function(y, out.prefix, return = c('rpkm','cpm'), gene.lengt
 }
 
 ## wrapper
-wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2, genes2keep = NULL, gene_types = NULL, outdir = './'){
+wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2, outdir = './'){
     
     file_base <- icmp$file_base[1]
     control_group <- unlist(strsplit(as.character(icmp$control_group[[1]]), split = ';'))
@@ -374,13 +374,6 @@ wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 
         exclude_samples <- unlist(strsplit(icmp$exclude_samples[1], split = ';'))
     }
     
-    ## filter gene if needed ####
-    if (!is.null(genes2keep)){
-        y0 <- y0[y0$genes$gene_id %in% genes2keep$gene_id, ]
-    }
-    if (!is.null(gene_types)){
-        y0 <- y0[y0$genes$gene_type %in% gene_types, ]
-    }
     
     ## run DGE ####
     lst <- run_da(
@@ -468,14 +461,25 @@ if (!exists('outdir')){
     outdir <- '.'
 }
 
+## filter gene if needed ####
 if (file.exists(gene_txt)){
     genes2keep <- read.delim(gene_txt)
-}else{
-    genes2keep <- NULL
+    y0 <- y0[y0$genes$gene_id %in% genes2keep$gene_id, ]
 }
 
 gene_types <- unlist(strsplit(gene_type, split = ','))
-if(setequal(gene_types, 'all')){gene_types <- NULL}
+if(!setequal(gene_types, 'all')){
+    y0 <- y0[y0$genes$gene_type %in% gene_types, ]
+}
+
+cbind(y0$genes, y0$counts) %>% 
+    write.table(
+        'all_samples.transcripts_filtered_for_DE.raw_counts.txt', sep = '\t', quote = F, row.names = F
+    )
+
+rpkm <- rpkm(y0, gene.length = length_col, normalized.lib.sizes = T, log = F)
+cbind(y0$genes, rpkm) %>% 
+    write.table('all_samples.transcripts_filtered_for_DE.FPKM.txt', sep = '\t', quote = F, row.names = F)
 
 ## detect differential transcripts ####
 colnames(cmp) <- gsub('\\.', '_', colnames(cmp))
@@ -498,7 +502,7 @@ cmp <- cmp %>%
 de.list <- list()
 for (i in 1:nrow(cmp)){
     de.list[[i]] <- wrap_one_cmp(
-        y0, cmp[i,], ss, fdr, fc, fdr2, fc2, genes2keep, gene_types, outdir = outdir
+        y0, cmp[i,], ss, fdr, fc, fdr2, fc2, outdir = outdir
     )
 }
 names(de.list) <- basename(cmp$out_prefix)
