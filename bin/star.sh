@@ -18,7 +18,7 @@ nthread=$1; shift
 fq1=$1; shift
 fq2=$1; shift
 ext_rg="$1"; shift
-ext_args="$1"; shift
+
 
 [[ -d $sample_id ]] || mkdir -p $sample_id
 cd $sample_id 
@@ -29,7 +29,7 @@ if [[ -s ../$gtf ]]; then
 else
 	more_args=""
 fi
-STAR $ext_args $more_args \
+STAR $@ $more_args \
 	--genomeLoad NoSharedMemory \
 	--genomeDir "../${star_ref}" \
 	--readFilesIn ../${fq1} ../${fq2} \
