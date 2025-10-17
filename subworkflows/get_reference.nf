@@ -138,7 +138,7 @@ workflow GET_REFERENCE {
     if (params.run_build_index){
         BUILD_INDEX(
             genome_fa,
-            gtf,
+            gtf == null ? "$projectDir/assets/dummy_file.csv" : gtf,
             aligner_index
         )
 
@@ -154,7 +154,7 @@ workflow GET_REFERENCE {
         }else{
             BUILD_INDEX(
                 genome_fa,
-                gtf,
+                gtf == null ? "$projectDir/assets/dummy_file.csv" : gtf,
                 "star"
             )
             index_dir = BUILD_INDEX.out.star
@@ -165,7 +165,7 @@ workflow GET_REFERENCE {
         }else{
             BUILD_INDEX(
                 genome_fa,
-                gtf,
+                gtf == null ? "$projectDir/assets/dummy_file.csv" : gtf,
                 "bwa"
             )
             index_dir = BUILD_INDEX.out.bwa

@@ -38,7 +38,7 @@ if ( params.genome_fa == null ){
     exit 1, "Need to provide a valid path with --genome_fa path/to/genome/fasta."
 }
 
-if ( params.gtf == null ){
+if ( params.gtf == null && !params.only_build_index){
     exit 1, "Need to provide a valid path with --gtf path/to/genes/gtf."
 }
 

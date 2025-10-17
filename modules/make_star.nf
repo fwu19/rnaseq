@@ -25,7 +25,7 @@ process MAKE_STAR {
     def overhang = params.sjdbOverhang ?: task.ext.sjdbOverhang
     def base = params.genomeSAindexNbases ?: task.ext.genomeSAindexNbases
     """
-    make_star.sh ${task.cpus} genome/ genes/ $args --sjdbOverhang $overhang --genomeSAindexNbases $base
+    make_star.sh ${task.cpus} genome/ genes/ $overhang --genomeSAindexNbases $base $args 
     
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
