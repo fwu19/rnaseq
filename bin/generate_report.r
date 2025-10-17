@@ -53,11 +53,19 @@ saveRDS(dat, 'data.rds')
 
 ## copy Rmd files ####
 if (workflow == 'regular'){
-    file.copy("report/rnaseq_regular.Rmd", "00_RNAseq_analysis_report.Rmd")
+    src <- "report/rnaseq_regular.Rmd"
+    dst <- "00_RNAseq_analysis_report.Rmd"
+    
 }else if (workflow == 'exome'){
-    file.copy("report/rnaseq_exome.Rmd", "00_RNAexome_analysis_report.Rmd")
+    src <- "report/rnaseq_exome.Rmd"
+    dst <- "00_RNAexome_analysis_report.Rmd"
+    
 }else if (workflow == 'pdx'){
-    file.copy("report/rnaseq_pdx.Rmd", "00_PDX_RNAseq_analysis_report.Rmd")
+    src <- "report/rnaseq_pdx.Rmd"
+    dst <- "00_PDX_RNAseq_analysis_report.Rmd"
 }else{
     cat(workflow, ' is not recognized!')
 }
+
+file.copy(src, dst)
+rmarkdown::render(dst)
