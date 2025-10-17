@@ -26,6 +26,6 @@ process DIFFERENTIAL_TRANSCRIPTS {
     
     script:
     """
-    differential_transcripts.r input=$samplesheet comparison=$comparison rds=${rds} length_col=${length_col} fdr=${fdr} fc=${fc} fdr2=${fdr2} fc2=${fc2} gene_txt=$gene_txt gene_type=$gene_type
+    differential_expression.r input=$samplesheet comparison=$comparison rds=${rds} length_col=${length_col} fdr=${fdr} fc=${fc} fdr2=${fdr2} fc2=${fc2} gene_txt=$gene_txt gene_type=$gene_type
     """
 }

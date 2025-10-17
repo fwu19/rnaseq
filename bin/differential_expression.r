@@ -29,8 +29,28 @@ run_da <- function(
     ## retrieve and process data ####
     if(!is.null(group)){y0$samples$group <- group}
     
-    j1 <- sum(y0$samples$group %in% control_group)
-    j2 <- sum(y0$samples$group %in% test_group)
+    j <- y0$samples$group %in% c(control_group, test_group)
+    if (!is.null(exclude_samples)){
+        j <- j & !rownames(y0$samples) %in% exclude_samples
+    }
+    
+    if (!is.null(include_samples)){
+        j <- j & rownames(y0$samples) %in% include_samples
+    }
+    
+    if (sum(j)==0){
+        return(list(error = data.frame(
+            control_group = paste(control_group, collapse = ';'),
+            test_group = paste(test_group, collapse = ';'),
+            control_samples = 0,
+            test_samples = 0
+        )))   
+    }
+    
+    y <- y0[,j]
+    
+    j1 <- sum(y$samples$group %in% control_group)
+    j2 <- sum(y$samples$group %in% test_group)
     if (j1 == 0 | j2 == 0){
         return(list(error = data.frame(
             control_group = paste(control_group, collapse = ';'),
@@ -47,18 +67,8 @@ run_da <- function(
         )))        
     }
     
-    j <- y0$samples$group %in% c(control_group, test_group)
-    if (!is.null(exclude_samples)){
-        j <- j & !rownames(y0$samples) %in% exclude_samples
-    }
     
-    if (!is.null(include_samples)){
-        j <- j & rownames(y0$samples) %in% include_samples
-    }
-    
-    y <- y0[,j]
     y$samples$group <- ifelse(y$samples$group %in% control_group, 'control', 'test')
-    
     
     if(TMM){
         keep <- filterByExpr(y, group = y$samples$group, min.count=10, min.total.count = 15)
@@ -390,7 +400,7 @@ wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 
     )
     
     if ('error' %in% names(lst)){
-        write.table(lst$error, paste0(file.base, '.error.txt'), sep = '\t', quote = F, row.names = F)
+        write.table(lst$error, paste0(file_base, '.error.txt'), sep = '\t', quote = F, row.names = F)
         return(lst)
     }
     
@@ -422,8 +432,19 @@ wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 
 }
 
 ## add default value if a column is missing
-add_colv <- function(df, colv, value){
-    if (!colv %in% colnames(df)){df[,colv] <- value}
+fill_column <- function(df, colv, default.value, na.value = NULL, missing.value = NULL){
+    if (!colv %in% colnames(df)){
+        df[,colv] <- default.value
+    }
+    
+    if (!is.null(na.value)){
+        df[,colv] <- ifelse(is.na(df[,colv]), na.value, df[,colv])
+    }
+    
+    if (!is.null(missing.value)){
+        df[,colv] <- ifelse(df[,colv] == "", missing.value, df[,colv])
+    }
+    
     return(df)
 }
 
@@ -455,11 +476,50 @@ fc <- as.numeric(fc)
 fdr2 <- as.numeric(fdr2)
 fc2 <- as.numeric(fc2)
 if (!exists('length_col')){
-    length_col <- 'gene_length'
+    if (grepl('transcript', rds)){
+        length_col <- 'EffectiveLength'
+    }else{
+        length_col <- 'gene_length'
+    }
 }
 if (!exists('outdir')){
     outdir <- '.'
 }
+
+## parse comparison table ####
+colnames(cmp) <- gsub('\\.', '_', colnames(cmp))
+cmp <- cmp %>% 
+    mutate(
+        test_group = gsub('-| +|&', '.', test_group),
+        control_group = gsub('-| +|&', '.', control_group)
+    ) %>% 
+    fill_column('out_prefix', paste(gsub(';','-', cmp$test_group), gsub(';','-', cmp$control_group), sep = '_vs_')) %>% 
+    fill_column('plot_title', paste(gsub(';','+', cmp$test_group), gsub(';','+', cmp$control_group), sep = ' vs ')) %>% 
+    fill_column('comparison_group', '') %>% 
+    fill_column('design_object', '~0+group', '~0+group', '~0+group' ) %>% 
+    fill_column('include_samples', NA, NA, NA) %>% 
+    fill_column('exclude_samples', NA, NA, NA) %>% 
+    arrange(out_prefix, is.na(exclude_samples), is.na(include_samples)) %>% 
+    group_by(out_prefix) %>% 
+    mutate(
+        n = 1:n()
+    ) %>% 
+    mutate(
+        file_base = file.path(outdir, paste0(out_prefix, ifelse(n>1, paste0('_run',n), '')), out_prefix)
+    )
+
+## update sample sheet and DGElist ####
+common_samples <- intersect(ss$id, y0$samples$id)
+if (length(common_samples) == 0 ){
+    stop(paste("No common samples are found between", input, "and", rds, "!"))
+}
+y0 <- y0[ ,y0$samples$id %in% common_samples]
+ss <- ss[ss$id %in% common_samples, ]
+new_meta <- setdiff(colnames(ss), colnames(y0$samples))
+if (length(new_meta)>0){
+    y0$samples[,new_meta] <- ss[match(y0$samples$id, ss$id),new_meta]
+}
+
 
 ## filter gene if needed ####
 if (file.exists(gene_txt)){
@@ -483,27 +543,6 @@ cbind(y0$genes, rpkm) %>%
 
 
 ## detect differential expression ####
-colnames(cmp) <- gsub('\\.', '_', colnames(cmp))
-cmp <- cmp %>% 
-    mutate(
-        test_group = gsub('-| +|&', '.', test_group),
-        control_group = gsub('-| +|&', '.', control_group)
-    ) %>% 
-    add_colv('out_prefix', paste(gsub(';','-', cmp$test_group), gsub(';','-', cmp$control_group), sep = '_vs_')) %>% 
-    add_colv('plot_title', paste(gsub(';','+', cmp$test_group), gsub(';','+', cmp$control_group), sep = ' vs ')) %>% 
-    add_colv('comparison_group', '') %>% 
-    add_colv('design_object', '~0+group') %>% 
-    add_colv('include_samples', NA) %>% 
-    add_colv('exclude_samples', NA) %>% 
-    arrange(out_prefix, is.na(exclude_samples), is.na(include_samples)) %>% 
-    group_by(out_prefix) %>% 
-    mutate(
-        n = 1:n()
-    ) %>% 
-    mutate(
-        file_base = file.path(outdir, paste0(out_prefix, ifelse(n>1, paste0('_run',n), '')), out_prefix)
-    )
-
 de.list <- list()
 for (i in 1:nrow(cmp)){
     de.list[[i]] <- wrap_one_cmp(
@@ -511,5 +550,5 @@ for (i in 1:nrow(cmp)){
     )
 }
 names(de.list) <- basename(cmp$out_prefix)
-saveRDS(de.list, 'differential_genes.rds')
+saveRDS(de.list, ifelse(grepl('transcript', rds), 'differential_transcripts.rds', 'differential_genes.rds'))
 
