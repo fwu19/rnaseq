@@ -499,7 +499,7 @@ cmp <- cmp %>%
     fill_column('design_object', '~0+group', '~0+group', '~0+group' ) %>% 
     fill_column('include_samples', NA, NA, NA) %>% 
     fill_column('exclude_samples', NA, NA, NA) %>% 
-    arrange(out_prefix, is.na(exclude_samples), is.na(include_samples)) %>% 
+    arrange(out_prefix, !is.na(exclude_samples), !is.na(include_samples)) %>% 
     group_by(out_prefix) %>% 
     mutate(
         n = 1:n()
@@ -534,12 +534,16 @@ if(!setequal(gene_types, 'all')){
 
 cbind(y0$genes, y0$counts) %>% 
     write.table(
-        'all_samples.genes_filtered_for_DE.raw_counts.txt', sep = '\t', quote = F, row.names = F
+        file.path(outdir, 'all_samples.genes_filtered_for_DE.raw_counts.txt'), 
+        sep = '\t', quote = F, row.names = F
     )
 
 rpkm <- rpkm(y0, gene.length = length_col, normalized.lib.sizes = T, log = F)
 cbind(y0$genes, rpkm) %>% 
-    write.table('all_samples.genes_filtered_for_DE.FPKM.txt', sep = '\t', quote = F, row.names = F)
+    write.table(
+        file.path(outdir, 'all_samples.genes_filtered_for_DE.FPKM.txt'), 
+        sep = '\t', quote = F, row.names = F
+    )
 
 
 ## detect differential expression ####
