@@ -7,7 +7,7 @@ overhang=$1; shift
 
 cat $gene_dir/* 2>/dev/null | egrep "^#" > genes.gtf
 cat $gene_dir/* 2>/dev/null | egrep -v "^#" >> genes.gtf
-[[ -s genes.gtf ]] && moreArgs="--sjdbGTFfile genes.gtf --sjdbOverhang $overhang"
+[[ -s genes.gtf ]] && moreArgs="--sjdbGTFfile genes.gtf"
 
 STAR --runThreadN ${cpus} \
 	--runMode genomeGenerate \

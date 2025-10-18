@@ -22,10 +22,10 @@ process MAKE_STAR {
 
     script:
     def args = task.ext.args ?: ""
-    def overhang = params.sjdbOverhang ?: task.ext.sjdbOverhang
-    def base = params.genomeSAindexNbases ?: task.ext.genomeSAindexNbases
+    def overhang = params.sjdbOverhang ? "--sjdbOverhang ${params.sjdbOverhang}": ""
+    def base = params.genomeSAindexNbases ? "--genomeSAindexNbases ${params.genomeSAindexNbases}" : ""
     """
-    make_star.sh ${task.cpus} genome/ genes/ $overhang --genomeSAindexNbases $base $args 
+    make_star.sh ${task.cpus} genome/ genes/ $overhang $base $args 
     
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
