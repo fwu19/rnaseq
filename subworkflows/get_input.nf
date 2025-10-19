@@ -26,13 +26,14 @@ workflow GET_INPUT {
             )
             input = GET_FASTQ_PATHS.out.csv
         }
-
+        
         CHECK_INPUT(
-            file( input, checkIfExists: true ),
-            file( metadata, checkIfExists: true )
+            input,
+            metadata
         )
         samplesheet = CHECK_INPUT.out.csv
         fq = CHECK_INPUT.out.fq
+        
         
     }
 

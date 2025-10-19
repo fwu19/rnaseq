@@ -77,9 +77,9 @@ workflow RNASEQ {
     ch_input = Channel.fromPath( params.input, checkIfExists: true )
     if (params.run_input_check){
         GET_INPUT(
-            params.input,
-            params.input_dir,
-            params.metadata
+            file(params.input, checkIfExists: true),
+            file(params.input_dir, checkIfExists: true),
+            file(params.metadata, checkIfExists: true)
         )
         samplesheet = GET_INPUT.out.samplesheet
         fq = GET_INPUT.out.fq

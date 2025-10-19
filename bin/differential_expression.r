@@ -487,7 +487,7 @@ if (!exists('outdir')){
 }
 
 ## parse comparison table ####
-colnames(cmp) <- gsub('\\.', '_', colnames(cmp))
+colnames(cmp) <- gsub(' +|\\.', '_', colnames(cmp))
 cmp <- cmp %>% 
     mutate(
         test_group = gsub('-| +|&', '.', test_group),
