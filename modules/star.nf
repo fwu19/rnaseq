@@ -25,10 +25,11 @@ process STAR {
 
     script:
     def args = task.ext.args ?: ""
-    def overhang = params.sjdbOverhang ?: task.ext.sjdbOverhang
+    def overhang = params.sjdbOverhang ? "--sjdbOverhang ${params.sjdbOverhang}" : ""
+    def outSAMattributes = params.outSAMattributes ? "--outSAMattributes ${params.outSAMattributes}" : ""
     def rg = task.ext.rg ?: "none"
     """
-    star.sh ${out_prefix} ${star_index} ${gtf} ${task.cpus} $read1 $read2 "$rg" $args --sjdbOverhang $overhang
+    star.sh ${out_prefix} ${star_index} ${gtf} ${task.cpus} $read1 $read2 "$rg" $args $overhang $outSAMattributes
 
     mv ${out_prefix}/Aligned.sortedByCoord.out.bam ${out_prefix}.bam
     mv ${out_prefix}/Aligned.sortedByCoord.out.bam.bai ${out_prefix}.bam.bai

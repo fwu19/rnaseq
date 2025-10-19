@@ -17,7 +17,7 @@ run_da <- function(
     report_cpm=F, report_rpkm=T, 
     TMM=T, method = 'QL', 
     rename_feature = NULL, feature_length = 'gene_length', 
-    design_object = ~0+group,
+    model_formula = ~0+group,
     target = NULL
 ){
     require(edgeR)
@@ -79,7 +79,7 @@ run_da <- function(
     
     
     ## Create design matrix ####
-    design <- model.matrix(design_object,data = y$samples)
+    design <- model.matrix(model_formula,data = y$samples)
     colnames(design) <- gsub('^group','',colnames(design))
     
     ## Make contrasts ####
@@ -369,7 +369,7 @@ wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 
     }else{
         group <- NULL
     }
-    design_object <- as.formula(icmp$design_object[1])
+    model_formula <- as.formula(icmp$model_formula[1])
     
     ## filter samples ####
     if (is.na(icmp$include_samples[1])){
@@ -396,7 +396,7 @@ wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 
         exclude_samples = exclude_samples,
         feature_length = length_col,
         fdr = fdr, fc = fc, fdr2 = fdr2, fc2 = fc2,
-        design_object = design_object
+        model_formula = model_formula
     )
     
     if ('error' %in% names(lst)){
@@ -463,7 +463,9 @@ if(grepl('dummy', comparison)){
     cat(comparison, "is a dummy file! Provide --comparison path/to/comparison_file (a comparison table in csv, txt, tsv or rds format)!")
     quit()
 }else if(grepl('.csv$', comparison)){
-    cmp <- read.csv(comparison)
+    cmp <- read.csv(comparison, comment.char = '#')
+}else if(grepl('.tsv$|.txt$', comparison)){
+    cmp <- read.delim(comparison, comment.char = '#')
 }else if (grepl('.rds$', comparison)){
     cmp <- readRDS(comparison)
 }else {
@@ -488,6 +490,7 @@ if (!exists('outdir')){
 
 ## parse comparison table ####
 colnames(cmp) <- gsub(' +|\\.', '_', colnames(cmp))
+colnames(cmp) <- gsub('design.object|design_object', 'model_formula', colnames(cmp))
 cmp <- cmp %>% 
     mutate(
         test_group = gsub('-| +|&', '.', test_group),
@@ -496,7 +499,7 @@ cmp <- cmp %>%
     fill_column('out_prefix', paste(gsub(';','-', cmp$test_group), gsub(';','-', cmp$control_group), sep = '_vs_')) %>% 
     fill_column('plot_title', paste(gsub(';','+', cmp$test_group), gsub(';','+', cmp$control_group), sep = ' vs ')) %>% 
     fill_column('comparison_group', '') %>% 
-    fill_column('design_object', '~0+group', '~0+group', '~0+group' ) %>% 
+    fill_column('model_formula', '~0+group', '~0+group', '~0+group' ) %>% 
     fill_column('include_samples', NA, NA, NA) %>% 
     fill_column('exclude_samples', NA, NA, NA) %>% 
     arrange(out_prefix, !is.na(exclude_samples), !is.na(include_samples)) %>% 
