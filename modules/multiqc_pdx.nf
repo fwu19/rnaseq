@@ -11,6 +11,7 @@ process MULTIQC_PDX {
     path ( multiqc_config )
     path ( 'fastqc/*' )
     path ( 'cutadapt/*' )
+    path ( 'fastp/*' )
     path ( 'fastqc_trimmed/*' )
     path ( 'rseqc/*' )
     path ( 'rnaseqc/*' )

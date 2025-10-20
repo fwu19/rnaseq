@@ -4,11 +4,13 @@ export_plots: true
 
 use_filename_as_sample_name:
   - cutadapt
+  - fastp
   - picard
 
 # Run only these modules
 run_modules:
   - cutadapt
+  - fastp
   - fastqc
   - star
   - samtools
@@ -30,6 +32,10 @@ module_order:
       name: "Cutadapt"
       path_filters:
         - "cutadapt/*"  
+  - fastp:
+      name: "Fastp"
+      path_filters:
+        - "fastp/*"  
   - star:
       name: "STAR"
       path_filters:

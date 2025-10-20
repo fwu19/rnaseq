@@ -96,11 +96,13 @@ workflow RNASEQ {
         PROCESS_FASTQ(
             samplesheet,
             fq,
-            params.cat_fastq
+            params.cat_fastq,
+            params.trimmer
         )
         ch_reads = PROCESS_FASTQ.out.reads
         ch_reads_trimmed = PROCESS_FASTQ.out.reads_trimmed
         ch_cutadapt_js = PROCESS_FASTQ.out.cutadapt_js
+        ch_fastp_js = PROCESS_FASTQ.out.fastp_js
     }
 
 
@@ -313,7 +315,8 @@ workflow RNASEQ {
             MULTIQC_PDX(
             ch_multiqc_config,
             ch_fastqc.map{it[1]}.flatten().collect().ifEmpty([]),  
-            ch_cutadapt_js.map{it[1]}.flatten().collect().ifEmpty([]),  
+            ch_cutadapt_js.map{it[2]}.flatten().collect().ifEmpty([]),  
+            ch_fastp_js.map{it[2]}.flatten().collect().ifEmpty([]),  
             ch_fastqc_trimmed.map{it[1]}.flatten().collect().ifEmpty([]),  
             ch_rseqc.map{it[1]}.flatten().collect().ifEmpty([]),  
             ch_rnaseqc.map{it[1]}.flatten().collect().ifEmpty([]),
@@ -331,7 +334,8 @@ workflow RNASEQ {
             MULTIQC(
             ch_multiqc_config,
             ch_fastqc.map{it[1]}.flatten().collect().ifEmpty([]),
-            ch_cutadapt_js.map{it[1]}.flatten().collect().ifEmpty([]),  
+            ch_cutadapt_js.map{it[2]}.flatten().collect().ifEmpty([]),  
+            ch_fastp_js.map{it[2]}.flatten().collect().ifEmpty([]),  
             ch_fastqc_trimmed.map{it[1]}.flatten().collect().ifEmpty([]),  
             ch_rseqc.map{it[1]}.flatten().collect().ifEmpty([]),  
             ch_rnaseqc.map{it[1]}.flatten().collect().ifEmpty([]),

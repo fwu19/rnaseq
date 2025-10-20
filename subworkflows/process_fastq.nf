@@ -4,17 +4,21 @@
 
 include { CAT_FASTQ } from '../modules/cat_fastq.nf'
 include { CUTADAPT  } from '../modules/cutadapt.nf'
+include { FASTP  } from '../modules/fastp.nf'
 
 workflow PROCESS_FASTQ {
     take:
     samplesheet
     fq
     cat_fastq
+    trimmer
 
     main: 
     ch_reads = Channel.empty()
     ch_reads_trimmed = Channel.empty()
     ch_cutadapt_js = Channel.empty()
+    ch_fastp_js = Channel.empty()
+    ch_fastp_html = Channel.empty()
 
     fq
         .splitCsv(header: true)
@@ -89,9 +93,23 @@ workflow PROCESS_FASTQ {
     /* consider to add splitting fastq here ? */
 
     /*
+    * run fastp
+    */
+    if (trimmer == 'fastp' && params.run_fastp){
+        FASTP(
+            ch_reads
+        )
+        ch_reads_trimmed = FASTP.out.fq
+        ch_fastp_js = FASTP.out.js
+        ch_fastp_html = FASTP.out.html
+
+    }
+
+
+    /*
     * run cutadapt
     */
-    if (params.run_cut_adapt){
+    if (trimmer == 'cutadapt' && params.run_cut_adapt){
         CUTADAPT(
             ch_reads
         )
@@ -107,5 +125,7 @@ workflow PROCESS_FASTQ {
     reads = ch_reads
     reads_trimmed = ch_reads_trimmed
     cutadapt_js = ch_cutadapt_js
+    fastp_js = ch_fastp_js
+    fastp_html = ch_fastp_html
 
 }
