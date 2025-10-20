@@ -134,7 +134,7 @@ run_da <- function(
     
     ## return results ####
     df_sum <- data.frame(
-        output_folder = gsub('.*differential_peaks/', '', out.dir), 
+        output_folder = basename(out.dir), 
         test_group = paste(test_group, collapse = '+'),
         control_group = paste(control_group, collapse = '+'),
         features_tested = nrow(y),
@@ -556,6 +556,6 @@ for (i in 1:nrow(cmp)){
         y0, cmp[i,], ss, fdr, fc, fdr2, fc2, outdir = outdir
     )
 }
-names(de.list) <- basename(cmp$out_prefix)
+names(de.list) <- basename(dirname(cmp$file_base))
 saveRDS(de.list, ifelse(grepl('transcript', rds), 'differential_transcripts.rds', 'differential_genes.rds'))
 
