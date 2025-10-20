@@ -21,9 +21,9 @@ process MAKE_STAR {
     task.ext.when == null || task.ext.when
 
     script:
-    def args = task.ext.args ?: ""
-    def overhang = params.sjdbOverhang ? "--sjdbOverhang ${params.sjdbOverhang}": ""
+    def overhang = params.sjdbOverhang ? "--sjdbOverhang ${params.sjdbOverhang}" : ""
     def base = params.genomeSAindexNbases ? "--genomeSAindexNbases ${params.genomeSAindexNbases}" : ""
+    def args = task.ext.args ?: ""
     """
     make_star.sh ${task.cpus} genome/ genes/ $overhang $base $args 
     
