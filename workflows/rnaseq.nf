@@ -46,7 +46,6 @@ workflow RNASEQ {
     /*
     * Run reference check
     */
-    index_dir =  file("$projectDir/assets/dummy_dir", checkIfExists: true)
     gene_txt = file(dummy_file, checkIfExists: true)
     tx_bed = file(dummy_file, checkIfExists: true)
     tx_txt = file(dummy_file, checkIfExists: true)
