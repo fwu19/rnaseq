@@ -14,7 +14,7 @@ process GENERATE_REPORT {
     path ( txt_rds )
     path ( dt_rds )
     path ( "hs_metrics/" )
-    path ( "*" )
+    path ( report_dir, stageAs: "report" )
 
     output:
     path( "*.{rds,html,Rmd}" )
