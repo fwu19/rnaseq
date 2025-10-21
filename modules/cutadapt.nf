@@ -10,22 +10,30 @@ process CUTADAPT {
     tuple val(meta), val(out_prefix), path(read1), path(read2)
     
     output:
-    tuple val(meta), val(out_prefix), path( "output/${read1}" ), path( "output/${read2}" ), emit: fq
+    tuple val(meta), val(out_prefix), path("trimmed_fastq/${read1}"), path("trimmed_fastq/${read2}"), emit: fq
     tuple val(meta), val(out_prefix), path( "${out_prefix}.cutadapt.json" ), emit: js
 
     script:
     def args = task.ext.args ?: ""
-    def adapters = params.adapters ?: "-a AGATCGGAAGAGCACACGTCTGAACTCCAGTCA -A AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT"
+    def adapter_list = params.adapters.split(',').collect()
+    if ( adapter_list.size == 1){
+        adapter1 = adapter_list[0]
+        adapter2 = adapter_list[0]
+    } else {
+        adapter1 = adapter_list[0]
+        adapter2 = adapter_list[1]
+    }
     """
-    mkdir output
+    mkdir trimmed_fastq
     cutadapt -j ${task.cpus} \
-    $args $adapters \
+    $args \
+    -a $adapter1 -A $adapter2 \
     --json=${out_prefix}.cutadapt.json \
 		--nextseq-trim=20 \
 		-m 20 \
 		--overlap 3 \
-		-o output/$read1 \
-    -p output/$read2 \
+		-o trimmed_fastq/$read1 \
+    -p trimmed_fastq/$read2 \
     $read1 $read2
 
     """

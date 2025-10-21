@@ -22,6 +22,7 @@ get_fastqs <- function(
         stop ('No read 1 files found!')
     }
     
+    # if fastq_2 exist, should have the same number as fastq_1
     if (nfq1 > 0 & nfq2 > 0 & nfq1 != nfq2){
         stop ('Found different numbers of read 1 and read 2 files!')
     }
@@ -35,20 +36,9 @@ get_fastqs <- function(
     if (nfq2 > 0){
         ss <- ss %>% 
             mutate(
-                match_id = gsub(paste0(r1_pattern, ".*"), "", fastq_1)
-            ) %>% 
-            left_join(
-                data.frame(
-                    fastq_2 = fqs2,
-                    match_id = gsub(paste0(r2_pattern, ".*"), "", fqs2)
-                ),
-                by = 'match_id'
-            ) %>% 
-            mutate(
-                single_end = ifelse(is.na(fastq_2), 'true', 'false'),
-                fastq_2 = ifelse(is.na(fastq_2), "", fastq_2)
-            ) %>% 
-            dplyr::select(-match_id)
+                fastq_2 = fqs2,
+                single_end = 'false'
+            )
     } else{
         ss <- ss %>% 
             mutate(
@@ -59,8 +49,7 @@ get_fastqs <- function(
     
     ss <- ss %>% 
         mutate(
-            id = gsub('-| +|&', '.', id),
-            sample_group = id
+            id = gsub(' +|&', '-', id)
         )
     
     ## 

@@ -95,7 +95,7 @@ workflow PROCESS_FASTQ {
     /*
     * run fastp
     */
-    if (trimmer == 'fastp' && params.run_fastp){
+    if (( trimmer == 'fastp' || !params.adapters ) && params.run_cut_adapt){
         FASTP(
             ch_reads
         )
@@ -103,19 +103,12 @@ workflow PROCESS_FASTQ {
         ch_fastp_js = FASTP.out.js
         ch_fastp_html = FASTP.out.html
 
-    }
-
-
-    /*
-    * run cutadapt
-    */
-    if (trimmer == 'cutadapt' && params.run_cut_adapt){
+    } else if (trimmer == 'cutadapt' && params.run_cut_adapt){
         CUTADAPT(
             ch_reads
         )
         ch_reads_trimmed = CUTADAPT.out.fq
         ch_cutadapt_js = CUTADAPT.out.js
-
     }
     // ch_reads.view()
     // [ [meta], meta.id, path("R1.fastq.gz"), path("R2.fastq.gz") ]

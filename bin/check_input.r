@@ -7,8 +7,20 @@ options(scipen = 99)
 library(dplyr)
 
 ## functions ####
-add_colv <- function(df, colv, value){
-    if (!colv %in% colnames(df)){df[,colv] <- value}
+## add default value if a column is missing
+fill_column <- function(df, colv, default.value, na.value = NULL, missing.value = NULL){
+    if (!colv %in% colnames(df)){
+        df[,colv] <- default.value
+    }
+    
+    if (!is.null(na.value)){
+        df[,colv] <- ifelse(is.na(df[,colv]), na.value, df[,colv])
+    }
+    
+    if (!is.null(missing.value)){
+        df[,colv] <- ifelse(df[,colv] == "", missing.value, df[,colv])
+    }
+    
     return(df)
 }
 
@@ -17,7 +29,11 @@ add_metadata <- function(ss, meta_csv){
     # metadata contains a required columns id and optional columns: sample_group, sample_replicate, target, control, call_peak, call_rep_peak, call_con_peak
     
     if (file_test('-f', meta_csv) & grepl('.csv$', meta_csv) & !grepl('dummy', meta_csv)){
-        meta <- read.csv(meta_csv)
+        meta <- read.csv(meta_csv) %>% 
+            mutate(
+                id = gsub(' +|&', '-', id)
+            )
+        
         ss <- ss %>% 
             inner_join(
                 meta, by = 'id', suffix = c(".x", "")
@@ -29,8 +45,8 @@ add_metadata <- function(ss, meta_csv){
         ss <- ss %>% 
             group_by(id) %>% 
             mutate(
-                fastq_1 = paste(basename(fastq_1), collapse = ';'),
-                fastq_2 = paste(basename(fastq_2), collapse = ';')
+                fastq_1 = paste(unique(basename(fastq_1)), collapse = ';'),
+                fastq_2 = paste(unique(basename(fastq_2)), collapse = ';')
             ) %>% 
             unique.data.frame()
     }
@@ -55,17 +71,20 @@ if (!'id' %in% colnames(ss)){
     stop ( 'Missing column fastq_1!' )
 }
 ss <- ss %>% 
-    add_colv('sample_group', ss$id) %>% 
-    add_colv('fastq_2', "") %>% 
+    fill_column('sample_group', ss$id, ss$id, ss$id) %>% 
+    fill_column('fastq_2', "", "", "") %>% 
     mutate(
-        id = gsub('-| +|&', '.', id),
-        sample_group = gsub('-| +|&', '.', sample_group),
+        id = gsub(' +|&', '-', id),
+        sample_group = gsub(' +|&', '-', sample_group),
         single_end = ifelse(fastq_2 == "", 'true', 'false')
     )
 
 
 ## add metadata and collapse by id if necessary ####
-ssv <- add_metadata(ss, meta_csv)
+ssv <- add_metadata(ss, meta_csv) %>% 
+    mutate(
+        sample_group = gsub(' +|&', '-', sample_group)
+    )
 ssv %>% 
     write.table('samplesheet.valid.csv', sep = ',', quote = F, row.names = F)
 

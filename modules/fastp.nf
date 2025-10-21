@@ -12,21 +12,43 @@ process FASTP {
     
 
     output:
-    tuple val(meta), val(out_prefix), path("output/${read1}"), path("output/${read2}"), emit: fq
+    tuple val(meta), val(out_prefix), path("trimmed_fastq/${read1}"), path("trimmed_fastq/${read2}"), emit: fq
     tuple val(meta), val(out_prefix), path( "${out_prefix}.fastp.json" ), emit: js
     tuple val(meta), val(out_prefix), path( "${out_prefix}.fastp.html" ), emit: html
 
     script:
     def args = task.ext.args ?: ""
-    def adapters = params.adapters ?: ""
-    """
-    mkdir output
-    fastp -w ${task.cpus} \
-    $args $adapters \
-    --in1 $read1 --in2 $read2 \
-    --out1 output/$read1 --out2 output/$read2 \
-    -j ${out_prefix}.fastp.json -h ${out_prefix}.fastp.html \
-    --detect_adapter_for_pe -l 20 -g
+    if (params.adapters){
+        adapter_list = params.adapters.split(',').collect()
+        if ( adapter_list.size == 1){
+            adapter1 = adapter_list[0]
+            adapter2 = adapter_list[0]
+        } else {
+            adapter1 = adapter_list[0]
+            adapter2 = adapter_list[1]
+        }
 
-    """
+        """
+        mkdir trimmed_fastq
+        fastp -w ${task.cpus} \
+        $args \
+        --adapter_sequence $adapter1 --adapter_sequence_r2 $adapter2 \
+        --in1 $read1 --in2 $read2 \
+        --out1 trimmed_fastq/$read1 --out2 trimmed_fastq/$read2 \
+        -j ${out_prefix}.fastp.json -h ${out_prefix}.fastp.html \
+        --detect_adapter_for_pe -l 20 -g
+        """
+
+    }else{
+
+        """
+        mkdir trimmed_fastq
+        fastp -w ${task.cpus} \
+        $args \
+        --in1 $read1 --in2 $read2 \
+        --out1 trimmed_fastq/$read1 --out2 trimmed_fastq/$read2 \
+        -j ${out_prefix}.fastp.json -h ${out_prefix}.fastp.html \
+        --detect_adapter_for_pe -l 20 -g
+        """
+    }
 }
