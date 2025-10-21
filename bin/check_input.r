@@ -41,17 +41,11 @@ add_metadata <- function(ss, meta_csv){
             dplyr::select(!ends_with(".x")) 
     }
     
-    if (sum(duplicated(ss$id)) > 0){
-        ss <- ss %>% 
-            group_by(id) %>% 
-            mutate(
-                fastq_1 = paste(unique(basename(fastq_1)), collapse = ';'),
-                fastq_2 = paste(unique(basename(fastq_2)), collapse = ';')
-            ) %>% 
-            unique.data.frame()
-    }
     ss %>% 
-        dplyr::relocate(id, fastq_1, fastq_2, sample_group)
+        dplyr::relocate(id, fastq_1, fastq_2, sample_group) %>% 
+        mutate(
+            sample_group = gsub(' +|&', '-', sample_group)
+        )
         
 }
 
@@ -81,15 +75,25 @@ ss <- ss %>%
 
 
 ## add metadata and collapse by id if necessary ####
-ssv <- add_metadata(ss, meta_csv) %>% 
-    mutate(
-        sample_group = gsub(' +|&', '-', sample_group)
-    )
-ssv %>% 
-    write.table('samplesheet.valid.csv', sep = ',', quote = F, row.names = F)
+ss <- add_metadata(ss, meta_csv)
 
-## write fastq paths ####
+## collapse sample sheet
+if (sum(duplicated(ss$id)) > 0){
+    ssu <- ss %>% 
+        group_by(id) %>% 
+        mutate(
+            fastq_1 = paste(unique(basename(fastq_1)), collapse = ';'),
+            fastq_2 = paste(unique(basename(fastq_2)), collapse = ';')
+        ) %>% 
+        unique.data.frame()
+}else{
+    ssu <- ss
+}
+ssu %>% 
+    write.table('samplesheet.unique.csv', sep = ',', quote = F, row.names = F)
+
+
+## write fastq paths
 ss %>% 
-    filter(id %in% ssv$id) %>% 
-    write.table('fq.csv', sep = ',', quote = F, row.names = F)
+    write.table('samplesheet.valid.csv', sep = ',', quote = F, row.names = F)
 

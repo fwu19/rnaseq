@@ -10,8 +10,8 @@ process CHECK_INPUT {
     path ( metadata )
 
     output:
-    path ('samplesheet.valid.csv'), emit: csv
-    path ('fq.csv'), emit: fq
+    path ('samplesheet.unique.csv'), emit: csv
+    path ('samplesheet.valid.csv'), emit: fq
     path  "versions.yml", emit: versions
 
     when:
