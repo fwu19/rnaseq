@@ -35,13 +35,13 @@ setwd(params$dat.dir)
 ```
 
 
-## Summary
+## SUMMARY
 
 This document presents analysis results of RNAseq data.
 
 $$\\[0.5in]$$
 
-## {.unnumbered .unlisted}
+
 
 ```{r make_tabs}
 # Function to create multiple tabs
@@ -91,9 +91,9 @@ plot_pca <- function(y, var.genes = NULL, color = NULL, plot.title = '', sample.
     }
     
     if(length(unique(df$color))>1){
-        p <- ggplot(df,aes(x=PC1,y=PC2,label=label,color=color,text=label))
+        p <- ggplot(df,aes(x=PC1,y=PC2,label=label,color=color, text=label))
     }else{
-        p <- ggplot(df,aes(x=PC1,y=PC2,label=label))
+        p <- ggplot(df,aes(x=PC1,y=PC2,label=label, text=label))
     }
     p <- p +
         geom_point(shape = 1)
@@ -263,7 +263,7 @@ scatter_plot <- function(
   xvar, xlab, xsf = 1, 
   yvar, ylab, ysf = 1, 
   color.var = 'sample_group', color.lab = '',
-  text.var = 'text',
+  text.var = 'Sample',
   size.var = NULL, size.lab = ''
 ){
   if (!xvar %in% colnames(df) | !yvar %in% colnames(df)){return(plot_spacer())}
@@ -302,7 +302,7 @@ scatter_plot <- function(
   }
   
   p+
-    geom_point()+
+    geom_point(shape = 1)+
     scale_size_continuous(range = c(1,3))+
     labs( 
       x = xlab, y = ylab,
@@ -324,62 +324,79 @@ dat <- readRDS('data.rds')
 ss <- dat$ss %>% 
   dplyr::select(-c(single_end)) %>% 
   mutate(
-    sample_group = gsub('_.*', '', sample_group),
-    fastq_dir = gsub('.*illumina/', '', dirname(fastq_1)),
-    fastq_1 = basename(fastq_1),
-    fastq_2 = basename(fastq_2)
+    id = as.character(id),
+    fastq_dir = dirname(gsub(';.*', '', fastq_1)),
+    fastq_1 = basename(gsub(';.*', '', fastq_1)),
+    fastq_2 = basename(gsub(';.*', '', fastq_2))
+  ) %>% 
+  mutate(
+    fastq_dir = ifelse(grepl('illumina', fastq_dir), gsub('.*illumina/', '', fastq_dir), basename(fastq_dir))
   ) %>% 
   relocate(fastq_dir, fastq_1, fastq_2, .after = last_col()) %>% 
   relocate(id)
 
 ms <- ss %>% 
-    mutate(fastq_id = sub('.fastq.gz$', '', fastq_1)) %>% 
-    dplyr::select(id, sample_group, fastq_id) %>% 
+  mutate(
+    fastqc_id = paste0(id, ifelse(grepl(';', fastq_1), '_merged', ''), '_R1')
+    ) %>% 
+    dplyr::select(id, sample_group, fastqc_id) %>% 
     dplyr::rename("Sample" ="id")
 
 if ('stat' %in% names(dat)){
+  stat <- dat$stat %>% 
+    mutate(Sample = as.character(Sample))
   ms <- ms %>% 
     left_join(
-      dat$stat %>% 
+      stat %>% 
       filter(is.na(FastQC_mqc.generalstats.fastqc.total_sequences)) %>% 
-      dplyr::select(Sample, !contains('FastQC')), 
+      dplyr::select(Sample, !contains('FastQC') & !contains('samtools')), 
+      by = c('Sample')
+    ) %>% 
+    left_join(
+      stat %>% 
+        filter(!is.na(FastQC_mqc.generalstats.fastqc.total_sequences) & grepl('_R1', Sample)) %>% 
+        dplyr::select(Sample, contains('fastqc.total_sequences')),
+      by = c('fastqc_id' = 'Sample')
+    ) %>% 
+    left_join(
+      stat %>% 
+        filter(!is.na(FastQC_trimmed_mqc.generalstats.fastqc_trimmed.total_sequences) & grepl('_R1', Sample)) %>% 
+        dplyr::select(Sample, contains('fastqc_trimmed.total_sequences')),
+      by = c('fastqc_id' = 'Sample')
+    )  %>% 
+    left_join( # samtools stat
+      stat %>% 
+        filter(grepl('stat$', Sample)) %>% 
+        mutate(Sample = gsub('.stat$', '', Sample)) %>% 
+        dplyr::select(Sample, contains('samtools')), 
       by = 'Sample'
-    ) %>% 
-    left_join(
-      dat$stat %>% 
-        filter(!is.na(FastQC_mqc.generalstats.fastqc.total_sequences) & grepl('_R1_|_merged_R1', Sample)) %>% 
-        dplyr::select(Sample, contains('fastqc.total_sequences')) %>% 
-        mutate(Sample = Sample),
-      by = c('fastq_id' = 'Sample')
-    ) %>% 
-    left_join(
-      dat$stat %>% 
-        filter(!is.na(FastQC_trimmed_mqc.generalstats.fastqc_trimmed.total_sequences) & grepl('_R1_|_merged_R1', Sample)) %>% 
-        dplyr::select(Sample, contains('fastqc_trimmed.total_sequences')) %>% 
-        mutate(Sample = Sample),
-      by = c('fastq_id' = 'Sample')
-    )    
+    )   
   colnames(ms) <- gsub('.*generalstats.', '', colnames(ms))
   
   ms$estimated_host_reads_percent <- 100 - round(ms$samtools_excluding_reads_of_host_origin_stats.reads_mapped/ms$samtools_alignment_to_graft_genome_stats.reads_mapped*100,1)
 
 }
 
+
 if ('rnaseqc' %in% names(dat)){
+  rnaseqc <- dat$rnaseqc %>% 
+    mutate(Sample = as.character(Sample))
   if (nrow(ms) > 0){
     ms <- ms %>% 
-      full_join(dat$rnaseqc, by = 'Sample')  
+      left_join(rnaseqc, by = 'Sample')  
   }else{
-    ms <- dat$rnaseqc
+    ms <- rnaseqc
   }
   
 }
 
 if ( 'gatk' %in% names(dat) ){
+  gatk <- dat$gatk  %>% 
+    mutate(Sample = as.character(Sample))
   if (nrow(ms) > 0){
-    ms <- full_join(ms, dat$gatk, by = "Sample")
+    ms <- left_join(ms, gatk, by = "Sample")
   }else{
-    ms <- dat$gatk
+    ms <- gatk
   }
   
 }
@@ -389,7 +406,7 @@ ms$text <- ms$Sample
 ```
 
 ```{r read_qc}
-
+qc_plot <- dot_plot
 
 figs <- list()
 
@@ -467,12 +484,12 @@ if ('PCT_OFF_BAIT' %in% colnames(ms) & 'ZERO_CVG_TARGETS_PCT' %in% colnames(ms))
   
 }
 
+
 ```
 
 ```{r run_pca}
 if (file.exists('gene.y0.rds')){
   y0 <- readRDS('gene.y0.rds')
-  y0$samples$group <- gsub('_.*', '', y0$samples$group)
   gene.pca <- plot_pca(y0, var.genes = 500, color = y0$samples$group, sample.label = F)
   if (length(unique(y0$samples$group))>30){
     y0$samples$group <- 1
@@ -502,7 +519,7 @@ if (file.exists(de.rds)){
 
 if ('de' %in% ls() & length(de) > 0){
   de_sum <- bind_rows(lapply(de, function(ide){ide$summary})) %>% 
-    dplyr::relocate(output.folder, control.group, test.group, features.tested:FC.cutoff, control.samples:test.samples)
+    dplyr::relocate(output_folder, control_group, test_group, features_tested:FC_cutoff, control_samples:test_samples)
  
   de_plots <- mapply(
     function(ide, out.prefix){
@@ -544,7 +561,7 @@ if (file.exists(dt.rds)){
 
 if ('dt' %in% ls() & length(dt) > 0){
   dt_sum <- bind_rows(lapply(dt, function(ide){ide$summary})) %>% 
-    dplyr::relocate(output.folder, control.group, test.group, features.tested:FC.cutoff, control.samples:test.samples)
+    dplyr::relocate(output_folder, control_group, test_group, features_tested:FC_cutoff, control_samples:test_samples)
  
   dt_plots <- mapply(
     function(ide, out.prefix){
@@ -576,7 +593,7 @@ if ('dt' %in% ls() & length(dt) > 0){
 
 ```
 
-## Sample sheet
+## SAMPLE SHEET
 ```{r sample_sheet}
 
 ss %>% 
@@ -593,13 +610,11 @@ ss %>%
   ))
 ```
 
-##  {.unnumbered .unlisted}
+
 
 $$\\[0.5in]$$
 
 ## QC {.tabset .tabset-pills}
-
-Hover over data points for more information. \
 
 ### Input reads
 ```{r}
@@ -630,11 +645,58 @@ plotly::ggplotly(p, tooltip = 'text')
 
 
 ### Off-target vs zero coverage rates
+(Only applicable to RNAexome data)
+
 ```{r}
 p <- figs$coverage
 plotly::ggplotly(p, tooltip = 'text')
 ```
 
+$$\\[0.5in]$$
+
+### Gene body coverage
+```{r, fig.dim=c(10,6)}
+if ('rseqc_gene_body_cov' %in% names(dat)){
+  df <- dat$rseqc_gene_body_cov %>% 
+    tibble::column_to_rownames(var = 'Sample') %>% 
+    as.matrix() %>% 
+    reshape2::melt() %>% 
+    dplyr::rename(Sample = Var1, x = Var2) %>% 
+    group_by(Sample) %>% 
+    mutate(
+      value = value/max(value)*100,
+      # Sample = gsub('^V', '', Sample),
+      x = as.numeric(gsub('X','',x))
+    )
+  if (setequal(paste0('V', ms$Sample, '_Filtered'), df$Sample)){
+    df$Sample <- gsub('^V|_Filtered$', '', df$Sample)
+  }
+  
+  df <- df %>% 
+    left_join(
+      ms %>% 
+        dplyr::select(Sample, sample_group), 
+      by = 'Sample')
+  
+  p <- df %>% 
+    ggplot(aes(x = x, y = value, color = sample_group, group = Sample, text = Sample))+
+    geom_line()+
+    facet_wrap(~sample_group, ncol = 1)+
+    labs(
+      x = "Gene body percentile (5' -> 3')", 
+      y = 'Percentile of coverage',
+      color = ''
+    )+
+    theme_bw()+
+    theme(
+      legend.position = 'none'
+    )
+  plotly::ggplotly(p, tooltip = 'text')
+}
+
+```
+
+$$\\[0.5in]$$
 
 ### Metric table
 Click a button to save as csv or Excel file. \
@@ -665,7 +727,7 @@ if (exists('ms')){
 
 ```
 
-##  {.unnumbered .unlisted}
+
 
 $$\\[0.5in]$$
 
@@ -673,10 +735,12 @@ $$\\[0.5in]$$
 
 
 
-## PCA plot of all samples {.tabset .tabset-pills}
-See the sample name by hovering over a dot \
+## GENE-LEVEL EXPRESSION
 
-### using gene-level expression
+### PCA plot of all samples 
+- PCA is based on top 500 variable genes (NOT on chr X, chr Y or chr M). \
+- See the sample name by hovering over a dot. \
+
 ```{r, fig.dim=c(6,4)}
 library(plotly)
 if(exists('gene.pca')){
@@ -687,33 +751,18 @@ if(exists('gene.pca')){
 
 ```
 
-### using transcript-level expression
-```{r, fig.dim=c(6,4)}
-library(plotly)
-if(exists('transcript.pca')){
-  ggplotly(transcript.pca, tooltip = "text")
-  
-}
+$$\\[0.2in]$$
 
+### Differential gene expression
 
-
-```
-
-##  {.unnumbered .unlisted}
-
-$$\\[0.5in]$$
-
-## Differential gene expression
-
-### DE Summary
-feature = gene; FDR = BH-corrected p-value; FC = fold change  \
-Note: \
-Statistics of DE genes are summarized based on two thresholds -- the first set between columns *features.up* and *FC.cutoff* and the second set between columns *features.up2* and *FC.cutoff2*. \
+#### DE Summary
+- feature = gene; FDR = BH-corrected p-value; FC = fold change  \
+- Statistics of DE genes are summarized based on two thresholds -- the first set between columns *features_up* and *FC_cutoff* and the second set between columns *features_up2* and *FC_cutoff2*. \
 
 ```{r}
 if (exists('de_sum')){
   de_sum %>% 
-    relocate(control.samples, test.samples, .after = last_col()) %>% 
+    relocate(control_samples, test_samples, .after = last_col()) %>% 
     DT::datatable(
       class = 'cell-border stripe', 
       rownames = T,  
@@ -730,13 +779,12 @@ if (exists('de_sum')){
 
 $$\\[0.2in]$$
 
-### DE plots {.tabset .tabset-pills}
+#### DE plots {.tabset .tabset-pills}
 
-DE genes displayed in the plots below and in the delivered pdf files  were defined by the first threshold in section *DE Summary* (between columns *features.up* and *FC.cutoff*) .  \
-Note: \
-PCA is based on top 500 variable genes (NOT on chr X, chr Y or chr M). \
-The PCA plot of samples relevant to a specific comparison are also shown below. \
-Comparisons are named as **[test group]\_vs\_[control group]**. \
+DE genes displayed in the plots below and in the delivered pdf files  were defined by the first threshold in section *DE Summary* (between columns *features_up* and *FC_cutoff*).  \
+
+- Comparisons are named as **[test group]\_vs\_[control group]**. \
+- PCA is based on top 500 variable genes (NOT on chr X, chr Y or chr M). \
 \
 
 ```{r, eval=TRUE, include=TRUE, results='asis', fig.cap=c('Fig. Differential expression analysis. (A) PCA plot. (B) MA/MD plot. (C) Volcano plot'), fig.width=12, fig.height=4}
@@ -755,22 +803,41 @@ if (exists('de_plots')){
 
 ```
 
+## {.unnumbered .unlisted}
 
 $$\\[0.5in]$$
 
 
+## TRANSCRIPT-LEVEL EXPRESSION
 
-## Differential transcript expression
+### PCA plot of all samples 
+- PCA is based on top 500 variable genes (NOT on chr X, chr Y or chr M). \
+- See the sample name by hovering over a dot. \
 
-### DT Summary
-feature = transcript; FDR = BH-corrected p-value; FC = fold change  \
-Note: \
-Statistics of DT genes are summarized based on two thresholds -- the first set between columns *features.up* and *FC.cutoff* and the second set between columns *features.up2* and *FC.cutoff2*. \
+```{r, fig.dim=c(6,4)}
+library(plotly)
+if(exists('transcript.pca')){
+  ggplotly(transcript.pca, tooltip = "text")
+  
+}
+
+
+
+```
+
+
+$$\\[0.2in]$$
+
+### Differential transcript expression
+
+#### DT Summary
+- feature = transcript; FDR = BH-corrected p-value; FC = fold change  \
+- Statistics of DT genes are summarized based on two thresholds -- the first set between columns *features_up* and *FC_cutoff* and the second set between columns *features_up2* and *FC_cutoff2*. \
 
 ```{r}
 if (exists('dt_sum')){
   dt_sum %>% 
-    relocate(control.samples, test.samples, .after = last_col()) %>% 
+    relocate(control_samples, test_samples, .after = last_col()) %>% 
     DT::datatable(
       class = 'cell-border stripe', 
       rownames = T,  
@@ -787,13 +854,12 @@ if (exists('dt_sum')){
 
 $$\\[0.2in]$$
 
-### DT plots {.tabset .tabset-pills}
+#### DT plots {.tabset .tabset-pills}
 
 Differential transcripts displayed in the plots below and in the delivered pdf files  were defined by the first threshold in section *DT Summary* (between columns *features.up* and *FC.cutoff*) .  \
-Note: \
-PCA is based on top 500 variable genes (NOT on chr X, chr Y or chr M). \
-The PCA plot of samples relevant to a specific comparison are also shown below. \
-Comparisons are named as **[test group]\_vs\_[control group]**. \
+
+- Comparisons are named as **[test group]\_vs\_[control group]**. \
+- PCA is based on top 500 variable genes (NOT on chr X, chr Y or chr M). \
 \
 
 ```{r, eval=TRUE, include=TRUE, results='asis', fig.cap=c('Fig. Differential expression analysis. (A) PCA plot. (B) MA/MD plot. (C) Volcano plot'), fig.width=12, fig.height=4}
@@ -813,15 +879,12 @@ if (exists('dt_plots')){
 ```
 
 
-
-
-
-##  {.unnumbered .unlisted}
+## {.unnumbered .unlisted}
 
 $$\\[0.5in]$$
 
 
-## Delivered files
+## DELIVERABLES
 **The following files will be delivered if relevant analyses are performed. ** \
 
 ### Arriba/
@@ -889,14 +952,14 @@ Alignments to graft and host genomes are stored in `graft_genome_assembly/` and 
 
 $$\\[0.1in]$$
 
-## Methods
+## METHODS
 
 [Cutadapt](https://journal.embnet.org/index.php/embnetjournal/article/view/200) was applied to remove adapter sequences. [STAR](https://pubmed.ncbi.nlm.nih.gov/23104886/) with 2-pass mapping was used to align reads to both graft and host genomes and gene annotation. [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/), [RNA-SeQC](https://pubmed.ncbi.nlm.nih.gov/22539670/), [RSeQC](https://pubmed.ncbi.nlm.nih.gov/22743226/) were used to check various QC metrics including insert fragment size, read quality, read duplication rates, rRNA rates, gene body coverage and read distribution in different genomic regions.  [XenofilteR](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-018-2353-5) was used to remove reads of mouse origin following authors-recommended parameters. [featureCounts](https://academic.oup.com/bioinformatics/article/30/7/923/232889?login=true) in Subread v2.0.0 was used to quantify gene-level expression. \
 Bioconductor package [edgeR](https://academic.oup.com/bioinformatics/article/26/1/139/182458) was used to detect differential expression between sample groups. Genes with low expression were excluded using edgeR function filterByExpr with min.count = 10 and min.total.count = 15. The filtered expression matrix was normalized by [TMM method](https://doi.org/10.1186/gb-2010-11-3-r25). Statistical test was using quasi-likelihood pipeline implemented in edgeR. A gene was deemed differentially expressed if meeting the cutoffs of log2 fold change and Benjamini-Hochberg adjusted p-values. \
 
 $$\\[0.5in]$$
 
-## Acknowledgement
+## ACKNOWLEDGEMENTS
 (For publication, please include the following acknowledgement.)
 This research was supported by the Genomics & Bioinformatics Shared Resource, RRID:SCR_022606, of the Fred Hutch/University of Washington/Seattle Children’s Cancer Consortium (P30 CA015704).
 

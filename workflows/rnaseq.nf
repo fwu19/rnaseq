@@ -34,7 +34,7 @@ if ('salmon' in skip_tools){
     params.run_de = false
 }
 
-if ( params.genome_fa == null ){
+if ( params.genome_fa == null && (params.only_build_index || (params.aligner == 'star' && !params.star) || (params.aligner == 'bwa-mem' && !params.bwa))){
     exit 1, "Need to provide a valid path with --genome_fa path/to/genome/fasta."
 }
 
