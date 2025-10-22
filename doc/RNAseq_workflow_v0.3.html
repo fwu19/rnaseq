@@ -175,7 +175,7 @@ pre code {
 
 <h1 class="title toc-ignore">RNAseq analysis workflow v0.3</h1>
 <h4 class="author"></h4>
-<h4 class="date">October 21 , 2025</h4>
+<h4 class="date">October 22 , 2025</h4>
 
 </div>
 
@@ -253,7 +253,7 @@ bash run.sh \
 <h4><code>--input_dir path/to/fastq/directory</code></h4>
 <p>This retrieves fastq files from a directory and create a sample sheet with columns id, fastq_1 and fastq_2. id is obtained from fastq file names, e.g. <strong>H_1</strong>_S50_L004_R1_001.fastq.gz. The underlying codes assume that fastq file names follow the pattern <code>SampleName_S[0-9]+(_L[0-9]+)?_R[12]</code>.<br />
 - If fastq files are located in different folders, can point to a text file listing all paths, one path per line.<br />
-- If fastq file names follow a different pattern, can set it with <code>--r1_pattern</code> and <code>--r1_pattern</code>. If using “()” in the matching pattern, add double backslash, i.e. <code>\\(</code> and <code>\\)</code><br />
+- If fastq file names follow a different pattern, can set it with <code>--r1_pattern</code> and <code>--r1_pattern</code>. If the matching patterns have “()”, add a backslash when providing them as command line arguments, i.e. <code>\(</code> and <code>\)</code>.<br />
 </p>
 <p><br />
 </p>
@@ -271,8 +271,8 @@ Additional columns are kept but will be overwritten if the same column names als
 <p>An example below:<br />
 <br />
 </p>
-<div class="datatables html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-1ccfac795bbca10abe0a" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-1ccfac795bbca10abe0a">{"x":{"filter":"none","vertical":false,"extensions":["Buttons"],"data":[["H1048_EV_1","H1048_EV_2","H1048_BMP_1","H1048_BMP_2"],["H1048_EV_1_S115_L006_R1_001.fastq.gz","H1048_EV_2_S116_L005_R1_001.fastq.gz","H1048_BMP_1_S118_L005_R1_001.fastq.gz","H1048_BMP_2_S119_L005_R1_001.fastq.gz"],["H1048_EV_1_S115_L006_R2_001.fastq.gz","H1048_EV_2_S116_L005_R2_001.fastq.gz","H1048_BMP_1_S118_L005_R2_001.fastq.gz","H1048_BMP_2_S119_L005_R2_001.fastq.gz"],["group1","group1","group2","group2"]],"container":"<table class=\"cell-border stripe\">\n  <thead>\n    <tr>\n      <th>id<\/th>\n      <th>fastq_1<\/th>\n      <th>fastq_2<\/th>\n      <th>sample_group<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"Bfrtip","buttons":["csv"],"columnDefs":[],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-ff4ec25f6964f551cda5" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-ff4ec25f6964f551cda5">{"x":{"filter":"none","vertical":false,"extensions":["Buttons"],"data":[["H1048_EV_1","H1048_EV_2","H1048_BMP_1","H1048_BMP_2"],["H1048_EV_1_S115_L006_R1_001.fastq.gz","H1048_EV_2_S116_L005_R1_001.fastq.gz","H1048_BMP_1_S118_L005_R1_001.fastq.gz","H1048_BMP_2_S119_L005_R1_001.fastq.gz"],["H1048_EV_1_S115_L006_R2_001.fastq.gz","H1048_EV_2_S116_L005_R2_001.fastq.gz","H1048_BMP_1_S118_L005_R2_001.fastq.gz","H1048_BMP_2_S119_L005_R2_001.fastq.gz"],["group1","group1","group2","group2"]],"container":"<table class=\"cell-border stripe\">\n  <thead>\n    <tr>\n      <th>id<\/th>\n      <th>fastq_1<\/th>\n      <th>fastq_2<\/th>\n      <th>sample_group<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"Bfrtip","buttons":["csv"],"columnDefs":[],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
 <p><br />
 </p>
 </div>
@@ -284,8 +284,8 @@ Additional columns are kept but will be overwritten if the same column names als
 <p>An example below:<br />
 <br />
 </p>
-<div class="datatables html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-94373e00e81e8f7914c9" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-94373e00e81e8f7914c9">{"x":{"filter":"none","vertical":false,"extensions":["Buttons"],"data":[["H1048_BMP_1","H1048_BMP_2","H1048_EV_1","H1048_EV_2"],["group2","group2","group1","group1"]],"container":"<table class=\"cell-border stripe\">\n  <thead>\n    <tr>\n      <th>id<\/th>\n      <th>sample_group<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"Bfrtip","buttons":["csv"],"columnDefs":[],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-bac0a41a183b2c74415f" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-bac0a41a183b2c74415f">{"x":{"filter":"none","vertical":false,"extensions":["Buttons"],"data":[["H1048_BMP_1","H1048_BMP_2","H1048_EV_1","H1048_EV_2"],["group2","group2","group1","group1"]],"container":"<table class=\"cell-border stripe\">\n  <thead>\n    <tr>\n      <th>id<\/th>\n      <th>sample_group<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"Bfrtip","buttons":["csv"],"columnDefs":[],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
 <ul>
 <li>When <code>--metadata</code> is supplied, only samples (by column id) in both <code>--metadata</code> and <code>--input</code>/<code>--input_dir</code> will be analyzed. This is useful for analyzing only a subset of samples.<br />
 </li>
@@ -300,8 +300,8 @@ Additional columns are kept but will be overwritten if the same column names als
 <p>An example below:<br />
 <br />
 </p>
-<div class="datatables html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-a2536eb108b64458f58c" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-a2536eb108b64458f58c">{"x":{"filter":"none","vertical":false,"extensions":["Buttons"],"data":[["group1"],["group2"]],"container":"<table class=\"cell-border stripe\">\n  <thead>\n    <tr>\n      <th>control_group<\/th>\n      <th>test_group<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"Bfrtip","buttons":["csv"],"columnDefs":[],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-abad38cd007c6dfe1280" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-abad38cd007c6dfe1280">{"x":{"filter":"none","vertical":false,"extensions":["Buttons"],"data":[["group1"],["group2"]],"container":"<table class=\"cell-border stripe\">\n  <thead>\n    <tr>\n      <th>control_group<\/th>\n      <th>test_group<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"Bfrtip","buttons":["csv"],"columnDefs":[],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
 <ul>
 <li><p>It is OK to list all possible pairs of control and test groups. The workflow performs a comparison only when data are available from both <code>control_group</code> and <code>test_group</code>.<br />
 </p></li>
