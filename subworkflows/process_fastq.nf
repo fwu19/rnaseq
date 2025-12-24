@@ -5,11 +5,12 @@
 include { CAT_FASTQ } from '../modules/cat_fastq.nf'
 include { CUTADAPT  } from '../modules/cutadapt.nf'
 include { FASTP  } from '../modules/fastp.nf'
+include { WRITE_CSV as WRITE_CSV_TRIM_FASTQ} from '../modules/write_csv.nf'
 
 workflow PROCESS_FASTQ {
     take:
-    samplesheet
-    fq
+    samplesheet // one row per unique id
+    fq // one row per fastq file
     cat_fastq
     trimmer
 
@@ -57,40 +58,13 @@ workflow PROCESS_FASTQ {
             .map { it -> [ it[1], it[1].id, it[2], it[3] ]}
             .set { ch_reads }
 
-    /*
-    * old codes
-    if (cat_fastq){
-        CAT_FASTQ(
-            fq
-                .splitCsv(header: true)
-                .map {
-                    row -> [ row.id, row.fastq_1, row.fastq_2 ]
-                }
-                .groupTuple (by: [0])
-        )
 
-        samplesheet
-            .splitCsv( header: true )
-            .map {
-                row -> [ row.id, row ]
-            }
-            .join ( CAT_FASTQ.out.reads )
-            .map { it -> [ it[1], it[1].id, it[2], it[3] ]}
-            .set { ch_reads }
-        
-    }else {
-        fq
-            .splitCsv(header: true)
-            .map {
-                row -> [ row, row.id, row.fastq_1, row.fastq_2 ]
-            }
-            .set { ch_reads}
-    }
 
+
+    /* consider to add splitting fastq here ? 
+    SPLIT_FASTQ(
+    )
     */
-
-
-    /* consider to add splitting fastq here ? */
 
     /*
     * run fastp
@@ -113,6 +87,19 @@ workflow PROCESS_FASTQ {
     // ch_reads.view()
     // [ [meta], meta.id, path("R1.fastq.gz"), path("R2.fastq.gz") ]
 
+    /* Write trimmed fastq paths to csv */
+    if (params.only_trim_fastq){
+        def my_dir = new File("${params.outdir}")
+        def outdir = my_dir.absolutePath
+        WRITE_CSV_TRIM_FASTQ(
+                ch_reads_trimmed
+                    .map { 
+                        it -> it[0] + [ trimmed_fastq_1: "${outdir}/trimmed_fastq/${it[2].name}" ] + [ trimmed_fastq_2: "${outdir}/trimmed_fastq/${it[3].name}" ] 
+                    }
+                    .collect(),
+                "trim_fastq.csv"        
+        )
+    }
 
     emit:
     reads = ch_reads

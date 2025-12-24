@@ -18,7 +18,7 @@ process HS_METRICS {
 
     script:
     """
-    collect_hs_metrics.sh ${meta.id} $bam $genome_fa $target_region
+    collect_hs_metrics.sh ${out_prefix} $bam $genome_fa $target_region
 
     """
 }
