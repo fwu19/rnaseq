@@ -19,11 +19,13 @@ workflow PDX_SPLIT_FASTQ {
 
 
     main:
+    ch_versions = Channel.empty()
 
     SPLIT_FASTQ(
         ch_reads,
         split_size
     )
+    ch_versions = ch_versions.mix(SPLIT_FASTQ.out.versions)
 
     ch_reads
         .map{ it -> [ it[1], it ] }
@@ -50,6 +52,7 @@ workflow PDX_SPLIT_FASTQ {
         ch_bam = STAR.out.bam
         ch_bai = STAR.out.bai
         // [ [meta], val(out_prefix), path(bam) ]
+        ch_versions = ch_versions.mix(STAR.out.versions)
 
         /*
         * align to host genome for PDX samples
@@ -63,7 +66,7 @@ workflow PDX_SPLIT_FASTQ {
         ch_bam_host = STAR_HOST.out.bam
         ch_bai_host = STAR_HOST.out.bai
         // [ [meta], val(out_prefix), path(bam) ]
-
+        ch_versions = ch_versions.mix(STAR_HOST.out.versions)
     }
     
     if (params.aligner == 'bwa-mem'){
@@ -75,6 +78,7 @@ workflow PDX_SPLIT_FASTQ {
         ch_bam = BWA_MEM.out.bam
         ch_bai = BWA_MEM.out.bai
         // [ [meta], val(out_prefix), path(bam) ]
+        ch_versions = ch_versions.mix(BWA_MEM.out.versions)
 
         /*
         * align to host genome for PDX samples
@@ -87,7 +91,7 @@ workflow PDX_SPLIT_FASTQ {
         ch_bam_host = BWA_MEM_HOST.out.bam
         ch_bai_host = BWA_MEM_HOST.out.bai
         // [ [meta], val(out_prefix), path(bam) ]
-
+        ch_versions = ch_versions.mix(BWA_MEM_HOST.out.versions)
         
     }
 
@@ -117,6 +121,7 @@ workflow PDX_SPLIT_FASTQ {
     )
     ch_bam_xeno = XENOFILTER.out.bam 
     // [ [meta], val(out_prefix), path/to/filtered.bam ]    
+    ch_versions = ch_versions.mix(XENOFILTER.out.versions)
 
     MERGE_BAM(
                 ch_bam_xeno
@@ -127,11 +132,12 @@ workflow PDX_SPLIT_FASTQ {
     ch_bai_xeno = MERGE_BAM.out.bai     
     // ch_bam_xeno.view()
     // [ [meta], val(out_prefix), path("*.{bam,bai}") ]      
-        
+    ch_versions = ch_versions.mix(MERGE_BAM.out.versions)    
 
     emit:
     //versions = ch_versions
     bam = ch_bam_xeno    
     bai = ch_bai_xeno
-
+    versions = ch_versions
+    
 }

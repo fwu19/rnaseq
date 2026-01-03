@@ -10,12 +10,18 @@ process FASTQC {
     input:
     tuple val(meta), val(out_prefix), path("${out_prefix}_R1.fastq.gz"), path("${out_prefix}_R2.fastq.gz")
     
-
     output:
     tuple val(meta), path("*.{html,zip}"), emit: qc
+    path ('versions.yml'), emit: versions
 
     script:
     """
     fastqc -o ./ --casava ${out_prefix}_R1.fastq.gz ${out_prefix}_R2.fastq.gz
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        fastqc: \$( fastqc --version | head -n 1 | sed -e "s/.* //g" )
+    END_VERSIONS
+
     """
 }

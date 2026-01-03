@@ -22,6 +22,7 @@ process STAR {
     tuple val(meta), val(out_prefix), path( "output/${out_prefix}.Log.final.out" ), emit: log
     path("${out_prefix}/", type: 'dir')
     path("${out_prefix}.{bam,bam.bai}")
+    path ('versions.yml'), emit: versions
 
     script:
     def args = task.ext.args ?: ""
@@ -39,5 +40,13 @@ process STAR {
     ln -s ../${out_prefix}/Aligned.toTranscriptome.out.bam ${out_prefix}.toTranscriptome.out.bam
     ln -s ../${out_prefix}/ReadsPerGene.out.tab ${out_prefix}.ReadsPerGene.out.tab
     ln -s ../${out_prefix}/Log.final.out ${out_prefix}.Log.final.out
+    
+    cd -
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        STAR: \$(STAR --version | head -n 1)
+        samtools: \$( samtools --version | head -n 1 | sed -e "s/.* //g" )
+    END_VERSIONS
+
     """
 }

@@ -17,11 +17,20 @@ process BWA_MEM {
     tuple val(meta), val(out_prefix), path( "${out_prefix}.bam" ), emit: bam 
     tuple val(meta), val(out_prefix), path( "${out_prefix}.bam.bai" ), emit: bai
     path("${out_prefix}.{bam,bam.bai}")
+    path ('versions.yml'), emit: versions
+
+    when:
+    task.ext.when == null || task.ext.when
 
     script:
     def args = task.ext.args ?: ""
     """
     bwa_mem.sh ${task.cpus} ${bwa_index} ${read1} ${read2} ${out_prefix}
     
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        bwa: \$( bwa 2>&1 | sed -n 3,3p | sed -e "s/.* //g" )
+        samtools: \$( samtools --version | head -n 1 | sed -e "s/.* //g" )
+    END_VERSIONS
     """
 }

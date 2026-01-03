@@ -43,6 +43,7 @@ if ( params.gtf == null && !params.only_build_index){
 }
 
 workflow RNASEQ {
+    ch_software_versions = Channel.empty()
     /*
     * Run reference check
     */
@@ -58,7 +59,7 @@ workflow RNASEQ {
             params.genome_fa,
             params.gtf,
             params.aligner,
-            params.aligner_index ?: params.aligner 
+            params.aligner_index ?: params.aligner
         )
         index_dir = GET_REFERENCE.out.index_dir // match params.aligner
         gene_txt = GET_REFERENCE.out.gene_txt
@@ -66,7 +67,7 @@ workflow RNASEQ {
         tx_bed = GET_REFERENCE.out.tx_bed
         tx_fa = GET_REFERENCE.out.tx_fa
         collapsed_gtf = GET_REFERENCE.out.collapsed_gtf
-
+        ch_software_versions = ch_software_versions.mix(GET_REFERENCE.out.versions)
     }
 
 
@@ -82,7 +83,7 @@ workflow RNASEQ {
         )
         samplesheet = GET_INPUT.out.samplesheet
         fq = GET_INPUT.out.fq
-
+        ch_software_versions = ch_software_versions.mix(GET_INPUT.out.versions)
     }
 
 
@@ -102,6 +103,7 @@ workflow RNASEQ {
         ch_reads_trimmed = PROCESS_FASTQ.out.reads_trimmed
         ch_cutadapt_js = PROCESS_FASTQ.out.cutadapt_js
         ch_fastp_js = PROCESS_FASTQ.out.fastp_js
+        ch_software_versions = ch_software_versions.mix(PROCESS_FASTQ.out.versions)
     }
 
 
@@ -141,6 +143,7 @@ workflow RNASEQ {
         ch_star_log_host = ALIGN_FASTQ.out.star_log_host
         ch_bam_xeno = ALIGN_FASTQ.out.bam_xeno 
         ch_bai_xeno = ALIGN_FASTQ.out.bai_xeno
+        ch_software_versions = ch_software_versions.mix(ALIGN_FASTQ.out.versions)
     
 
         // save graft-only reads
@@ -150,6 +153,7 @@ workflow RNASEQ {
                 ch_bam_xeno
             )
             ch_graft_reads = BAM_TO_FASTQ.out.fq
+            ch_software_versions = ch_software_versions.mix(BAM_TO_FASTQ.out.versions)
         }
 
     }
@@ -178,6 +182,7 @@ workflow RNASEQ {
             .splitCsv(header: false)
             .map {it[0]}
             .first()
+        ch_software_versions = ch_software_versions.mix(INFER_EXPERIMENT.out.versions)
 
     }
 
@@ -202,6 +207,7 @@ workflow RNASEQ {
         ch_de = QUANT_GENES.out.de
         gene_txt = QUANT_GENES.out.gene_txt
         ch_counts = QUANT_GENES.out.counts // if params.run_featurecounts, ch_counts is updated
+        ch_software_versions = ch_software_versions.mix(QUANT_GENES.out.versions)
 
     }
 
@@ -221,6 +227,7 @@ workflow RNASEQ {
             )
             ch_salmon = MAP_TRANSCRIPTS.out.salmon
             // [ [meta], val(out_prefix), path("${out_prefix}/") ]
+            ch_software_versions = ch_software_versions.mix(MAP_TRANSCRIPTS.out.versions)
         }
 
         /*  Collect transcript-level counts and call differential transcripts */
@@ -234,6 +241,7 @@ workflow RNASEQ {
 
             ch_tx_rds = QUANT_TRANSCRIPTS.out.tx_rds
             ch_dt = QUANT_TRANSCRIPTS.out.dt
+            ch_software_versions = ch_software_versions.mix(QUANT_TRANSCRIPTS.out.versions)
         }
     }
 
@@ -253,7 +261,7 @@ workflow RNASEQ {
             params.known_fusions,
             params.protein_domains
         )
-
+        ch_software_versions = ch_software_versions.mix(ARRIBA.out.versions)
     }
 
 
@@ -269,6 +277,7 @@ workflow RNASEQ {
         )
         ch_fastqc = QC_FASTQ.out.fastqc
         ch_fastqc_trimmed = QC_FASTQ.out.fastqc_trimmed
+        ch_software_versions = ch_software_versions.mix(QC_FASTQ.out.versions)
     }
 
     /*
@@ -301,6 +310,7 @@ workflow RNASEQ {
         ch_bam_stat = QC_ALIGNMENT.out.bam_stat
         ch_bam_stat_host = QC_ALIGNMENT.out.bam_stat_host  
         ch_bam_stat_xeno = QC_ALIGNMENT.out.bam_stat_xeno
+        ch_software_versions = ch_software_versions.mix(QC_ALIGNMENT.out.versions)
         
     }
 
@@ -328,6 +338,7 @@ workflow RNASEQ {
             )
             ch_multiqc = MULTIQC_PDX.out.data
             //ch_multiqc.view()
+            ch_software_versions = ch_software_versions.mix(MULTIQC_PDX.out.versions)
 
         }else{
             MULTIQC(
@@ -345,6 +356,7 @@ workflow RNASEQ {
             )
             ch_multiqc = MULTIQC.out.data
             //ch_multiqc.view()
+            ch_software_versions = ch_software_versions.mix(MULTIQC.out.versions)
         }
     }
 
@@ -366,6 +378,26 @@ workflow RNASEQ {
             ch_hs_metrics.map{it[1]}.flatten().collect().ifEmpty([]),
             params.report_dir ? Channel.fromPath(params.report_dir, type: 'dir', checkIfExists: true) : Channel.fromPath("$projectDir/assets/report/", type: 'dir', checkIfExists: true)
         )
-        
+        ch_software_versions = ch_software_versions.mix(GENERATE_REPORT.out.versions)
     }
+
+    /*
+    * Collect software versions
+    */
+    ch_software_versions
+        .collectFile(storeDir: "${params.outdir}/pipeline_info", name: 'software_versions.yml', sort: true, newLine: true)
+
+
+
+}
+
+////////////////////////////////////////////////////
+/* --              COMPLETION EMAIL            -- */
+////////////////////////////////////////////////////
+import groovy.json.JsonOutput
+workflow.onComplete {
+    def jsonStr = JsonOutput.toJson(params)
+    def pretty  = JsonOutput.prettyPrint(jsonStr)
+    file("${params.outdir ?: '.'}/pipeline_info/params.json").text = pretty
+
 }

@@ -12,6 +12,7 @@ process CUTADAPT {
     output:
     tuple val(meta), val(out_prefix), path("trimmed_fastq/${read1}"), path("trimmed_fastq/${read2}"), emit: fq
     tuple val(meta), val(out_prefix), path( "${out_prefix}.cutadapt.json" ), emit: js
+    path ('versions.yml'), emit: versions
 
     script:
     def args = task.ext.args ?: ""
@@ -36,5 +37,9 @@ process CUTADAPT {
     -p trimmed_fastq/$read2 \
     $read1 $read2
 
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        cutadapt: \$( cutadapt -h | head -n 1 | sed -e "s/.* //g" )
+    END_VERSIONS
     """
 }

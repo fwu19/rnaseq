@@ -20,6 +20,8 @@ workflow PROCESS_FASTQ {
     ch_cutadapt_js = Channel.empty()
     ch_fastp_js = Channel.empty()
     ch_fastp_html = Channel.empty()
+    ch_versions = Channel.empty()
+
 
     fq
         .splitCsv(header: true)
@@ -76,6 +78,7 @@ workflow PROCESS_FASTQ {
         ch_reads_trimmed = FASTP.out.fq
         ch_fastp_js = FASTP.out.js
         ch_fastp_html = FASTP.out.html
+        ch_versions = ch_versions.mix(FASTP.out.versions)
 
     } else if (trimmer == 'cutadapt' && params.run_cut_adapt){
         CUTADAPT(
@@ -83,6 +86,7 @@ workflow PROCESS_FASTQ {
         )
         ch_reads_trimmed = CUTADAPT.out.fq
         ch_cutadapt_js = CUTADAPT.out.js
+        ch_versions = ch_versions.mix(CUTADAPT.out.versions)
     }
     // ch_reads.view()
     // [ [meta], meta.id, path("R1.fastq.gz"), path("R2.fastq.gz") ]
@@ -99,6 +103,8 @@ workflow PROCESS_FASTQ {
                     .collect(),
                 "trim_fastq.csv"        
         )
+        ch_versions = ch_versions.mix(WRITE_CSV_TRIM_FASTQ.out.versions)
+
     }
 
     emit:
@@ -107,5 +113,6 @@ workflow PROCESS_FASTQ {
     cutadapt_js = ch_cutadapt_js
     fastp_js = ch_fastp_js
     fastp_html = ch_fastp_html
+    versions = ch_versions
 
 }

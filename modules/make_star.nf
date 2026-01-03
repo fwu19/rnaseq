@@ -16,6 +16,7 @@ process MAKE_STAR {
     path ( "STAR2Index/", emit: dir)
     path  ("versions.yml", emit: versions)
     path ( "STAR2Index/", type: 'dir')
+    path ('versions.yml'), emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -30,7 +31,9 @@ process MAKE_STAR {
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         STAR: \$(STAR --version | head -n 1)
+        samtools: \$( samtools --version | head -n 1 | sed -e "s/.* //g" )
     END_VERSIONS
+    
     """
 
     stub:

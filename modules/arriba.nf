@@ -22,6 +22,10 @@ process ARRIBA {
     output:
     path("${out_prefix}/", type: 'dir')
     path("${out_prefix}.{bam,bam.bai,fusions.tsv}")
+    path ('versions.yml'), emit: versions
+
+    when:
+    task.ext.when == null || task.ext.when
 
     script:
     def args = task.ext.args ?: ""
@@ -32,5 +36,11 @@ process ARRIBA {
     mv Aligned.sortedByCoord.out.bam ../${out_prefix}.bam
     mv Aligned.sortedByCoord.out.bam.bai ../${out_prefix}.bam.bai
     mv fusions.tsv ../${out_prefix}.fusions.tsv 
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        arriba: \$( arriba -h | head -n 1 | sed -e "s/.* //g" )
+        samtools: \$( samtools --version | head -n 1 | sed -e "s/.* //g" )
+    END_VERSIONS
     """
 }

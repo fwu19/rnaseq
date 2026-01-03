@@ -20,6 +20,7 @@ workflow QUANT_GENES {
     main: 
     ch_gene_rds = Channel.empty()
     ch_de = Channel.empty()
+    ch_versions  = Channel.empty()
 
     /*
     * Parse saved alignments
@@ -68,6 +69,7 @@ workflow QUANT_GENES {
         
             ch_counts = FEATURECOUNTS.out.counts
             // [ [meta], val(out_prefix), path("count.txt") ]
+            ch_versions = ch_versions.mix(FEATURECOUNTS.out.versions)
     }
 
 
@@ -83,7 +85,7 @@ workflow QUANT_GENES {
             params.workflow
     )
     ch_gene_rds = GENERATE_GENE_COUNT_MATRIX.out.rds
-    
+    ch_versions = ch_versions.mix(GENERATE_GENE_COUNT_MATRIX.out.versions)
     
     /*
     * differential genes
@@ -102,6 +104,7 @@ workflow QUANT_GENES {
             params.de_gene_type
         )
         ch_de = DIFFERENTIAL_GENES.out.rds
+        ch_versions = ch_versions.mix(DIFFERENTIAL_GENES.out.versions)
     }
 
     
@@ -110,5 +113,6 @@ workflow QUANT_GENES {
     de = ch_de
     counts = ch_counts
     gene_txt = gene_txt
+    versions = ch_versions
 
 }

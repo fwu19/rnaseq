@@ -15,10 +15,18 @@ process SALMON {
     output:
     tuple val(meta), val(out_prefix), path( "${out_prefix}/" ), emit: sf
     path( "${out_prefix}/" )
+    path ('versions.yml'), emit: versions
 
     script:
 
     """
     salmon.sh ${task.cpus} ${bam} ${tx_fa} ${out_prefix}
+    
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        samtools: \$( samtools --version | head -n 1 | sed -e "s/.* //g" )
+        salmon: \$( salmon --version | head -n 1 | sed -e "s/.* //g" )
+    END_VERSIONS
+
     """
 }

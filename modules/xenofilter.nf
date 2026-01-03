@@ -18,12 +18,19 @@ process XENOFILTER {
     tuple val(meta), val(out_prefix), path ("*.bam"), emit: bam
     tuple val(meta), val(out_prefix), path ("*.bai"), emit: bai
     path("*.{bam,bai,log}")
+    path ('versions.yml'), emit: versions
     
     script:
     """
     xenofilteR.r graft/*.bam host/*.bam ${out_prefix} $mm_threshold ${task.cpus}
     mv Filtered_bams/XenofilteR.log ${out_prefix}.XenofilteR.log
     mv Filtered_bams/*.bam* .
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        R: \$(R --version | head -n 1)
+    END_VERSIONS
+
     
     """
 }

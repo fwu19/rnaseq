@@ -31,7 +31,7 @@ workflow ALIGN_FASTQ {
     ch_star_log_host = Channel.empty()
     ch_bam_xeno = Channel.empty()
     ch_bai_xeno = Channel.empty()
-
+    ch_versions = Channel.empty()
 
     if (params.aligner == 'star'){
             
@@ -51,7 +51,7 @@ workflow ALIGN_FASTQ {
         // [ [meta], val(out_prefix), path(log) ]
         ch_counts = STAR.out.counts
         // [ [meta], val(out_prefix), path("ReadsPerGene.tab") ]
-
+        ch_versions = ch_versions.mix(STAR.out.versions)
 
         /*
         * align to host genome for PDX samples
@@ -68,6 +68,7 @@ workflow ALIGN_FASTQ {
                         "star"
                     )
                     aligner_index_host = BUILD_INDEX_HOST.out.star
+                    ch_versions = ch_versions.mix(BUILD_INDEX_HOST.out.versions)
                 }
             }else{
                 aligner_index_host = file(params.star_host, checkIfExists: true)
@@ -86,6 +87,7 @@ workflow ALIGN_FASTQ {
             // [ [meta], val(out_prefix), path(bam) ]
             ch_star_log_host = STAR_HOST.out.log
             // [ [meta], val(out_prefix), path(log) ]
+            ch_versions = ch_versions.mix(STAR_HOST.out.versions)
 
             ch_bam
                 .map{ it -> [ [ it[0], it[1] ], it[2] ]}
@@ -112,6 +114,7 @@ workflow ALIGN_FASTQ {
         // [ [meta], val(out_prefix), path(bam) ]
         ch_bai = BWA_MEM.out.bai
         // [ [meta], val(out_prefix), path(bai) ]
+        ch_versions = ch_versions.mix(BWA_MEM.out.versions)
 
         /*
         * align to host genome for PDX samples
@@ -127,6 +130,7 @@ workflow ALIGN_FASTQ {
                         "bwa"
                     )
                     aligner_index_host = BUILD_INDEX_HOST.out.bwa
+                    ch_versions = ch_versions.mix(BUILD_INDEX_HOST.out.versions)
                 }
             }else{
             aligner_index_host = file(params.bwa_host, checkIfExists: true)
@@ -140,7 +144,7 @@ workflow ALIGN_FASTQ {
             // [ [meta], val(out_prefix), path(bam) ]
             ch_bai_host = BWA_MEM_HOST.out.bai
             // [ [meta], val(out_prefix), path(bam) ]
-
+            ch_versions = ch_versions.mix(BWA_MEM_HOST.out.versions)
         }
     }
 
@@ -155,6 +159,7 @@ workflow ALIGN_FASTQ {
             )
             ch_bam_xeno = PDX_SPLIT_FASTQ.out.bam 
             ch_bai_xeno = PDX_SPLIT_FASTQ.out.bai
+            ch_versions = ch_versions.mix(PDX_SPLIT_FASTQ.out.versions)
         }else{
             XENOFILTER(
                 ch_bam
@@ -177,6 +182,7 @@ workflow ALIGN_FASTQ {
             )
             ch_bam_xeno = XENOFILTER.out.bam 
             ch_bai_xeno = XENOFILTER.out.bai
+            ch_versions = ch_versions.mix(XENOFILTER.out.versions)
         }
     }
 
@@ -195,7 +201,7 @@ workflow ALIGN_FASTQ {
                     .collect(),
                 "align_fastq.csv"        
         )
-
+    
     }else if (params.aligner == 'star' && write_csv){
         subdir_aln_fq = params.aligner.toUpperCase()
         WRITE_CSV_ALIGN_FASTQ(
@@ -206,6 +212,7 @@ workflow ALIGN_FASTQ {
                     .collect(),
                 "align_fastq.csv"        
         )
+        
     }else if (params.aligner == 'bwa-mem' && write_csv){
         subdir_aln_fq = params.aligner.toUpperCase()
         WRITE_CSV_ALIGN_FASTQ(
@@ -216,7 +223,7 @@ workflow ALIGN_FASTQ {
                     .collect(),
                 "align_fastq.csv"        
         )
-
+        
     }
 
     emit:
@@ -231,6 +238,6 @@ workflow ALIGN_FASTQ {
     star_log_host = ch_star_log_host
     bam_xeno = ch_bam_xeno
     bai_xeno = ch_bai_xeno
-
+    versions = ch_versions
 
 }

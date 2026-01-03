@@ -23,10 +23,17 @@ process DIFFERENTIAL_GENES {
 
     output:
     path ("differential_genes.rds"), emit: rds, optional: true
+    path ('versions.yml'), emit: versions
     path ("*"), optional: true
     
     script:
     """
     differential_expression.r input=$samplesheet comparison=$comparison rds=${rds} fdr=${fdr} fc=${fc} fdr2=${fdr2} fc2=${fc2} gene_txt=$gene_txt gene_type=$gene_type length_col=$length_col
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        R: \$(R --version | head -n 1)
+    END_VERSIONS
+
     """
 }

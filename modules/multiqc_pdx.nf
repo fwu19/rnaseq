@@ -28,10 +28,17 @@ process MULTIQC_PDX {
     path ('multiqc_data/*'), emit: data
     path ('multiqc_data/', type: 'dir' )
     path ('multiqc_report.html')
+    path ('versions.yml'), emit: versions
 
     script:
     def args = task.ext.args ?: ''
     """
     multiqc -f --ignore _STARpass1/ --config $multiqc_config .
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        multiqc: \$( multiqc --version | sed -e "s/multiqc, version //g" )
+    END_VERSIONS
+
     """
 }

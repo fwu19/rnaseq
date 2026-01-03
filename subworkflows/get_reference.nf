@@ -27,6 +27,7 @@ workflow GET_REFERENCE {
     tx_txt = Channel.empty()
     tx_bed = Channel.empty()
     collapsed_gtf = Channel.empty()
+    ch_versions = Channel.empty()
 
     genome_fa = fa_str
     gtf = gtf_str
@@ -79,6 +80,7 @@ workflow GET_REFERENCE {
         } else {
             GTF2GENES(gtf)
             gene_txt = GTF2GENES.out.txt
+            ch_versions = ch_versions.mix(GTF2GENES.out.versions)
         }
     }
 
@@ -95,6 +97,7 @@ workflow GET_REFERENCE {
                 gtf
             )
             tx_fa = GTF2FASTA.out.fa
+            ch_versions = ch_versions.mix(GTF2FASTA.out.versions)
         }
 
     }
@@ -109,6 +112,7 @@ workflow GET_REFERENCE {
         } else {
             GTF2TRANSCRIPTS(gtf)
             tx_txt = GTF2TRANSCRIPTS.out.txt
+            ch_versions = ch_versions.mix(GTF2TRANSCRIPTS.out.versions)
         }
     }
 
@@ -119,6 +123,7 @@ workflow GET_REFERENCE {
         }else{
                 COLLAPSE_GTF(gtf)
                 collapsed_gtf = COLLAPSE_GTF.out.gtf
+                ch_versions = ch_versions.mix(COLLAPSE_GTF.out.versions)
         }
     }
 
@@ -129,6 +134,7 @@ workflow GET_REFERENCE {
         }else{
                 GTF2BED(gtf)
                 tx_bed = GTF2BED.out.bed
+                ch_versions = ch_versions.mix(GTF2BED.out.versions)
         }
     }
 
@@ -141,6 +147,7 @@ workflow GET_REFERENCE {
             gtf == null ? "$projectDir/assets/dummy_file.csv" : gtf,
             aligner_index
         )
+        ch_versions = ch_versions.mix(BUILD_INDEX.out.versions)
 
         if (aligner == 'star'){
             index_dir = BUILD_INDEX.out.star
@@ -158,6 +165,8 @@ workflow GET_REFERENCE {
                 "star"
             )
             index_dir = BUILD_INDEX.out.star
+            ch_versions = ch_versions.mix(BUILD_INDEX.out.versions)
+
         }
     }else if (aligner == 'bwa-mem'){
         if (params.bwa){
@@ -169,6 +178,8 @@ workflow GET_REFERENCE {
                 "bwa"
             )
             index_dir = BUILD_INDEX.out.bwa
+            ch_versions = ch_versions.mix(BUILD_INDEX.out.versions)
+
         }
     }else{
         exit 1, "Use --aligner to provide an aligner. Possible values are star, bwa."
@@ -183,5 +194,5 @@ workflow GET_REFERENCE {
     tx_txt = tx_txt
     tx_bed = tx_bed
     collapsed_gtf = collapsed_gtf
-
+    versions = ch_versions
 }

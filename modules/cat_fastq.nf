@@ -13,6 +13,9 @@ process CAT_FASTQ {
     output:
     tuple val(id), path("${id}_merged_R1.fastq.gz"), path("${id}_merged_R2.fastq.gz"), emit: reads
 
+    when:
+    task.ext.when == null || task.ext.when
+
     script:
     """
     cat_fastq.sh $id read1/ read2/

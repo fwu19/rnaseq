@@ -16,10 +16,17 @@ process RNASEQC {
     output:
     tuple val(meta), path("${out_prefix}*.{tsv,gct}"), emit: qc
     path("${out_prefix}*.{tsv,gct}")
-    
+    path ('versions.yml'), emit: versions
+
     script:
     """
     rnaseqc.sh ${out_prefix} ${gtf} ${strand} ${read_type} ${bam} 
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        samtools: \$( samtools --version | head -n 1 | sed -e "s/.* //g" )
+        rnaseqc: \$( rnaseqc -v 2>&1 | sed -n 3,3p | sed -e "s/.* //g" )
+    END_VERSIONS
 
     """
 }

@@ -15,11 +15,17 @@ process HS_METRICS {
     output:
     tuple val(meta), path("${out_prefix}*.hs_metrics.txt"), emit: qc
     tuple val(meta), path("${out_prefix}*.hs_metrics.txt")
+    path ('versions.yml'), emit: versions
 
     script:
     """
     collect_hs_metrics.sh ${out_prefix} $bam $genome_fa $target_region
 
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        samtools: \$( samtools --version | head -n 1 | sed -e "s/.* //g" )
+        gatk: \$( gatk --version 2>&1 | sed -n 4,4p | sed -e "s/.* //g" )
+    END_VERSIONS
     """
 }
 

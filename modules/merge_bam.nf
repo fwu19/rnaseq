@@ -15,6 +15,7 @@ process MERGE_BAM {
     tuple val(meta), val(meta.id), path("${meta.id}*.bam"), emit: bam 
     tuple val(meta), val(meta.id), path("${meta.id}*.bam.bai"), emit: bai
     path("${meta.id}*.{bam,bam.bai}")
+    path ('versions.yml'), emit: versions
 
     script:
     def suffix = task.ext.suffix ?: ""
@@ -22,6 +23,11 @@ process MERGE_BAM {
     """
     samtools merge ${args} -@ ${task.cpus} -f -o ${meta.id}${suffix}.bam input/*.bam
     samtools index ${meta.id}${suffix}.bam
+    
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        samtools: \$( samtools --version | head -n 1 | sed -e "s/.* //g" )
+    END_VERSIONS
 
     """
 }

@@ -16,6 +16,7 @@ workflow QUANT_TRANSCRIPTS {
     main: 
     ch_tx_rds = Channel.empty()
     ch_dt = Channel.empty()
+    ch_versions = Channel.empty()
 
     /* generate count matrix */
     if (params.run_tx_count){
@@ -27,6 +28,7 @@ workflow QUANT_TRANSCRIPTS {
             "EffectiveLength"
         )
         ch_tx_rds = GENERATE_TRANSCRIPT_COUNT_MATRIX.out.rds
+        ch_versions = ch_versions.mix(GENERATE_TRANSCRIPT_COUNT_MATRIX.out.versions)
 
     }
 
@@ -46,11 +48,13 @@ workflow QUANT_TRANSCRIPTS {
             params.de_gene_type
         )
         ch_dt = DIFFERENTIAL_TRANSCRIPTS.out.rds
+        ch_versions = ch_versions.mix(DIFFERENTIAL_TRANSCRIPTS.out.versions)
     }
 
 
     emit:
     tx_rds = ch_tx_rds
     dt = ch_dt
+    versions = ch_versions
 
 }

@@ -11,6 +11,7 @@ process CHECK_CSV {
 
     output:
     path ('samplesheet.checked.csv'), emit: csv
+    path ('versions.yml'), emit: versions
 
     when:
     task.ext.when == null || task.ext.when

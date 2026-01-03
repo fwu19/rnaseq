@@ -30,6 +30,7 @@ workflow QC_ALIGNMENT {
     ch_bam_stat = Channel.empty()
     ch_bam_stat_host = Channel.empty()
     ch_bam_stat_xeno = Channel.empty()
+    ch_versions = Channel.empty()
     
     /*
     * Build bam/bai channels
@@ -77,6 +78,7 @@ workflow QC_ALIGNMENT {
         )            
         ch_rnaseqc = RNASEQC.out.qc
         // [ [meta], path("*") ]
+        ch_versions = ch_versions.mix(RNASEQC.out.versions)
     }
 
     /*
@@ -89,6 +91,7 @@ workflow QC_ALIGNMENT {
         )
         ch_rseqc = RSEQC.out.qc
         // [ [meta], path("*") ]
+        ch_versions = ch_versions.mix(RSEQC.out.versions)
     }
 
     /*
@@ -102,6 +105,7 @@ workflow QC_ALIGNMENT {
             )
             ch_hs_metrics = HS_METRICS.out.qc
             // [ [meta], path("*") ]
+            ch_versions = ch_versions.mix(HS_METRICS.out.versions)
 
     }
         
@@ -117,16 +121,19 @@ workflow QC_ALIGNMENT {
                 ch_bam_bai
             )
             ch_bam_stat = SAMTOOLS_VIEW.out.data
+            ch_versions = ch_versions.mix(SAMTOOLS_VIEW.out.versions)
 
             SAMTOOLS_VIEW_HOST(
                 ch_bam_bai_host
             )
             ch_bam_stat_host = SAMTOOLS_VIEW_HOST.out.data
+            ch_versions = ch_versions.mix(SAMTOOLS_VIEW_HOST.out.versions)
 
             SAMTOOLS_VIEW_XENO(
                 ch_bam_bai_xeno
             )
             ch_bam_stat_xeno = SAMTOOLS_VIEW_XENO.out.data
+            ch_versions = ch_versions.mix(SAMTOOLS_VIEW_XENO.out.versions)
     }
 
 
@@ -137,5 +144,6 @@ workflow QC_ALIGNMENT {
     bam_stat = ch_bam_stat
     bam_stat_host  = ch_bam_stat_host
     bam_stat_xeno = ch_bam_stat_xeno
+    versions = ch_versions
 
 }

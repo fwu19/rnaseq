@@ -16,11 +16,19 @@ process SPLIT_FASTQ {
 
     output:
     tuple val(meta), val(out_prefix), path( "${out_prefix}.csv" ), emit: csv
+    path ('versions.yml'), emit: versions
 
     script:
     def args = task.ext.args ?: ""
     """
     split_fastq.sh ${out_prefix} $fq1 $fq2 $size "$args" 
+
+        
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        seqkit: \$( seqkit -h | sed -n 3,3p | sed -e "s/.* //g" )
+    END_VERSIONS
+
     """
     
 

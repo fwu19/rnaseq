@@ -16,11 +16,18 @@ process GENERATE_TRANSCRIPT_COUNT_MATRIX {
     
     output:
     path ("transcript.y0.rds"), emit: rds
+    path ('versions.yml'), emit: versions
     path ("*")
     
     script:
     """
     generate_transcript_count_matrix.r input=$samplesheet count.dir=counts tx.txt=${tx_txt} length.col=${length_col}
     mv y0.rds transcript.y0.rds
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        R: \$(R --version | head -n 1)
+    END_VERSIONS
+    
     """
 }

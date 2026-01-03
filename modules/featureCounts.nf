@@ -15,10 +15,17 @@ process FEATURECOUNTS {
     
     output:
     tuple val(meta), val(out_prefix), path("${out_prefix}*.txt"), emit: counts
+    path ('versions.yml'), emit: versions
     path("${out_prefix}*.{txt,summary}")
 
     script:
     """
     featureCounts.sh ${out_prefix} ${gtf} ${bam} ${read_type} ${strand} ${task.cpus}
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        featureCounts: \$( featureCounts -v 2>&1 | sed -n 2,2p | sed -e "s/.* //g" )
+    END_VERSIONS
+
     """
 }

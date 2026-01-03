@@ -18,10 +18,16 @@ process GENERATE_REPORT {
 
     output:
     path( "*.{rds,html,Rmd}" )
+    path ('versions.yml'), emit: versions
 
     script:
     """
     generate_report.r $workflow
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        R: \$(R --version | head -n 1)
+    END_VERSIONS
     
     """
 }

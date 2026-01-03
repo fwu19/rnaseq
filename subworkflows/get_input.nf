@@ -14,6 +14,7 @@ workflow GET_INPUT {
     main: 
     fq = "$projectDir/assets/dummy_file.csv"
     samplesheet = "$projectDir/assets/dummy_file.csv"
+    ch_versions = Channel.empty()
 
     if (params.run_input_check){
         if ( input_dir =~ 'dummy' ){
@@ -25,6 +26,7 @@ workflow GET_INPUT {
                 file(input_dir, checkIfExists: true)
             )
             input = GET_FASTQ_PATHS.out.csv
+            ch_versions = ch_versions.mix(GET_FASTQ_PATHS.out.versions)
         }
         
         CHECK_INPUT(
@@ -33,7 +35,7 @@ workflow GET_INPUT {
         )
         samplesheet = CHECK_INPUT.out.csv
         fq = CHECK_INPUT.out.fq
-        
+        ch_versions = ch_versions.mix(CHECK_INPUT.out.versions)
         
     }
 
@@ -42,5 +44,6 @@ workflow GET_INPUT {
     emit:
     samplesheet = samplesheet
     fq = fq
+    versions = ch_versions
 
 }

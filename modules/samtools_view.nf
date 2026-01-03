@@ -1,4 +1,3 @@
-
 process SAMTOOLS_VIEW {
     label "process_medium"
     module = ['SAMtools/1.17-GCC-12.2.0']
@@ -14,6 +13,7 @@ process SAMTOOLS_VIEW {
     output:
     tuple val(meta), path("${out_prefix}.{stat,flagstat}"), emit: data
     path("${out_prefix}.{stat,flagstat}")
+    path ('versions.yml'), emit: versions
 
     script:
     def suffix = task.ext.suffix ?: ""
@@ -21,5 +21,11 @@ process SAMTOOLS_VIEW {
     """
     samtools stats -@ ${task.cpus} $bam >${out_prefix}.stat
     samtools flagstat -@ ${task.cpus} -O tsv $bam >${out_prefix}.flagstat
+    
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        samtools: \$( samtools --version | head -n 1 | sed -e "s/.* //g" )
+    END_VERSIONS
+
     """
 }

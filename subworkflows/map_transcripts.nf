@@ -12,6 +12,7 @@ workflow MAP_TRANSCRIPTS {
 
     main: 
     ch_salmon = Channel.empty()
+    ch_versions = Channel.empty()
 
     if (params.run_salmon){
         
@@ -24,9 +25,11 @@ workflow MAP_TRANSCRIPTS {
             )
         }
         ch_salmon = SALMON.out.sf
+        ch_versions = ch_versions.mix(SALMON.out.versions)
     }
 
     emit:
     salmon = ch_salmon
+    versions = ch_versions
 
 }

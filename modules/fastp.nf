@@ -15,6 +15,7 @@ process FASTP {
     tuple val(meta), val(out_prefix), path("trimmed_fastq/${read1}"), path("trimmed_fastq/${read2}"), emit: fq
     tuple val(meta), val(out_prefix), path( "${out_prefix}.fastp.json" ), emit: js
     tuple val(meta), val(out_prefix), path( "${out_prefix}.fastp.html" ), emit: html
+    path ('versions.yml'), emit: versions
 
     script:
     def args = task.ext.args ?: ""
@@ -37,6 +38,12 @@ process FASTP {
         --out1 trimmed_fastq/$read1 --out2 trimmed_fastq/$read2 \
         -j ${out_prefix}.fastp.json -h ${out_prefix}.fastp.html \
         --detect_adapter_for_pe -l 20 -g
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            fastp: \$( fastp --version | head -n 1 | sed -e "s/.* //g" )
+        END_VERSIONS
+
         """
 
     }else{
@@ -49,6 +56,12 @@ process FASTP {
         --out1 trimmed_fastq/$read1 --out2 trimmed_fastq/$read2 \
         -j ${out_prefix}.fastp.json -h ${out_prefix}.fastp.html \
         --detect_adapter_for_pe -l 20 -g
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            fastp: \$( fastp --version | head -n 1 | sed -e "s/.* //g" )
+        END_VERSIONS
+
         """
     }
 }
