@@ -187,8 +187,6 @@ workflow ALIGN_FASTQ {
     }
 
     /* write csv */
-    def my_dir = new File("${params.outdir}")
-    def outdir = my_dir.absolutePath
     if(workflow == 'pdx' && write_csv){
         subdir_aln_fq = params.aligner.toUpperCase()
         WRITE_CSV_ALIGN_FASTQ(
@@ -196,10 +194,10 @@ workflow ALIGN_FASTQ {
                     .join(ch_bam_host)
                     .join(ch_bam_xeno)
                     .map { 
-                        it -> it[0] + [graft_bam: "${outdir}/${subdir_aln_fq}/${params.genome}/_unfiltered/${it[0].id}.bam" ] + [host_bam: "${outdir}/${subdir_aln_fq}/${params.host_genome}/_unfiltered/${it[0].id}.bam" ]+ [filtered_graft_bam: "${outdir}/${subdir_aln_fq}/${params.genome}/${it[0].id}.bam" ]
+                        it -> it[0] + [graft_bam: "${subdir_aln_fq}/${params.genome}/_unfiltered/${it[0].id}.bam" ] + [host_bam: "${subdir_aln_fq}/${params.host_genome}/_unfiltered/${it[0].id}.bam" ]+ [filtered_graft_bam: "${subdir_aln_fq}/${params.genome}/${it[0].id}.bam" ]
                     }
                     .collect(),
-                "align_fastq.csv"        
+                "mapped.csv"        
         )
     
     }else if (params.aligner == 'star' && write_csv){
@@ -207,10 +205,10 @@ workflow ALIGN_FASTQ {
         WRITE_CSV_ALIGN_FASTQ(
                 ch_bam
                     .map { 
-                        it -> it[0] + [bam: "${outdir}/${subdir_aln_fq}/${params.genome}/${it[0].id}.bam"] + [tx_bam: "${outdir}/${subdir_aln_fq}/${params.genome}/_work/${it[0].id}/Aligned.toTranscriptome.out.bam" ] + [gene_count: "${outdir}/${subdir_aln_fq}/${params.genome}/_work/${it[0].id}/ReadsPerGene.out.tab" ] 
+                        it -> it[0] + [bam: "${subdir_aln_fq}/${params.genome}/${it[0].id}.bam"] + [tx_bam: "${subdir_aln_fq}/${params.genome}/_work/${it[0].id}/Aligned.toTranscriptome.out.bam" ] + [gene_count: "${subdir_aln_fq}/${params.genome}/_work/${it[0].id}/ReadsPerGene.out.tab" ] 
                     }
                     .collect(),
-                "align_fastq.csv"        
+                "mapped.csv"        
         )
         
     }else if (params.aligner == 'bwa-mem' && write_csv){
@@ -218,10 +216,10 @@ workflow ALIGN_FASTQ {
         WRITE_CSV_ALIGN_FASTQ(
                 ch_bam
                     .map { 
-                        it -> it[0] + [bam: "${outdir}/${subdir_aln_fq}/${params.genome}/${it[0].id}.bam"]
+                        it -> it[0] + [bam: "${subdir_aln_fq}/${params.genome}/${it[0].id}.bam"]
                     }
                     .collect(),
-                "align_fastq.csv"        
+                "mapped.csv"        
         )
         
     }

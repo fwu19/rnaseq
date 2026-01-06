@@ -541,11 +541,25 @@ cbind(y0$genes, y0$counts) %>%
         sep = '\t', quote = F, row.names = F
     )
 
+cpm <- cpm(y0, normalized.lib.sizes = T, log = F)
+cbind(y0$genes, cpm) %>% 
+  write.table(
+    file.path(outdir, 'all_samples.genes_filtered_for_DE.CPM.txt'), 
+    sep = '\t', quote = F, row.names = F
+    )
+
 rpkm <- rpkm(y0, gene.length = length_col, normalized.lib.sizes = T, log = F)
 cbind(y0$genes, rpkm) %>% 
     write.table(
         file.path(outdir, 'all_samples.genes_filtered_for_DE.FPKM.txt'), 
         sep = '\t', quote = F, row.names = F
+    )
+
+tpm <- rpkm/matrix(colSums(rpkm), nrow = nrow(rpkm), ncol = ncol(rpkm), byrow = T)*1e6
+cbind(y0$genes, tpm) %>% 
+  write.table(
+    file.path(outdir, 'all_samples.genes_filtered_for_DE.TPM.txt'), 
+    sep = '\t', quote = F, row.names = F
     )
 
 

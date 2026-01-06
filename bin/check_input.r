@@ -76,6 +76,9 @@ ss <- ss %>%
 
 ## add metadata and collapse by id if necessary ####
 ss <- add_metadata(ss, meta_csv)
+if(nrow(ss) == 0){
+  stop(paste0('No input in the sample sheet!\nCheck ', in_csv, '\nIf ', meta_csv, ' is supplied, Column id should share at least one value with the same column in ', meta_csv, '.\n'))
+}
 
 ## collapse sample sheet
 if (sum(duplicated(ss$id)) > 0){
@@ -90,7 +93,7 @@ if (sum(duplicated(ss$id)) > 0){
     ssu <- ss
 }
 ssu %>% 
-    write.table('samplesheet.unique.csv', sep = ',', quote = F, row.names = F)
+    write.table('samplesheet.unique_samples.csv', sep = ',', quote = F, row.names = F)
 
 
 ## write fastq paths

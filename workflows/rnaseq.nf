@@ -369,8 +369,9 @@ workflow RNASEQ {
     if (params.run_report){
         GENERATE_REPORT(
             params.workflow,
-            params.step == "mapping" ? samplesheet : file("${params.outdir}/csv/align_fastq.csv", checkIfExists: true), 
-            ch_multiqc.ifEmpty([]),
+            (params.step == "mapping") ? samplesheet : file("${params.outdir}/csv/mapped.csv", checkIfExists: true), 
+            //ch_multiqc.ifEmpty([]), 
+            params.update == "report" ? Channel.fromPath("${params.outdir}/MultiQC/multiqc_data/*").collect(): ch_multiqc.ifEmpty([]), 
             ch_gene_rds.ifEmpty([]),
             ch_de.ifEmpty([]),
             ch_tx_rds.ifEmpty([]),
