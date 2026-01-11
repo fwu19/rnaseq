@@ -2,6 +2,7 @@
 * Analyze gene-level expression 
 */
 
+include { WRITE_CSV as WRITE_CSV_FEATURECOUNTS} from '../modules/write_csv.nf'
 include { FEATURECOUNTS } from '../modules/featureCounts.nf'
 include { GENERATE_GENE_COUNT_MATRIX } from '../modules/generate_gene_count_matrix.nf'
 include { DIFFERENTIAL_GENES } from '../modules/differential_genes.nf'
@@ -14,94 +15,68 @@ workflow QUANT_GENES {
     ch_counts
     gene_txt
     tx_bed
-    strand
-    read_type
+    experiment
+
 
     main: 
-    ch_gene_rds = Channel.empty()
+    ch_expr = Channel.empty()
     ch_de = Channel.empty()
     ch_versions  = Channel.empty()
 
-    /*
-    * Parse saved alignments
-    */
-    if (params.step in [ "expression_quanification", "differential_expression"] ){     
-            align_csv = file("${params.outdir}/csv/align_fastq.csv", checkIfExists: true)       
-            if (params.workflow == 'pdx'){
-                align_csv
-                    .splitCsv(header: true)
-                    .map {
-                        row -> [ row, row.id, row.filtered_graft_bam ]
-                    }
-                    .set { ch_bam}
-            }else{
-                align_csv
-                    .splitCsv(header: true)
-                    .map {
-                        row -> [ row, row.id, row.bam ]
-                    }
-                    .set { ch_bam}
-
-            }
-
-            if (params.workflow != 'pdx' && params.aligner == 'star'){
-                align_csv
-                    .splitCsv(header: true)
-                    .map {
-                        row -> [ row, row.id, row.gene_count ]
-                    }
-                    .set { ch_counts}
-            }
-            
-    }
-
-
-    /*
-    * run featureCounts if needed
-    */
-    if (params.run_featurecounts){
-            FEATURECOUNTS(
-                ch_bam, 
-                params.gtf,
-                read_type,
-                strand
-            )
-        
-            ch_counts = FEATURECOUNTS.out.counts
-            // [ [meta], val(out_prefix), path("count.txt") ]
-            ch_versions = ch_versions.mix(FEATURECOUNTS.out.versions)
-    }
 
 
     /*
     * Generate read count matrix
     */
-    GENERATE_GENE_COUNT_MATRIX(
+    if (params.run_gene_count){
+        
+        if (params.run_featurecounts){
+                FEATURECOUNTS(
+                ch_bam, 
+                params.gtf,
+                experiment
+                )     
+                ch_counts = FEATURECOUNTS.out.counts
+                // [ [meta], val(out_prefix), path("count.txt") ]
+                ch_versions = ch_versions.mix(FEATURECOUNTS.out.versions)
+
+                WRITE_CSV_FEATURECOUNTS(
+                    ch_counts
+                    .map { 
+                        it -> [id: it[0].id] + [sample_group: it[0].sample_group] + [ gene_count: "featureCounts/${params.genome}/${it[2].name}" ] 
+                    }
+                    .collect(),
+                "gene_counts.featureCounts.csv"        
+                )
+            
+        }
+
+        GENERATE_GENE_COUNT_MATRIX(
             samplesheet, 
-            ch_counts.map{it[2]}.flatten().collect(),
+            ch_counts.map{it[2]}.collect(),
             gene_txt,
             params.length_col, // default: gene_length
-            strand,
-            params.workflow
-    )
-    ch_gene_rds = GENERATE_GENE_COUNT_MATRIX.out.rds
-    ch_versions = ch_versions.mix(GENERATE_GENE_COUNT_MATRIX.out.versions)
-    
+            experiment
+        )
+        ch_expr = GENERATE_GENE_COUNT_MATRIX.out.rds
+        ch_versions = ch_versions.mix(GENERATE_GENE_COUNT_MATRIX.out.versions)
+    }else{
+        if (params.run_de){
+            ch_expr = Channel.fromPath("${params.outdir}/expression_quantification/all_samples.gene_raw_counts.txt")
+        }
+        
+    }
+
     /*
     * differential genes
     */
-    if (params.run_de && params.comparison){
-        DIFFERENTIAL_GENES(
+    if (params.run_de && file("${params.comparison}").exists()){
+       DIFFERENTIAL_GENES(
             samplesheet, 
-            file(params.comparison, checkIfExists: true),
-            ch_gene_rds, 
+            file(params.comparison),
+            ch_expr, 
             "gene_length",
-            params.fdr,
-            params.fc,
-            params.fdr2,
-            params.fc2,
-            gene_txt,
-            params.de_gene_type
+            gene_txt
         )
         ch_de = DIFFERENTIAL_GENES.out.rds
         ch_versions = ch_versions.mix(DIFFERENTIAL_GENES.out.versions)
@@ -109,10 +84,9 @@ workflow QUANT_GENES {
 
     
     emit:
-    gene_rds = ch_gene_rds
-    de = ch_de
+    expr = ch_expr
     counts = ch_counts
-    gene_txt = gene_txt
+    de = ch_de
     versions = ch_versions
 
 }

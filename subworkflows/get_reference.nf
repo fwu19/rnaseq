@@ -31,41 +31,6 @@ workflow GET_REFERENCE {
 
     genome_fa = fa_str
     gtf = gtf_str
-    
-    /*
-    * Concatenate multiple fasta and gtf files
-    */
-    /*
-    def fa_list = fa_str.split(',')
-    def fa_no = fa_list.size()
-    def gtf_list = gtf_str.split(',')
-    def gtf_no = gtf_list.size()
-
-    genome_fa = "$projectDir/assets/dummy_file.csv"
-    gtf = "$projectDir/assets/dummy_file.csv"
-    
-    if ( fa_no > 1){
-        CAT_GENOME_FA(
-            Channel.fromList(fa_list).collect(),
-            "genome.fa",
-            "fa"
-        )
-        genome_fa = CAT_GENOME_FA.out.file
-    }else{
-        genome_fa = file(fa_str, checkIfExists: true)
-    }
-
-    if ( gtf_no > 1 ){
-        CAT_GTF(
-            Channel.fromList(gtf_list).collect(),
-            "genes.gtf",
-            "gtf"
-        )
-        gtf = CAT_GTF.out.file
-    }else{
-        gtf = gtf_str
-    }
-    */
 
     /*
     *   Process GTF

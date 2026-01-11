@@ -1,4 +1,4 @@
-process GENERATE_REPORT {
+process RENDER_REPORT {
     container "docker://fwu19/r-libs:4.1.2" 
 
     label "process_single"
@@ -6,15 +6,14 @@ process GENERATE_REPORT {
     tag "Make plots of read and peak metrics "
 
     input:
-    val( workflow )
-    path ( samplesheet, stageAs: "sample_sheet.csv" )
-    path ( "multiqc_data/" )
-    path ( gene_rds )
-    path ( de_rds )
-    path ( txt_rds )
-    path ( dt_rds )
+    path ( "sample_sheet.csv" )
+    path ( "multiqc_data" )
+    path ( gene_counts )
+    path ( de )
+    path ( txt_counts )
+    path ( dt )
     path ( "hs_metrics/" )
-    path ( report_dir, stageAs: "report" )
+    path ( "report" )
 
     output:
     path( "*.{rds,html,Rmd}" )
@@ -22,7 +21,7 @@ process GENERATE_REPORT {
 
     script:
     """
-    generate_report.r $workflow
+    render_report.r workflow=${params.workflow} fdr=${params.fdr} fc=${params.fc} fdr2=${params.fdr2} fc2=${params.fc2}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

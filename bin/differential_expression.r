@@ -8,6 +8,35 @@ library(patchwork)
 
 ## functions ####
 
+count2dgelist <- function(
+  counts.tsv=NULL, feature.cols=1:8, pattern2remove="^X|.bam$", counts=NULL, features = NULL, samples = NULL, group.col = 'sample_group'
+){
+  options(stringsAsFactors = F)
+  require(edgeR)
+  
+  if(is.null(counts)){
+    counts <- read.delim(counts.tsv)
+  }
+  if(!is.null(pattern2remove)){
+    colnames(counts) <- gsub(pattern2remove, '', colnames(counts))
+  }
+  if(is.null(features)){
+    features <- counts[feature.cols]
+    counts <- counts[-(feature.cols)]
+  }
+  
+  
+  y0 <- DGEList(counts=counts, genes=features, remove.zeros = T, samples = samples) 
+  if(!is.null(samples) & group.col %in% colnames(samples)){
+    y0$samples$group <- samples[,group.col]
+  }
+  y0 <- calcNormFactors(y0)
+  
+  saveRDS(y0, 'y0.rds')
+  
+  return(y0)
+}
+
 ## for all
 run_da <- function(
     y0, out_prefix, 
@@ -450,13 +479,12 @@ fill_column <- function(df, colv, default.value, na.value = NULL, missing.value 
 
 ## read arguments ####
 args <- as.vector(commandArgs(T)) 
-lst <- strsplit(args, split = '=')
-for (x in lst){
-    assign(x[1],x[2])
-} # read arguments: ss, comparison, rds, fdr, fc, fdr2, fc2
+# for (arg in strsplit(args, split = "=")){
+#     assign(arg[1], arg[2])
+# } # read arguments: ss, comparison, count_file, fdr, fc, fdr2, fc2
+for (arg in args){eval(parse(text = arg))}
 
 ss <- read.csv(input) %>% 
-    relocate(fastq_1, fastq_2, .after = last_col()) %>% 
     unique.data.frame() # sample sheet
 
 if(grepl('dummy', comparison)){
@@ -472,13 +500,12 @@ if(grepl('dummy', comparison)){
     stop(paste(comparison, 'should be either csv or rds file!'))
 }
 
-y0 <- readRDS(rds)
 fdr <- as.numeric(fdr)
 fc <- as.numeric(fc)
 fdr2 <- as.numeric(fdr2)
 fc2 <- as.numeric(fc2)
 if (!exists('length_col')){
-    if (grepl('transcript', rds)){
+    if (grepl('transcript', count_file)){
         length_col <- 'EffectiveLength'
     }else{
         length_col <- 'gene_length'
@@ -510,6 +537,26 @@ cmp <- cmp %>%
     mutate(
         file_base = file.path(outdir, paste0(out_prefix, ifelse(n>1, paste0('_run',n), '')), out_prefix)
     )
+
+
+## create y0 if not available ####
+if (grepl('rds$', count_file)){
+  y0 <- readRDS(count_file)
+}else{
+  nsamples <- nrow(ss)
+  gene_expr <- read.delim(count_file)
+  cts <- gene_expr[,tail(1:ncol(gene_expr), nsamples)]
+  mid <- gsub('-', '.', ifelse(grepl('^[0-9]', ss$id), paste0('X', ss$id), ss$id))
+  colnames(cts) <- ss$id[match(colnames(cts), mid)] # revert "." to "-"
+  
+  y0 <- count2dgelist(
+    counts = cts, 
+    features = gene_expr[, 1:(ncol(gene_expr)-nsamples)], 
+    samples = ss %>% arrange(factor(id, levels = colnames(cts))),
+    group = 'sample_group'
+  )
+  rm(nsamples, mid, gene_expr, cts)
+}
 
 ## update sample sheet and DGElist ####
 common_samples <- intersect(ss$id, y0$samples$id)
@@ -571,5 +618,5 @@ for (i in 1:nrow(cmp)){
     )
 }
 names(de.list) <- basename(dirname(cmp$file_base))
-saveRDS(de.list, ifelse(grepl('transcript', rds), 'differential_transcripts.rds', 'differential_genes.rds'))
+saveRDS(de.list, ifelse(grepl('transcript', count_file), 'differential_transcripts.rds', 'differential_genes.rds'))
 

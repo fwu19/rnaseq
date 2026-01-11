@@ -93,7 +93,7 @@ if (sum(duplicated(ss$id)) > 0){
     ssu <- ss
 }
 ssu %>% 
-    write.table('samplesheet.unique_samples.csv', sep = ',', quote = F, row.names = F)
+    write.table('samplesheet.collapsed.csv', sep = ',', quote = F, row.names = F)
 
 
 ## write fastq paths

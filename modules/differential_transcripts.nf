@@ -11,14 +11,9 @@ process DIFFERENTIAL_TRANSCRIPTS {
     input:
     path(samplesheet)
     path(comparison)
-    path(rds)
+    path(count_file)
     val(length_col)
-    val(fdr)
-    val(fc)
-    val(fdr2)
-    val(fc2)
     path(gene_txt)
-    val(gene_type)
 
     output:
     path ("differential_transcripts.rds"), emit: rds, optional: true
@@ -27,7 +22,7 @@ process DIFFERENTIAL_TRANSCRIPTS {
     
     script:
     """
-    differential_expression.r input=$samplesheet comparison=$comparison rds=${rds} length_col=${length_col} fdr=${fdr} fc=${fc} fdr2=${fdr2} fc2=${fc2} gene_txt=$gene_txt gene_type=$gene_type
+    differential_expression.r input="\'$samplesheet\'" comparison="\'$comparison\'" gene_txt="\'${gene_txt}\'" count_file="\'${count_file}\'" fdr=${params.fdr} fc=${params.fc} fdr2=${params.fdr2} fc2=${params.fc2} gene_type="\'${params.de_gene_type}\'" length_col="\'$length_col\'"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

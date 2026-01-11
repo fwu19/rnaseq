@@ -129,7 +129,13 @@ y0 <- count2dgelist(
         arrange(factor(id, levels = colnames(lst$counts))),
     group.col = 'sample_group'
 )
+cpm <- cpm(y0, normalized.lib.sizes = T, log = F)
+cbind(y0$genes, cpm) %>% 
+    write.table('all_samples.transcript_CPM.txt', sep = '\t', quote = F, row.names = F)
 rpkm <- rpkm(y0, gene.length = "EffectiveLength", normalized.lib.sizes = T, log = F)
 cbind(y0$genes, rpkm) %>% 
     write.table('all_samples.transcript_FPKM.txt', sep = '\t', quote = F, row.names = F)
+tpm <- rpkm/matrix(colSums(rpkm), nrow = nrow(rpkm), ncol = ncol(rpkm), byrow = T)*1e6
+cbind(y0$genes, tpm) %>% 
+    write.table('all_samples.transcript_TPM.txt', sep = '\t', quote = F, row.names = F)
 

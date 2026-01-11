@@ -14,7 +14,7 @@ workflow QUANT_TRANSCRIPTS {
     tx_txt
 
     main: 
-    ch_tx_rds = Channel.empty()
+    ch_tx_expr = Channel.empty()
     ch_dt = Channel.empty()
     ch_versions = Channel.empty()
 
@@ -23,29 +23,28 @@ workflow QUANT_TRANSCRIPTS {
         
         GENERATE_TRANSCRIPT_COUNT_MATRIX(
             samplesheet, 
-            ch_salmon.map{it[2]}.collect().ifEmpty([]), 
+            ch_salmon.map{it[2]}.collect(), 
             tx_txt,
             "EffectiveLength"
         )
-        ch_tx_rds = GENERATE_TRANSCRIPT_COUNT_MATRIX.out.rds
+        ch_tx_expr = GENERATE_TRANSCRIPT_COUNT_MATRIX.out.rds
         ch_versions = ch_versions.mix(GENERATE_TRANSCRIPT_COUNT_MATRIX.out.versions)
 
+    }else{
+        if (params.run_dt){
+            ch_tx_expr = Channel.fromPath("${params.outdir}/expression_quantification/all_samples.transcript_raw_counts.txt")
+        }
+        
     }
 
     /* differential transcripts */
-    if (params.run_dt && params.comparison){
+    if (params.run_dt && file("${params.comparison}").exists()){
 
         DIFFERENTIAL_TRANSCRIPTS(
             samplesheet, 
-            Channel.fromPath(params.comparison, checkIfExists: true), 
-            ch_tx_rds, 
+            ch_tx_expr, 
             "EffectiveLength",
-            params.fdr,
-            params.fc,
-            params.fdr2,
-            params.fc2,
-            gene_txt,
-            params.de_gene_type
+            gene_txt
         )
         ch_dt = DIFFERENTIAL_TRANSCRIPTS.out.rds
         ch_versions = ch_versions.mix(DIFFERENTIAL_TRANSCRIPTS.out.versions)
@@ -53,7 +52,7 @@ workflow QUANT_TRANSCRIPTS {
 
 
     emit:
-    tx_rds = ch_tx_rds
+    tx_expr = ch_tx_expr
     dt = ch_dt
     versions = ch_versions
 

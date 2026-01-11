@@ -9,12 +9,10 @@ process GENERATE_GENE_COUNT_MATRIX {
     
     input:
     path(samplesheet)
-    //tuple val(meta) val(id) path("counts/*")
     path("counts/*")
     path(gene_txt)
     val(length_col)
-    val(strand)
-    val(workflow)
+    val(experiment)
 
     output:
     path ("gene.y0.rds"), emit: rds
@@ -22,8 +20,9 @@ process GENERATE_GENE_COUNT_MATRIX {
     path ("*")
     
     script:
+    def strand = "${experiment[0]}"
     """
-    generate_gene_count_matrix.r input=$samplesheet count.dir=counts gene.txt=$gene_txt length.col=${length_col} strand=${strand} workflow=${workflow}
+    generate_gene_count_matrix.r input=$samplesheet count.dir=counts gene.txt=$gene_txt length.col=$length_col strand=$strand workflow=${params.workflow}
     mv y0.rds gene.y0.rds
 
     cat <<-END_VERSIONS > versions.yml

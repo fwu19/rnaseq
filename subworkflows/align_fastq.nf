@@ -8,6 +8,7 @@ include { STAR } from '../modules/star.nf'
 include { STAR  as  STAR_HOST } from '../modules/star.nf'
 include { XENOFILTER } from '../modules/xenofilter.nf'
 include { WRITE_CSV as WRITE_CSV_ALIGN_FASTQ} from '../modules/write_csv.nf'
+include { WRITE_CSV as WRITE_CSV_STAR_COUNTS} from '../modules/write_csv.nf'
 
 include { BUILD_INDEX as BUILD_INDEX_HOST } from './build_index.nf'
 include { PDX_SPLIT_FASTQ } from './pdx_split_fastq.nf'
@@ -18,7 +19,6 @@ workflow ALIGN_FASTQ {
     split_fastq // if true, don't run xenofilteR
     aligner_index
     workflow
-    write_csv
 
     main: 
     ch_bam = Channel.empty()
@@ -187,36 +187,43 @@ workflow ALIGN_FASTQ {
     }
 
     /* write csv */
-    if(workflow == 'pdx' && write_csv){
+    if(workflow == 'pdx' ){
         subdir_aln_fq = params.aligner.toUpperCase()
         WRITE_CSV_ALIGN_FASTQ(
                 ch_bam
                     .join(ch_bam_host)
                     .join(ch_bam_xeno)
                     .map { 
-                        it -> it[0] + [graft_bam: "${subdir_aln_fq}/${params.genome}/_unfiltered/${it[0].id}.bam" ] + [host_bam: "${subdir_aln_fq}/${params.host_genome}/_unfiltered/${it[0].id}.bam" ]+ [filtered_graft_bam: "${subdir_aln_fq}/${params.genome}/${it[0].id}.bam" ]
+                        it -> it[0] + [graft_bam: "${subdir_aln_fq}/${params.genome}/_unfiltered/${it[0].id}.bam" ] + [host_bam: "${subdir_aln_fq}/${params.host_genome}/_unfiltered/${it[0].id}.bam" ] + [bam: "${subdir_aln_fq}/${params.genome}/${it[0].id}.bam" ] + [bai: "${subdir_aln_fq}/${params.genome}/${it[0].id}.bai" ]
                     }
                     .collect(),
                 "mapped.csv"        
         )
     
-    }else if (params.aligner == 'star' && write_csv){
-        subdir_aln_fq = params.aligner.toUpperCase()
+    }else if (params.aligner == 'star' ){
         WRITE_CSV_ALIGN_FASTQ(
                 ch_bam
                     .map { 
-                        it -> it[0] + [bam: "${subdir_aln_fq}/${params.genome}/${it[0].id}.bam"] + [tx_bam: "${subdir_aln_fq}/${params.genome}/_work/${it[0].id}/Aligned.toTranscriptome.out.bam" ] + [gene_count: "${subdir_aln_fq}/${params.genome}/_work/${it[0].id}/ReadsPerGene.out.tab" ] 
+                        it -> it[0] + [bam: "STAR/${params.genome}/${it[0].id}.bam"] + [bai: "$STAR/${params.genome}/${it[0].id}.bai"] + [tx_bam: "$STAR/${params.genome}/_work/${it[0].id}/Aligned.toTranscriptome.out.bam" ] 
                     }
                     .collect(),
                 "mapped.csv"        
         )
+
+        WRITE_CSV_STAR_COUNTS(
+                ch_bam
+                    .map { 
+                        it -> it[0] + [gene_count: "STAR/${params.genome}/_work/${it[0].id}/ReadsPerGene.out.tab" ] 
+                    }
+                    .collect(),
+                "gene_counts.STAR.csv"        
+        )
         
-    }else if (params.aligner == 'bwa-mem' && write_csv){
-        subdir_aln_fq = params.aligner.toUpperCase()
+    }else if (params.aligner == 'bwa-mem' ){
         WRITE_CSV_ALIGN_FASTQ(
                 ch_bam
                     .map { 
-                        it -> it[0] + [bam: "${subdir_aln_fq}/${params.genome}/${it[0].id}.bam"]
+                        it -> it[0] + [bam: "BWA-MEM/${params.genome}/${it[0].id}.bam"] + [bai: "WA-MEM/${params.genome}/${it[0].id}.bai"]
                     }
                     .collect(),
                 "mapped.csv"        

@@ -15,8 +15,6 @@ process MAKE_STAR {
     output:
     path ( "STAR2Index/", emit: dir)
     path  ("versions.yml", emit: versions)
-    path ( "STAR2Index/", type: 'dir')
-    path ('versions.yml'), emit: versions
 
     when:
     task.ext.when == null || task.ext.when

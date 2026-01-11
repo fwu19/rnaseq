@@ -3,6 +3,7 @@
 */
 
 include { SALMON  } from '../modules/salmon.nf'
+include { WRITE_CSV as WRITE_CSV_SALMON} from '../modules/write_csv.nf'
 
 
 workflow MAP_TRANSCRIPTS {
@@ -26,6 +27,15 @@ workflow MAP_TRANSCRIPTS {
         }
         ch_salmon = SALMON.out.sf
         ch_versions = ch_versions.mix(SALMON.out.versions)
+
+        WRITE_CSV_SALMON(
+            ch_salmon
+                .map { 
+                    it -> it[0] + [salmon: "Salmon/${params.genome}/${it[0].id}/"]
+                }
+                .collect(),
+            "salmon.csv"        
+        )
     }
 
     emit:

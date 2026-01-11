@@ -18,7 +18,7 @@ workflow BUILD_INDEX {
     bowtie_dir = Channel.empty()
     bowtie2_dir = Channel.empty()
     salmon_dir = Channel.empty()
-    ch_versions = Channel.empty()
+    //ch_versions = Channel.empty()
 
     // Init aligners
     def aligner_index_list = ["bowtie", "bowtie2", "bwa", "salmon", "star"]
@@ -33,7 +33,7 @@ workflow BUILD_INDEX {
             gtf
         )
         star_dir = MAKE_STAR.out.dir
-        ch_versions = ch_versions.mix(MAKE_STAR.out.versions)
+        //ch_versions = ch_versions.mix(MAKE_STAR.out.versions)
     }
 
     if ("bwa" in index_list){
@@ -41,12 +41,12 @@ workflow BUILD_INDEX {
             genome_fa.split(',').collect()
         )
         bwa_dir = MAKE_BWA.out.dir
-        ch_versions = ch_versions.mix(MAKE_BWA.out.versions)
+        //ch_versions = ch_versions.mix(MAKE_BWA.out.versions)
     }
 
     emit:
     star = star_dir
     bwa = bwa_dir
-    versions = ch_versions
+    //versions = ch_versions
 
 }

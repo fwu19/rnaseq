@@ -9,9 +9,9 @@ process INFER_EXPERIMENT {
     path(tx_bed)
 
     output:
-    path ('strand.txt', emit: strand)
-    path ('read_type.txt', emit: read_type)
+    path ('infer_experiment.csv', emit: csv)
     path ('versions.yml'), emit: versions
+    path ( '*.csv' )
 
     script:
     def args = task.ext.args ?: "-s 200000 -q 30"

@@ -21,7 +21,7 @@ process MULTIQC {
     path ( 'salmon/*' )
 
     output:
-    path ('multiqc_data/*'), emit: data
+    path ('multiqc_data/'), emit: data
     path ('multiqc_data/', type: 'dir' )
     path ('multiqc_report.html')
     path ('versions.yml'), emit: versions
@@ -33,8 +33,7 @@ process MULTIQC {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        multiqc: \$( multiqc --version | sed -e "s/multiqc, version //g" )
+        multiqc: \$(multiqc --version | sed "s/ .*//g" )
     END_VERSIONS
-
     """
 }

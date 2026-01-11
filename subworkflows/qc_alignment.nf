@@ -20,8 +20,7 @@ workflow QC_ALIGNMENT {
     bai_xeno
     collapsed_gtf
     tx_bed
-    strand
-    read_type
+    experiment
     
     main: 
     ch_rnaseqc = Channel.empty()
@@ -73,8 +72,7 @@ workflow QC_ALIGNMENT {
         RNASEQC(
             params.workflow == 'pdx' ? ch_bam_bai_xeno : ch_bam_bai,
             collapsed_gtf,
-            strand,
-            read_type
+            experiment
         )            
         ch_rnaseqc = RNASEQC.out.qc
         // [ [meta], path("*") ]
@@ -104,6 +102,7 @@ workflow QC_ALIGNMENT {
                 params.target_region
             )
             ch_hs_metrics = HS_METRICS.out.qc
+                .map { it[1] }
             // [ [meta], path("*") ]
             ch_versions = ch_versions.mix(HS_METRICS.out.versions)
 

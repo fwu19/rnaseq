@@ -10,8 +10,7 @@ process RNASEQC {
     input:
     tuple val(meta), val(out_prefix), path(bam), path(bai)
     path(gtf)
-    val(strand)
-    val(read_type)
+    val (experiment)
 
     output:
     tuple val(meta), path("${out_prefix}*.{tsv,gct}"), emit: qc
@@ -20,7 +19,7 @@ process RNASEQC {
 
     script:
     """
-    rnaseqc.sh ${out_prefix} ${gtf} ${strand} ${read_type} ${bam} 
+    rnaseqc.sh ${out_prefix} ${gtf} ${experiment[0]} ${experiment[1]} ${bam} 
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

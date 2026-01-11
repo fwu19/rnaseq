@@ -91,9 +91,8 @@ count2dgelist <- function(
 
 ## read arguments ####
 args <- as.vector(commandArgs(T)) 
-lst <- strsplit(args, split = '=')
-for (x in lst){
-    assign(x[1],x[2])
+for (arg in strsplit(args, split = "=")){
+  assign(arg[1], arg[2])
 } # read arguments: ss, count.dir, gene.txt, length.col
 
 ss <- read.csv(input) %>% 

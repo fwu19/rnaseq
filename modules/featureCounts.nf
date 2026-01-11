@@ -10,8 +10,7 @@ process FEATURECOUNTS {
     input:
     tuple val(meta), val(out_prefix), path( bam )
     path (gtf)
-    val (read_type)
-    val (strand)
+    val (experiment)
     
     output:
     tuple val(meta), val(out_prefix), path("${out_prefix}*.txt"), emit: counts
@@ -20,7 +19,7 @@ process FEATURECOUNTS {
 
     script:
     """
-    featureCounts.sh ${out_prefix} ${gtf} ${bam} ${read_type} ${strand} ${task.cpus}
+    featureCounts.sh ${out_prefix} ${gtf} ${bam} ${experiment.read_type} ${experiment.strand} ${task.cpus}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
