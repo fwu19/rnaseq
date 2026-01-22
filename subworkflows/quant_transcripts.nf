@@ -47,7 +47,7 @@ workflow QUANT_TRANSCRIPTS {
             gene_txt
         )
         ch_dt = DIFFERENTIAL_TRANSCRIPTS.out.rds
-        ch_versions = ch_versions.mix(DIFFERENTIAL_TRANSCRIPTS.out.versions.first())
+        ch_versions = ch_versions.mix(DIFFERENTIAL_TRANSCRIPTS.out.versions)
     }
 
 

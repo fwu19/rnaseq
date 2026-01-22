@@ -2,16 +2,17 @@
 * Align all fastq files, and run XenofilteR if needed
 */
 
+include { BUILD_INDEX as BUILD_INDEX_HOST } from './build_index.nf'
+include { PDX_SPLIT_FASTQ } from './pdx_split_fastq.nf'
+
 include { BWA_MEM } from '../modules/bwa_mem.nf'
 include { BWA_MEM  as  BWA_MEM_HOST } from '../modules/bwa_mem.nf'
 include { STAR } from '../modules/star.nf'
 include { STAR  as  STAR_HOST } from '../modules/star.nf'
 include { XENOFILTER } from '../modules/xenofilter.nf'
+include { BAM_TO_FASTQ } from '../modules/bam_to_fastq.nf'
 include { WRITE_CSV as WRITE_CSV_ALIGN_FASTQ} from '../modules/write_csv.nf'
 include { WRITE_CSV as WRITE_CSV_STAR_COUNTS} from '../modules/write_csv.nf'
-
-include { BUILD_INDEX as BUILD_INDEX_HOST } from './build_index.nf'
-include { PDX_SPLIT_FASTQ } from './pdx_split_fastq.nf'
 
 workflow ALIGN_FASTQ {
     take:
@@ -31,6 +32,7 @@ workflow ALIGN_FASTQ {
     ch_star_log_host = Channel.empty()
     ch_bam_xeno = Channel.empty()
     ch_bai_xeno = Channel.empty()
+    ch_graft_reads = Channel.empty()
     ch_versions = Channel.empty()
 
     if (params.aligner == 'star'){
@@ -184,6 +186,16 @@ workflow ALIGN_FASTQ {
             ch_bai_xeno = XENOFILTER.out.bai
             ch_versions = ch_versions.mix(XENOFILTER.out.versions.first())
         }
+
+        // save graft-only reads
+        if(params.run_arriba || params.only_filter_fastq){
+            BAM_TO_FASTQ(
+                ch_bam_xeno
+            )
+            ch_graft_reads = BAM_TO_FASTQ.out.fq
+            ch_software_versions = ch_software_versions.mix(BAM_TO_FASTQ.out.versions)
+        }
+
     }
 
     /* write csv */
@@ -242,6 +254,7 @@ workflow ALIGN_FASTQ {
     star_log_host = ch_star_log_host
     bam_xeno = ch_bam_xeno
     bai_xeno = ch_bai_xeno
+    graft_reads = ch_graft_reads
     versions = ch_versions
 
 }

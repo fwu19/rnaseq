@@ -21,7 +21,7 @@ process GTF2BED {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        Perl: \$(perl --version | head -n 1)
+        Perl: \$(perl --version | sed -n 2,2p | sed -e "s/.*(//g; s/).*//g")
     END_VERSIONS
     """
 

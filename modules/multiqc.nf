@@ -34,7 +34,7 @@ process MULTIQC {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        multiqc: \$(multiqc --version 2>&1 | sed "s/ .*//g" )
+        multiqc: \$(multiqc --version 2>&1 | sed "s/.* //g" )
     END_VERSIONS
     """
 }

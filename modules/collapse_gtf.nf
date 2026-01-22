@@ -32,7 +32,7 @@ process COLLAPSE_GTF {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        Python: \$(python --version | head -n 1)
+        Python: \$(python --version 2>&1 | head -n 1 | sed -e "s/.* //g" )
     END_VERSIONS
     """
 

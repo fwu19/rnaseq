@@ -1,9 +1,12 @@
 #!/usr/bin/env nextflow 
 
+nextflow.enable.dsl=2
+
 include { GET_REFERENCE } from '../subworkflows/get_reference.nf'
 include { GET_INPUT } from '../subworkflows/get_input.nf'
 include { PROCESS_FASTQ } from '../subworkflows/process_fastq.nf'
 include { ALIGN_FASTQ } from '../subworkflows/align_fastq.nf'
+include { CHECK_EXPERIMENT } from '../subworkflows/check_experiment.nf'
 include { QUANT_GENES } from '../subworkflows/quant_genes.nf'
 include { MAP_TRANSCRIPTS } from '../subworkflows/map_transcripts.nf'
 include { QUANT_TRANSCRIPTS } from '../subworkflows/quant_transcripts.nf'
@@ -11,8 +14,6 @@ include { QC_FASTQ } from '../subworkflows/qc_fastq.nf'
 include { QC_ALIGNMENT } from '../subworkflows/qc_alignment.nf'
 include { GENERATE_REPORT } from '../subworkflows/generate_report.nf'
 
-include { INFER_EXPERIMENT } from '../modules/infer_experiment.nf'
-include { BAM_TO_FASTQ } from '../modules/bam_to_fastq.nf'
 include { ARRIBA  } from '../modules/arriba.nf'
 include { MULTIQC } from '../modules/multiqc.nf'
 
@@ -89,11 +90,27 @@ workflow RNASEQ {
         ch_software_versions = ch_software_versions.mix(PROCESS_FASTQ.out.versions)
     }
 
+    /*
+    * Infer strandedness and read type
+    */
+    infer_experiment = Channel.empty()
+    if (params.run_infer_experiment ){
+        CHECK_EXPERIMENT(
+            fq,
+            index_dir,
+            tx_bed
+        )
+        infer_experiment = CHECK_EXPERIMENT.out.csv
+        ch_software_versions = ch_software_versions.mix(CHECK_EXPERIMENT.out.versions)
+        
+    }else {
+        if (params.run_quant_genes && params.run_gene_count){
+            infer_experiment = Channel.fromPath("${params.outdir}/csv/infer_experiment.csv")
+        }
+    }    
 
     /*
-    * run STAR alignment 
-    * for pdx workflow, align to both graft and host genomes 
-    * for pdx workflow, run XenofilteR to remove reads with host origin
+    * Gene-level analysis
     */
     ch_counts = Channel.empty()
     ch_bam = Channel.empty()
@@ -105,115 +122,85 @@ workflow RNASEQ {
     ch_star_log_host = Channel.empty() 
     ch_bam_xeno = Channel.empty()
     ch_bai_xeno = Channel.empty()
+    ch_graft_reads = Channel.empty()
+    ch_gene_expr = Channel.empty()
+    ch_de = Channel.empty()
 
     if (params.gene_level){
+        /*
+        * run alignment 
+        * for pdx workflow, align to both graft and host genomes 
+        * for pdx workflow, run XenofilteR to remove reads with host origin
+        */
         if (params.run_alignment){
-        ALIGN_FASTQ(
-            params.run_cut_adapt ? ch_reads_trimmed : ch_reads,
-            params.run_split_fastq, // if true, dont run xenofilteR
-            index_dir,
-            params.workflow
-        )
-        
-        ch_bam = ALIGN_FASTQ.out.bam
-        ch_bai = ALIGN_FASTQ.out.bai
-        ch_counts = ALIGN_FASTQ.out.counts
-        ch_tx_bam = ALIGN_FASTQ.out.tx_bam
-        ch_star_log = ALIGN_FASTQ.out.star_log
-        ch_bam_host = ALIGN_FASTQ.out.bam_host
-        ch_bai_host = ALIGN_FASTQ.out.bai_host
-        ch_star_log_host = ALIGN_FASTQ.out.star_log_host
-        ch_bam_xeno = ALIGN_FASTQ.out.bam_xeno 
-        ch_bai_xeno = ALIGN_FASTQ.out.bai_xeno
-        ch_software_versions = ch_software_versions.mix(ALIGN_FASTQ.out.versions)
-    
-
-        // save graft-only reads
-        ch_graft_reads = Channel.empty()
-        if(params.workflow == 'pdx' && (params.run_arriba || params.only_filter_fastq)){
-            BAM_TO_FASTQ(
-                ch_bam_xeno
+            ALIGN_FASTQ(
+                params.run_cut_adapt ? ch_reads_trimmed : ch_reads,
+                params.run_split_fastq, // if true, dont run xenofilteR
+                index_dir,
+                params.workflow
             )
-            ch_graft_reads = BAM_TO_FASTQ.out.fq
-            ch_software_versions = ch_software_versions.mix(BAM_TO_FASTQ.out.versions)
-        }
-
+        
+            ch_bam = ALIGN_FASTQ.out.bam
+            ch_bai = ALIGN_FASTQ.out.bai
+            ch_counts = ALIGN_FASTQ.out.counts
+            ch_tx_bam = ALIGN_FASTQ.out.tx_bam
+            ch_star_log = ALIGN_FASTQ.out.star_log
+            ch_bam_host = ALIGN_FASTQ.out.bam_host
+            ch_bai_host = ALIGN_FASTQ.out.bai_host
+            ch_star_log_host = ALIGN_FASTQ.out.star_log_host
+            ch_bam_xeno = ALIGN_FASTQ.out.bam_xeno 
+            ch_bai_xeno = ALIGN_FASTQ.out.bai_xeno
+            ch_graft_reads = ALIGN_FASTQ.out.graft_reads
+            ch_software_versions = ch_software_versions.mix(ALIGN_FASTQ.out.versions)
+    
         } else {
-        if (params.run_quant_genes && params.run_gene_count){
-            ch_bam = file("${params.outdir}/csv/mapped.csv", checkIfExists: true)
-                .splitCsv(header: true)
-                .map { it -> [ [it.id, it.sample_group], it.id , path("${params.outdir}/${it.bam}") ] }
+            if (params.run_quant_genes && params.run_gene_count){
+                ch_bam = file("${params.outdir}/csv/mapped.csv", checkIfExists: true)
+                    .splitCsv(header: true)
+                    .map { it -> [ [it.id, it.sample_group], it.id , path("${params.outdir}/${it.bam}") ] }
 
-            ch_bai = file("${params.outdir}/csv/mapped.csv", checkIfExists: true)
-                .splitCsv(header: true)
-                .map { it -> [ [ it.id, it.sample_group ], it.id, path("${params.outdir}/${it.bai}") ] }
+                ch_bai = file("${params.outdir}/csv/mapped.csv", checkIfExists: true)
+                    .splitCsv(header: true)
+                    .map { it -> [ [ it.id, it.sample_group ], it.id, path("${params.outdir}/${it.bai}") ] }
 
-            if (params.workflow == 'pdx'){
-                ch_bam_xeno = ch_bam
-                ch_bai_xeno = ch_bai
-            }
+                if (params.workflow == 'pdx'){
+                    ch_bam_xeno = ch_bam
+                    ch_bai_xeno = ch_bai
+                }
 
-            ch_counts = file("${params.outdir}/csv/gene_counts.${params.aligner.toUpperCase()}.csv")
+                ch_counts = file("${params.outdir}/csv/gene_counts.${params.aligner.toUpperCase()}.csv")
                     .splitCsv(header: true)
                     .map { it -> [ [ it.id, it.sample_group ], it.id, path("${params.outdir}/${it.gene_count}") ] }
 
-        }
+            }
 
         
-        if (params.run_quant_transcripts && params.run_tx_count ){
-            ch_tx_bam = file("${params.outdir}/csv/mapped.csv", checkIfExists: true)
-                .splitCsv(header: true)
-                .map { it -> [ [ it.id, it.sample_group ], it.id, path("${params.outdir}/${it.tx_bam}") ] }
+            if (params.run_quant_transcripts && params.run_tx_count ){
+                ch_tx_bam = file("${params.outdir}/csv/mapped.csv", checkIfExists: true)
+                    .splitCsv(header: true)
+                    .map { it -> [ [ it.id, it.sample_group ], it.id, path("${params.outdir}/${it.tx_bam}") ] }
+            }
         }
-        }
-    }
-    /*
-    * Infer strandedness and read type
-    */
-    infer_experiment = Channel.empty()
-    if (params.run_infer_experiment ){
-        INFER_EXPERIMENT(
-                ch_bam
-                .map{ it -> [ [ it[0], it[1] ], it[2] ]}
-                .join (
-                    ch_bai
-                    .map{ it -> [ [ it[0], it[1] ], it[2] ]}
-                )
-                .map { it -> [ it[0][0], it[0][1], it[1], it[2] ]}
-                .first(),
-                tx_bed
-        )
-        infer_experiment = INFER_EXPERIMENT.out.csv
-        ch_software_versions = ch_software_versions.mix(INFER_EXPERIMENT.out.versions)
-        
-    }else {
-        if (params.run_quant_genes && params.run_gene_count){
-            infer_experiment = Channel.fromPath("${params.outdir}/csv/infer_experiment.csv")
-        }
-    }    
     
 
-    /*
-    *   collect gene-level count matrix and call differential expression
-    */
-    ch_gene_expr = Channel.empty()
-    ch_de = Channel.empty()
-    if (params.gene_level){
+        /*
+        *   collect gene-level count matrix and call differential expression
+        */
         if ( params.run_quant_genes ){
-        QUANT_GENES(
-            samplesheet,
-            params.workflow == 'pdx' ? ch_bam_xeno : ch_bam,
-            params.workflow == 'pdx' ? ch_bai_xeno : ch_bai,
-            ch_counts.ifEmpty([]),
-            gene_txt,
-            tx_bed,
-            infer_experiment
-        )
+            QUANT_GENES(
+                samplesheet,
+                params.workflow == 'pdx' ? ch_bam_xeno : ch_bam,
+                params.workflow == 'pdx' ? ch_bai_xeno : ch_bai,
+                ch_counts.ifEmpty([]),
+                gene_txt,
+                tx_bed,
+                infer_experiment
+            )
         
-        ch_counts = QUANT_GENES.out.counts // if params.run_featurecounts, ch_counts is updated
-        ch_gene_expr = QUANT_GENES.out.expr 
-        ch_de = QUANT_GENES.out.de
-        ch_software_versions = ch_software_versions.mix(QUANT_GENES.out.versions)
+            ch_counts = QUANT_GENES.out.counts // if params.run_featurecounts, ch_counts is updated
+            ch_gene_expr = QUANT_GENES.out.expr 
+            ch_de = QUANT_GENES.out.de
+            ch_software_versions = ch_software_versions.mix(QUANT_GENES.out.versions)
 
         } 
     }
@@ -373,7 +360,7 @@ workflow RNASEQ {
     */
     if (!params.update){
         ch_software_versions
-            .collectFile(storeDir: "${params.outdir}/pipeline_info", name: 'software_versions.yml', sort: true, newLine: true)
+            .collectFile(storeDir: "${params.outdir}/pipeline_info", name: 'software_versions.yml', sort: false, newLine: true)
     }
 
 

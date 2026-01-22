@@ -1,8 +1,9 @@
 
 process BAM_TO_FASTQ {
     label "process_medium"
-    module = ['BEDTools/2.30.0-GCC-12.2.0', 'SAMtools/1.17-GCC-12.2.0']
 
+    container = 'community.wave.seqera.io/library/bamtools_salmon_samtools:22d508928f8d86c7'
+    //module = ['BEDTools/2.30.0-GCC-12.2.0', 'SAMtools/1.17-GCC-12.2.0']
 
     tag "convert bam to fastq on ${out_prefix}"
 
