@@ -1,7 +1,8 @@
 process FASTQC {
     label "process_single"
-    module = 'FastQC/0.12.1-Java-11'
 
+    container = 'quay.io/biocontainers/fastqc:0.12.1--hdfd78af_0'
+    //module = 'FastQC/0.12.1-Java-11'
 
     tag "FASTQC on ${meta.id}"
 

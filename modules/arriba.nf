@@ -1,7 +1,9 @@
 
 process ARRIBA {
     label "process_high"
-    module = [ 'Arriba/2.4.0-GCC-12.2.0', 'SAMtools/1.17-GCC-12.2.0' ]
+
+    container = 'quay.io/biocontainers/arriba:2.4.0--hdbdd923_4'
+    //module = [ 'Arriba/2.4.0-GCC-12.2.0', 'SAMtools/1.17-GCC-12.2.0' ]
 
 
     tag "Arriba on ${out_prefix}"
@@ -32,7 +34,7 @@ process ARRIBA {
     """
     mkdir ${out_prefix}
     cd ${out_prefix}
-    run_arriba.sh ../${star_index} ../${gtf} ../${genome_fa} ../${blacklist} ../${known_fusions} ../${protein_domains} ${task.cpus} ../${read1} ../${read2}
+    arriba.sh ../${star_index} ../${gtf} ../${genome_fa} ../${blacklist} ../${known_fusions} ../${protein_domains} ${task.cpus} ../${read1} ../${read2}
     mv Aligned.sortedByCoord.out.bam ../${out_prefix}.bam
     mv Aligned.sortedByCoord.out.bam.bai ../${out_prefix}.bam.bai
     mv fusions.tsv ../${out_prefix}.fusions.tsv 

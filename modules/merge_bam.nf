@@ -1,8 +1,9 @@
 
 process MERGE_BAM {
     label "process_high"
-    module = ['SAMtools/1.17-GCC-12.2.0']
 
+    container = 'quay.io/biocontainers/samtools:1.17--hd87286a_1'
+    //module = ['SAMtools/1.17-GCC-12.2.0']
 
     tag "merge bam files for ${out_prefix}"
 

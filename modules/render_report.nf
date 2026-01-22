@@ -25,7 +25,7 @@ process RENDER_REPORT {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        R: \$(R --version | head -n 1)
+        R: \$(R --version 2>&1 | head -n 1 | sed -e "s/R version //g; s/ .*//g" )
     END_VERSIONS
     
     """

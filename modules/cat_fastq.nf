@@ -2,7 +2,6 @@
 process CAT_FASTQ {
     label "process_single"
 
-
     tag "CAT_FASTQ on $id"
 
     //publishDir "${params.outdir}/merged_fastq/", pattern: '*.fastq.gz', mode: 'copy'

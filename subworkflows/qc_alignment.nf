@@ -76,7 +76,7 @@ workflow QC_ALIGNMENT {
         )            
         ch_rnaseqc = RNASEQC.out.qc
         // [ [meta], path("*") ]
-        ch_versions = ch_versions.mix(RNASEQC.out.versions)
+        ch_versions = ch_versions.mix(RNASEQC.out.versions.first())
     }
 
     /*
@@ -89,7 +89,7 @@ workflow QC_ALIGNMENT {
         )
         ch_rseqc = RSEQC.out.qc
         // [ [meta], path("*") ]
-        ch_versions = ch_versions.mix(RSEQC.out.versions)
+        ch_versions = ch_versions.mix(RSEQC.out.versions.first())
     }
 
     /*
@@ -104,7 +104,7 @@ workflow QC_ALIGNMENT {
             ch_hs_metrics = HS_METRICS.out.qc
                 .map { it[1] }
             // [ [meta], path("*") ]
-            ch_versions = ch_versions.mix(HS_METRICS.out.versions)
+            ch_versions = ch_versions.mix(HS_METRICS.out.versions.first())
 
     }
         
@@ -120,19 +120,19 @@ workflow QC_ALIGNMENT {
                 ch_bam_bai
             )
             ch_bam_stat = SAMTOOLS_VIEW.out.data
-            ch_versions = ch_versions.mix(SAMTOOLS_VIEW.out.versions)
+            ch_versions = ch_versions.mix(SAMTOOLS_VIEW.out.versions.first())
 
             SAMTOOLS_VIEW_HOST(
                 ch_bam_bai_host
             )
             ch_bam_stat_host = SAMTOOLS_VIEW_HOST.out.data
-            ch_versions = ch_versions.mix(SAMTOOLS_VIEW_HOST.out.versions)
+            ch_versions = ch_versions.mix(SAMTOOLS_VIEW_HOST.out.versions.first())
 
             SAMTOOLS_VIEW_XENO(
                 ch_bam_bai_xeno
             )
             ch_bam_stat_xeno = SAMTOOLS_VIEW_XENO.out.data
-            ch_versions = ch_versions.mix(SAMTOOLS_VIEW_XENO.out.versions)
+            ch_versions = ch_versions.mix(SAMTOOLS_VIEW_XENO.out.versions.first())
     }
 
 

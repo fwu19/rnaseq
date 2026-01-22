@@ -1,7 +1,8 @@
 process MULTIQC {
     label "process_medium"
-    module = ['MultiQC/1.21-foss-2023a']
 
+    container = 'quay.io/biocontainers/multiqc:1.21--pyhdfd78af_0'
+    //module = ['MultiQC/1.21-foss-2023a']
 
     tag "MultiQC on all samples"
 
@@ -33,7 +34,7 @@ process MULTIQC {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        multiqc: \$(multiqc --version | sed "s/ .*//g" )
+        multiqc: \$(multiqc --version 2>&1 | sed "s/ .*//g" )
     END_VERSIONS
     """
 }

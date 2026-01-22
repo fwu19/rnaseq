@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # get arguments
-BASE_DIR="/fh/fast/_SR/Genomics/proj/dstirewa_NPM1/arriba_v2.4.0/"
+# BASE_DIR="/fh/fast/_SR/Genomics/proj/dstirewa_NPM1/arriba_v2.4.0/"
 # STAR_INDEX_DIR="${BASE_DIR}/STAR_index_hg38_GENCODE38"
 ANNOTATION_GTF="${BASE_DIR}/GENCODE38.gtf"
 ASSEMBLY_FA="${BASE_DIR}/hg38.fa"
@@ -20,12 +20,12 @@ PROTEIN_DOMAINS_GFF3="$6"
 THREADS="$7"
 READ1="$8"
 READ2="${9-}"
-out_prefix=$1; shift
 
-
-"$BASE_DIR/arriba" \
+#"$BASE_DIR/arriba" \
+arriba \
         -x $bam \
         -o ${out_prefix}.fusions.tsv -O ${out_prefix}.fusions.discarded.tsv \
-        -a "$ASSEMBLY_FA" -g "$ANNOTATION_GTF" -b "$BLACKLIST_TSV" -k "$KNOWN_FUSIONS_TSV" -t "$TAGS_TSV" -p "$PROTEIN_DOMAINS_GFF3" | tee ${out_prefix}.arriba.log
+        -a "$ASSEMBLY_FA" -g "$ANNOTATION_GTF" -b "$BLACKLIST_TSV" -k "$KNOWN_FUSIONS_TSV" -t "$TAGS_TSV" -p "$PROTEIN_DOMAINS_GFF3" | \
+        tee ${out_prefix}.arriba.log
 
-run_arriba.sh $@
+#run_arriba.sh $@

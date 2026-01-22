@@ -59,7 +59,7 @@ workflow QUANT_GENES {
             experiment
         )
         ch_expr = GENERATE_GENE_COUNT_MATRIX.out.rds
-        ch_versions = ch_versions.mix(GENERATE_GENE_COUNT_MATRIX.out.versions)
+        ch_versions = ch_versions.mix(GENERATE_GENE_COUNT_MATRIX.out.versions.first())
     }else{
         if (params.run_de){
             ch_expr = Channel.fromPath("${params.outdir}/expression_quantification/all_samples.gene_raw_counts.txt")
@@ -70,7 +70,7 @@ workflow QUANT_GENES {
     /*
     * differential genes
     */
-    if (params.run_de && file("${params.comparison}").exists()){
+    if (params.run_de){
        DIFFERENTIAL_GENES(
             samplesheet, 
             file(params.comparison),
@@ -79,7 +79,7 @@ workflow QUANT_GENES {
             gene_txt
         )
         ch_de = DIFFERENTIAL_GENES.out.rds
-        ch_versions = ch_versions.mix(DIFFERENTIAL_GENES.out.versions)
+        ch_versions = ch_versions.mix(DIFFERENTIAL_GENES.out.versions.first())
     }
 
     

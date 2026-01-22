@@ -26,7 +26,7 @@ process SPLIT_FASTQ {
         
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        seqkit: \$( seqkit -h | sed -n 3,3p | sed -e "s/.* //g" )
+        seqkit: \$( seqkit -h 2>&1 | sed -n 3,3p | sed -e "s/.* //g" )
     END_VERSIONS
 
     """

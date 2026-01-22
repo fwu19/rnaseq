@@ -1,7 +1,8 @@
 process COLLAPSE_GTF {
-    module = [ "fhPython/3.11.3-foss-2023a", "bx-python/0.13.0-foss-2023b"]
-
     label 'process_single'
+
+//    container = 'quay.io/biocontainers/mulled-v2-b09526e9169de63faa8bb47ddeb97043262b8aaf:7ff5bd4607a0f73068087f8a88f5d13031c7f58d-0'
+    module = [ "fhPython/3.11.3-foss-2023a", "bx-python/0.13.0-foss-2023b"]
 
     tag "Process a GTF file."
 

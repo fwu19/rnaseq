@@ -25,7 +25,7 @@ workflow PDX_SPLIT_FASTQ {
         ch_reads,
         split_size
     )
-    ch_versions = ch_versions.mix(SPLIT_FASTQ.out.versions)
+    ch_versions = ch_versions.mix(SPLIT_FASTQ.out.versions.first())
 
     ch_reads
         .map{ it -> [ it[1], it ] }
@@ -52,7 +52,7 @@ workflow PDX_SPLIT_FASTQ {
         ch_bam = STAR.out.bam
         ch_bai = STAR.out.bai
         // [ [meta], val(out_prefix), path(bam) ]
-        ch_versions = ch_versions.mix(STAR.out.versions)
+        ch_versions = ch_versions.mix(STAR.out.versions.first())
 
         /*
         * align to host genome for PDX samples
@@ -66,7 +66,7 @@ workflow PDX_SPLIT_FASTQ {
         ch_bam_host = STAR_HOST.out.bam
         ch_bai_host = STAR_HOST.out.bai
         // [ [meta], val(out_prefix), path(bam) ]
-        ch_versions = ch_versions.mix(STAR_HOST.out.versions)
+        ch_versions = ch_versions.mix(STAR_HOST.out.versions.first())
     }
     
     if (params.aligner == 'bwa-mem'){
@@ -78,7 +78,7 @@ workflow PDX_SPLIT_FASTQ {
         ch_bam = BWA_MEM.out.bam
         ch_bai = BWA_MEM.out.bai
         // [ [meta], val(out_prefix), path(bam) ]
-        ch_versions = ch_versions.mix(BWA_MEM.out.versions)
+        ch_versions = ch_versions.mix(BWA_MEM.out.versions.first())
 
         /*
         * align to host genome for PDX samples
@@ -91,7 +91,7 @@ workflow PDX_SPLIT_FASTQ {
         ch_bam_host = BWA_MEM_HOST.out.bam
         ch_bai_host = BWA_MEM_HOST.out.bai
         // [ [meta], val(out_prefix), path(bam) ]
-        ch_versions = ch_versions.mix(BWA_MEM_HOST.out.versions)
+        ch_versions = ch_versions.mix(BWA_MEM_HOST.out.versions.first())
         
     }
 
@@ -121,7 +121,7 @@ workflow PDX_SPLIT_FASTQ {
     )
     ch_bam_xeno = XENOFILTER.out.bam 
     // [ [meta], val(out_prefix), path/to/filtered.bam ]    
-    ch_versions = ch_versions.mix(XENOFILTER.out.versions)
+    ch_versions = ch_versions.mix(XENOFILTER.out.versions.first())
 
     MERGE_BAM(
                 ch_bam_xeno
@@ -132,10 +132,9 @@ workflow PDX_SPLIT_FASTQ {
     ch_bai_xeno = MERGE_BAM.out.bai     
     // ch_bam_xeno.view()
     // [ [meta], val(out_prefix), path("*.{bam,bai}") ]      
-    ch_versions = ch_versions.mix(MERGE_BAM.out.versions)    
+    ch_versions = ch_versions.mix(MERGE_BAM.out.versions.first())    
 
     emit:
-    //versions = ch_versions
     bam = ch_bam_xeno    
     bai = ch_bai_xeno
     versions = ch_versions

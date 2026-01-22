@@ -21,13 +21,13 @@ workflow QC_FASTQ {
             raw_reads
         )
         ch_fastqc = FASTQC.out.qc
-        ch_versions = ch_versions.mix(FASTQC.out.versions)
+        ch_versions = ch_versions.mix(FASTQC.out.versions.first())
 
         FASTQC_TRIMMED(
             trimmed_reads
         )
         ch_fastqc_trimmed = FASTQC_TRIMMED.out.qc
-        ch_versions = ch_versions.mix(FASTQC_TRIMMED.out.versions)
+        ch_versions = ch_versions.mix(FASTQC_TRIMMED.out.versions.first())
     }
 
     emit:

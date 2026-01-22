@@ -26,7 +26,7 @@ workflow MAP_TRANSCRIPTS {
             )
         }
         ch_salmon = SALMON.out.sf
-        ch_versions = ch_versions.mix(SALMON.out.versions)
+        ch_versions = ch_versions.mix(SALMON.out.versions.first())
 
         WRITE_CSV_SALMON(
             ch_salmon

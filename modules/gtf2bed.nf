@@ -1,6 +1,7 @@
 process GTF2BED {
-    container "docker://quay.io/biocontainers/mulled-v2-5c3b70e8ce9caf9b6b1999ab1fa0390894d4b503:2a7ee357fe425dbd45d1b771a8dcadedc6b7242a-0"
     label 'process_single'
+
+    container "docker://quay.io/biocontainers/mulled-v2-5c3b70e8ce9caf9b6b1999ab1fa0390894d4b503:2a7ee357fe425dbd45d1b771a8dcadedc6b7242a-0"
 
     tag "Convert gtf to bed12."
 
@@ -30,7 +31,7 @@ process GTF2BED {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        Perl: \$(perl --version | head -n 1)
+        Perl: \$(perl --version | sed -n 2,2p | sed -e "s/.*(//g; s/).*//g")
     END_VERSIONS
     """
 

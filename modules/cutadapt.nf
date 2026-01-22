@@ -1,6 +1,8 @@
 process CUTADAPT {
     label "process_high"
-    module = ['cutadapt/4.9-GCCcore-12.3.0']
+
+    container = 'quay.io/biocontainers/cutadapt:4.9--py311haab0aaa_3'
+    //module = ['cutadapt/4.9-GCCcore-12.3.0']
 
     tag "CUTADAPT on ${meta.id}"
 
@@ -39,7 +41,7 @@ process CUTADAPT {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        cutadapt: \$( cutadapt -h | head -n 1 | sed -e "s/.* //g" )
+        cutadapt: \$( cutadapt -h 2>&1 | head -n 1 | sed -e "s/.* //g" )
     END_VERSIONS
     """
 }

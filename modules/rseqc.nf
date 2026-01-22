@@ -1,7 +1,8 @@
 process RSEQC {
     label "process_high"
-    module = ['RSeQC/5.0.1-foss-2021b', 'SAMtools/1.17-GCC-12.2.0', 'R/4.1.2-foss-2021b']
 
+    container = 'community.wave.seqera.io/library/rseqc_r-base:2e29d2dfda9cef15'
+    //module = ['RSeQC/5.0.1-foss-2021b', 'SAMtools/1.17-GCC-12.2.0', 'R/4.1.2-foss-2021b']
 
     tag "RSeQC on ${meta.id}"
 
@@ -22,9 +23,8 @@ process RSEQC {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        samtools: \$( samtools --version | head -n 1 | sed -e "s/.* //g" )
-        R: \$(R --version | head -n 1)
-        Python: \$(python --version | head -n 1)
+        R: \$(R --version 2>&1 | head -n 1 | sed -e "s/R version //g; s/ .*//g" )
+        Python: \$(python --version 2>&1 | head -n 1 | sed -e "s/.* //g" )
     END_VERSIONS
 
 

@@ -1,6 +1,8 @@
 process INFER_EXPERIMENT {
     label 'process_single'
-    module = ['RSeQC/5.0.1-foss-2021b']
+
+    container = 'quay.io/biocontainers/rseqc:5.0.1--py39hf95cd2a_1'
+    //module = ['RSeQC/5.0.1-foss-2021b']
 
     tag "Infer strandedness and read type."
 
@@ -20,7 +22,7 @@ process INFER_EXPERIMENT {
     
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        Python: \$(python --version | head -n 1)
+        Python: \$(python --version 2>&1 | head -n 1 | sed -e "s/.* //g" )
     END_VERSIONS
 
     """

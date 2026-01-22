@@ -2,11 +2,13 @@
 
 sampleId=$1; shift
 gtfQC=$1; shift
-strand=${1:-2}; shift
-readType=${1:-PE}; shift
+strand=$(tail -n 1 $1 | cut -f 1 -d , )
+readType=$(tail -n 1 $1 | cut -f 2 -d , )
 
 if [[ $strand -eq 2 ]]; then
     moreArgs="--stranded=RF"
+elif [[ $strand -eq 2 ]]; then
+    moreArgs="--stranded=FR"
 fi
 
 if [[ $readType -eq "SE" ]]; then

@@ -1,7 +1,8 @@
 process GTF2FASTA {
-    module = [ 'gffread/0.12.7-GCCcore-12.3.0' ]
-
     label 'process_single'
+
+    container = 'quay.io/biocontainers/gffread:0.12.7--h077b44d_6'
+    //module = [ 'gffread/0.12.7-GCCcore-12.3.0' ]
 
     tag "Retrieve transcript sequences."
 
@@ -22,7 +23,7 @@ process GTF2FASTA {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        gffread: \$(gffread --version | head -n 1)
+        gffread: \$(gffread --version 2>&1 | head -n 1)
     END_VERSIONS
     """
 

@@ -1,7 +1,8 @@
 process HS_METRICS {
     label "process_medium"
-    module = ['GATK/4.4.0.0-GCCcore-12.2.0-Java-17', 'SAMtools/1.17-GCC-12.2.0']
 
+    container = 'community.wave.seqera.io/library/angsd_gatk_pcangsd_samtools:331c7b441aa26e67'
+    //module = ['GATK/4.4.0.0-GCCcore-12.2.0-Java-17', 'SAMtools/1.17-GCC-12.2.0']
 
     tag "collect hs_metrics on ${meta.id}"
 
@@ -23,7 +24,7 @@ process HS_METRICS {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        samtools: \$( samtools --version | head -n 1 | sed -e "s/.* //g" )
+        samtools: \$( samtools --version 2>&1 | head -n 1 | sed -e "s/.* //g" )
         gatk: \$( gatk --version 2>&1 | sed -n 4,4p | sed -e "s/.* //g" )
     END_VERSIONS
     """

@@ -93,14 +93,14 @@ count2dgelist <- function(
 args <- as.vector(commandArgs(T)) 
 for (arg in strsplit(args, split = "=")){
   assign(arg[1], arg[2])
-} # read arguments: ss, count.dir, gene.txt, length.col
+} # read arguments: ss, count.dir, gene.txt, length.col, experiment
 
 ss <- read.csv(input) %>% 
     mutate(id = factor(id)) %>% 
     relocate(fastq_1, fastq_2, .after = last_col()) %>% 
     unique.data.frame() # sample sheet
 
-count.col <- as.integer(strand) + 2 # for strand=0,1,2
+count.col <- as.integer(read.csv(experiment)$strand) + 2 # for strand=0,1,2
 
 
 ## generate count matrix ####

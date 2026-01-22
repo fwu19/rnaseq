@@ -28,7 +28,7 @@ workflow QUANT_TRANSCRIPTS {
             "EffectiveLength"
         )
         ch_tx_expr = GENERATE_TRANSCRIPT_COUNT_MATRIX.out.rds
-        ch_versions = ch_versions.mix(GENERATE_TRANSCRIPT_COUNT_MATRIX.out.versions)
+        ch_versions = ch_versions.mix(GENERATE_TRANSCRIPT_COUNT_MATRIX.out.versions.first())
 
     }else{
         if (params.run_dt){
@@ -47,7 +47,7 @@ workflow QUANT_TRANSCRIPTS {
             gene_txt
         )
         ch_dt = DIFFERENTIAL_TRANSCRIPTS.out.rds
-        ch_versions = ch_versions.mix(DIFFERENTIAL_TRANSCRIPTS.out.versions)
+        ch_versions = ch_versions.mix(DIFFERENTIAL_TRANSCRIPTS.out.versions.first())
     }
 
 

@@ -1,8 +1,9 @@
 
 process BWA_MEM {
     label "process_high"
-    module = ['BWA/0.7.17-GCCcore-12.2.0', 'SAMtools/1.17-GCC-12.2.0']
 
+    container = 'community.wave.seqera.io/library/bwa_htslib_samtools:56c9f8d5201889a4'
+    //module = ['BWA/0.7.17-GCCcore-12.2.0', 'SAMtools/1.17-GCC-12.2.0']
 
     tag "BWA_MEM on ${out_prefix}"
 

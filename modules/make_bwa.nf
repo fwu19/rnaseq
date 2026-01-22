@@ -1,8 +1,9 @@
 
 process MAKE_BWA {
     label "process_high"
-    module = ['BWA/0.7.17-GCCcore-12.2.0', 'SAMtools/1.17-GCC-12.2.0']
 
+    container = 'community.wave.seqera.io/library/bwa_htslib_samtools:56c9f8d5201889a4'
+    //module = ['BWA/0.7.17-GCCcore-12.2.0', 'SAMtools/1.17-GCC-12.2.0']
 
     tag "Make BWA index"
 
@@ -28,7 +29,7 @@ process MAKE_BWA {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        BWA: \$(BWA --version | head -n 1)
+        bwa: \$( bwa 2>&1 | sed -n 3,3p | sed -e "s/.* //g" )
     END_VERSIONS
 
     """
