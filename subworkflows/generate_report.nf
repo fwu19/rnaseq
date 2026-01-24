@@ -40,12 +40,12 @@ workflow GENERATE_REPORT {
 
     RENDER_REPORT(
         samplesheet, 
-        multiqc, 
-        gene_expr, 
-        de, 
-        tx_expr, 
-        dt, 
-        hs_metrics, 
+        params.run_multiqc ? multiqc : Channel.fromPath("${params.outdir}/MultiQC/multiqc_data/", type: 'dir').ifEmpty([]), 
+        params.run_gene_count ? gene_expr : Channel.fromPath("${params.outdir}/expression_quantification/all_samples.gene_raw_counts.txt").ifEmpty([]), 
+        params.run_de ? de : Channel.fromPath("${params.outdir}/differential_genes/", type: 'dir').ifEmpty([]), 
+        params.run_tx_count ? tx_expr : Channel.fromPath("${params.outdir}/expression_quantification/all_samples.transcript_raw_counts.txt").ifEmpty([]),  
+        params.run_dt ? dt : Channel.fromPath("${params.outdir}/differential_transcripts/", type: 'dir').ifEmpty([]), 
+        params.run_hs_metrics ? hs_metrics : Channel.fromPath("${params.outdir}/QC/gatk/*", type: 'dir').collect().ifEmpty([]), 
         report_dir
     )
     ch_versions = RENDER_REPORT.out.versions

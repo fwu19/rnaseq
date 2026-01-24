@@ -38,10 +38,10 @@ workflow QUANT_TRANSCRIPTS {
     }
 
     /* differential transcripts */
-    if (params.run_dt && file("${params.comparison}").exists()){
-
+    if (params.run_dt){
         DIFFERENTIAL_TRANSCRIPTS(
             samplesheet, 
+            file(params.comparison),
             ch_tx_expr, 
             "EffectiveLength",
             gene_txt

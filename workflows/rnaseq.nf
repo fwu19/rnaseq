@@ -104,8 +104,8 @@ workflow RNASEQ {
         ch_software_versions = ch_software_versions.mix(CHECK_EXPERIMENT.out.versions)
         
     }else {
-        if (params.run_quant_genes && params.run_gene_count){
-            infer_experiment = Channel.fromPath("${params.outdir}/csv/infer_experiment.csv")
+        if ((params.run_quant_genes && params.run_gene_count) || (params.run_qc_alignment && params.run_rnaseqc)){
+            infer_experiment = file("${params.outdir}/csv/infer_experiment.csv")
         }
     }    
 
@@ -358,7 +358,7 @@ workflow RNASEQ {
     /*
     * Collect software versions
     */
-    if (!params.update){
+    if (!params.run_update){
         ch_software_versions
             .collectFile(storeDir: "${params.outdir}/pipeline_info", name: 'software_versions.yml', sort: false, newLine: true)
     }

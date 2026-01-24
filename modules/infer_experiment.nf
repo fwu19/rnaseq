@@ -11,7 +11,7 @@ process INFER_EXPERIMENT {
     path(tx_bed)
 
     output:
-    path ('infer_experiment.csv', emit: csv)
+    path ('infer_experiment.csv'), emit: csv
     path ('versions.yml'), emit: versions
     path ( '*.csv' )
 

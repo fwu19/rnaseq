@@ -71,7 +71,7 @@ workflow QUANT_GENES {
     * differential genes
     */
     if (params.run_de){
-       DIFFERENTIAL_GENES(
+        DIFFERENTIAL_GENES(
             samplesheet, 
             file(params.comparison),
             ch_expr, 

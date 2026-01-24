@@ -70,11 +70,12 @@ workflow CHECK_EXPERIMENT {
                 ch_bai
                     .map{ it -> [ [ it[0], it[1] ], it[2] ]}
             ) 
-            .map { it -> [ it[0][0], it[0][1], it[1], it[2] ]},
+            .map { it -> [ it[0][0], it[0][1], it[1], it[2] ]}
+            .first(),
         tx_bed
     )
     csv = INFER_EXPERIMENT.out.csv
-    ch_versions = ch_versions.mix(INFER_EXPERIMENT.out.versions.first())
+    ch_versions = ch_versions.mix(INFER_EXPERIMENT.out.versions)
 
     emit:
     csv
