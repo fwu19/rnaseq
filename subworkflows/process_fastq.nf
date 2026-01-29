@@ -13,6 +13,7 @@ workflow PROCESS_FASTQ {
     fq // one row per fastq file
     cat_fastq
     trimmer
+    srcdir
 
     main: 
     ch_reads = Channel.empty()
@@ -93,12 +94,12 @@ workflow PROCESS_FASTQ {
 
     /* Write trimmed fastq paths to csv */
     if (params.only_trim_fastq){
-        def my_dir = new File("${params.outdir}")
-        def outdir = my_dir.absolutePath
+        def my_dir = new File("${srcdir}")
+        def srcdir = my_dir.absolutePath
         WRITE_CSV_TRIM_FASTQ(
                 ch_reads_trimmed
                     .map { 
-                        it -> it[0] + [ trimmed_fastq_1: "${outdir}/trimmed_fastq/${it[2].name}" ] + [ trimmed_fastq_2: "${outdir}/trimmed_fastq/${it[3].name}" ] 
+                        it -> it[0] + [ trimmed_fastq_1: "${srcdir}/trimmed_fastq/${it[2].name}" ] + [ trimmed_fastq_2: "${srcdir}/trimmed_fastq/${it[3].name}" ] 
                     }
                     .collect(),
                 "trim_fastq.csv"        

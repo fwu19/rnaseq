@@ -14,7 +14,7 @@ process RNASEQC {
     path(experiment)
 
     output:
-    tuple val(meta), path("${out_prefix}*.{tsv,gct}"), emit: qc
+    path("${out_prefix}*.{tsv,gct}"), emit: qc
     path("${out_prefix}*.{tsv,gct}")
     path ('versions.yml'), emit: versions
 

@@ -13,8 +13,7 @@ process MERGE_BAM {
     tuple val(meta), path("input/*")
     
     output:
-    tuple val(meta), val(meta.id), path("${meta.id}*.bam"), emit: bam 
-    tuple val(meta), val(meta.id), path("${meta.id}*.bam.bai"), emit: bai
+    tuple val(meta), val(meta.id), path("${meta.id}*.bam"), path("${meta.id}*.bam.bai"), emit: bam_bai 
     path("${meta.id}*.{bam,bam.bai}")
     path ('versions.yml'), emit: versions
 

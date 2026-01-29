@@ -15,8 +15,7 @@ process XENOFILTER {
 
 
     output:
-    tuple val(meta), val(out_prefix), path ("*.bam"), emit: bam
-    tuple val(meta), val(out_prefix), path ("*.bai"), emit: bai
+    tuple val(meta), val(out_prefix), path ("*.bam"), path ("*.bai"), emit: bam_bai
     path("*.{bam,bai,log}")
     path ('versions.yml'), emit: versions
     

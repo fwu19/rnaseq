@@ -15,8 +15,7 @@ process BWA_MEM {
     path (bwa_index)
     
     output:
-    tuple val(meta), val(out_prefix), path( "${out_prefix}.bam" ), emit: bam 
-    tuple val(meta), val(out_prefix), path( "${out_prefix}.bam.bai" ), emit: bai
+    tuple val(meta), val(out_prefix), path( "${out_prefix}.bam" ), ath( "${out_prefix}.bam.bai" ), emit: bam_bai 
     path("${out_prefix}.{bam,bam.bai}")
     path ('versions.yml'), emit: versions
 

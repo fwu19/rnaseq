@@ -14,8 +14,8 @@ process FASTP {
 
     output:
     tuple val(meta), val(out_prefix), path("trimmed_fastq/${read1}"), path("trimmed_fastq/${read2}"), emit: fq
-    tuple val(meta), val(out_prefix), path( "${out_prefix}.fastp.json" ), emit: js
-    tuple val(meta), val(out_prefix), path( "${out_prefix}.fastp.html" ), emit: html
+    path( "${out_prefix}.fastp.json" ), emit: js
+    path( "${out_prefix}.fastp.html" ), emit: html
     path ('versions.yml'), emit: versions
 
     script:

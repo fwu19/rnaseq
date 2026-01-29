@@ -1,4 +1,4 @@
-process CHECK_INPUT {
+process GET_INPUT {
     container "docker://fwu19/r-libs:4.1.2" 
 
     label 'process_single'

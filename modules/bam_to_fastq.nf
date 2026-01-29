@@ -11,7 +11,7 @@ process BAM_TO_FASTQ {
     publishDir "${params.outdir}/fastq/${out_prefix}", mode: 'copy'
 
     input:
-    tuple val(meta), val(out_prefix), path(bam)
+    tuple val(meta), val(out_prefix), path(bam), path(bai)
 
     output:
     tuple val(meta), val(out_prefix), path( "${out_prefix}_R1.fastq.gz" ), path( "${out_prefix}_R2.fastq.gz" ), emit: fq

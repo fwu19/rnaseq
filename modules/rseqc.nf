@@ -13,8 +13,7 @@ process RSEQC {
     path(tx_bed)
 
     output:
-    tuple val(meta), path("${out_prefix}*.{txt,pdf,r,bed,log,xls,xlsx}"), emit: qc
-    path("${out_prefix}*.{txt,pdf,r,bed,log,xls,xlsx}")
+    path("${out_prefix}*.{txt,pdf,r,bed,log,xls,xlsx}"), emit: qc
     path ('versions.yml'), emit: versions
 
     script:

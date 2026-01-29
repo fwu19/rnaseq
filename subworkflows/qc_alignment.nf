@@ -12,15 +12,13 @@ include { SAMTOOLS_VIEW as SAMTOOLS_VIEW_XENO } from '../modules/samtools_view.n
 
 workflow QC_ALIGNMENT {
     take:
-    bam
-    bai
-    bam_host
-    bai_host
-    bam_xeno
-    bai_xeno
+    ch_bam_bai
+    ch_bam_bai_host
+    ch_bam_bai_xeno
     collapsed_gtf
     tx_bed
-    experiment
+    infer_experiment
+    srcdir
     
     main: 
     ch_rnaseqc = Channel.empty()
@@ -32,47 +30,13 @@ workflow QC_ALIGNMENT {
     ch_versions = Channel.empty()
     
     /*
-    * Build bam/bai channels
-    */
-    bam
-        .map{ it -> [ [ it[0], it[1] ], it[2] ]}
-        .join (
-            bai
-                .map{ it -> [ [ it[0], it[1] ], it[2] ]}
-        )
-        .map { it -> [ it[0][0], it[0][1], it[1], it[2] ]}
-        .set { ch_bam_bai }
-                    
-    
-    if (params.workflow == 'pdx'){
-        bam_host
-            .map{ it -> [ [ it[0], it[1] ], it[2] ]}
-            .join (
-                bai_host
-                    .map{ it -> [ [ it[0], it[1] ], it[2] ]}
-            )
-            .map { it -> [ it[0][0], it[0][1], it[1], it[2] ]}
-            .set { ch_bam_bai_host }
-
-        bam_xeno
-            .map{ it -> [ [ it[0], it[1] ], it[2] ]}
-            .join (
-                bai_xeno
-                    .map{ it -> [ [ it[0], it[1] ], it[2] ]}
-            )
-            .map { it -> [ it[0][0], it[0][1], it[1], it[2] ]}
-            .set { ch_bam_bai_xeno }
-        
-    }
-
-    /*
     * RNASeQC
     */
     if (params.run_rnaseqc){
         RNASEQC(
             params.workflow == 'pdx' ? ch_bam_bai_xeno : ch_bam_bai,
             collapsed_gtf,
-            experiment
+            params.run_infer_experiment ? infer_experiment : file("${srcdir}/csv/infer_experiment.csv")
         )            
         ch_rnaseqc = RNASEQC.out.qc
         // [ [meta], path("*") ]

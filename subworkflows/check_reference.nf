@@ -13,12 +13,13 @@ include { GTF2BED  } from '../modules/gtf2bed.nf'
 include { GTF2FASTA  } from '../modules/gtf2fasta.nf'
 
 
-workflow GET_REFERENCE {
+workflow CHECK_REFERENCE {
     take:
     fa_str
     gtf_str
     aligner
     aligner_index // could be null
+    srcdir
 
     main: 
     index_dir = Channel.empty()
@@ -37,7 +38,7 @@ workflow GET_REFERENCE {
     */
     /* generate genes.gtf */
     if (params.run_gene_count || params.run_dt){
-        File ref = new File("${params.outdir}/references/${params.genome}/genes.txt")
+        File ref = new File("${srcdir}/references/${params.genome}/genes.txt")
         if (params.gene_txt){
             gene_txt = file(params.gene_txt, checkIfExists: true)
         } else if (ref.exists()){
@@ -51,7 +52,7 @@ workflow GET_REFERENCE {
 
     /* generate transcripts.fa */
     if (params.run_salmon){
-        File ref = new File("${params.outdir}/references/${params.genome}/transcripts.fa")
+        File ref = new File("${srcdir}/references/${params.genome}/transcripts.fa")
         if (params.tx_fa){
             tx_fa = file(params.tx_fa, checkIfExists:true)
         } else if (ref.exists()){
@@ -69,7 +70,7 @@ workflow GET_REFERENCE {
 
     /* generate transcripts.txt */
     if (params.run_tx_count){
-        File ref = new File("${params.outdir}/references/${params.genome}/transcripts.txt")
+        File ref = new File("${srcdir}/references/${params.genome}/transcripts.txt")
         if (params.tx_txt){
             tx_txt = file(params.tx_txt, checkIfExists:true)
         } else if (ref.exists()){

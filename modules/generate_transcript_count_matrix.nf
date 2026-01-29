@@ -4,7 +4,7 @@ process GENERATE_TRANSCRIPT_COUNT_MATRIX {
     container "docker://fwu19/r-libs:4.1.2" 
 
 
-    tag "Differential transcripts"
+    tag "generate transcript-level count matrix"
 
     publishDir "${params.outdir}/transcript_expression/", mode: 'copy'
     

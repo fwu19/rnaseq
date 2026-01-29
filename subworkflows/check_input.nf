@@ -3,9 +3,9 @@
 */
 
 include { GET_FASTQ_PATHS } from '../modules/get_fastq_paths'
-include { CHECK_INPUT  } from '../modules/check_input.nf'
+include { GET_INPUT  } from '../modules/get_input.nf'
 
-workflow GET_INPUT {
+workflow CHECK_INPUT {
     take:
     input
     input_dir
@@ -29,13 +29,13 @@ workflow GET_INPUT {
             ch_versions = ch_versions.mix(GET_FASTQ_PATHS.out.versions.first())
         }
         
-        CHECK_INPUT(
+        GET_INPUT(
             input,
             metadata
         )
-        samplesheet = CHECK_INPUT.out.csv
-        fq = CHECK_INPUT.out.fq
-        ch_versions = ch_versions.mix(CHECK_INPUT.out.versions.first())
+        samplesheet = GET_INPUT.out.csv
+        fq = GET_INPUT.out.fq
+        ch_versions = ch_versions.mix(GET_INPUT.out.versions.first())
         
     }
 

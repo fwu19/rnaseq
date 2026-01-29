@@ -13,6 +13,7 @@ workflow CHECK_EXPERIMENT {
     fq
     aligner_index
     tx_bed
+    srcdir
 
     main: 
     ch_reads= Channel.empty()
@@ -21,61 +22,57 @@ workflow CHECK_EXPERIMENT {
     ch_versions = Channel.empty()
     csv = Channel.empty()
 
-    ch_reads = fq
+    File saved = new File("${srcdir}/csv/infer_experiment.csv")
+    if (saved.exists()){
+        csv = file(saved)
+    }else{
+
+        ch_reads = fq
         .splitCsv(header: true)
         .map {
             row -> [ row, row.id, row.fastq_1, row.fastq_2 ]
         }
 
-    SAMPLE_FASTQ(
+        SAMPLE_FASTQ(
         ch_reads.first(),
         1000000
-    )
-    sub_reads = SAMPLE_FASTQ.out.fq
+        )
+        sub_reads = SAMPLE_FASTQ.out.fq
 
-    if (params.aligner == 'star'){            
+        if (params.aligner == 'star'){            
         STAR(
             sub_reads,
             params.genome, 
             aligner_index, 
             params.gtf
         )
-        ch_bam = STAR.out.bam
-        // [ [meta], val(out_prefix), path(bam) ]
-        ch_bai = STAR.out.bai
-        // [ [meta], val(out_prefix), path(bai) ]
+        ch_bam_bai = STAR.out.bam_bai
+        // [ [meta], val(out_prefix), path(bam), path(bai) ]
         ch_versions = ch_versions.mix(STAR.out.versions.first())
 
-    }
+        }
     
-    if (params.aligner == 'bwa-mem'){
+        if (params.aligner == 'bwa-mem'){
 
         BWA_MEM(
             sub_reads, 
             params.genome, 
             aligner_index
         )
-        ch_bam = BWA_MEM.out.bam
-        // [ [meta], val(out_prefix), path(bam) ]
-        ch_bai = BWA_MEM.out.bai
-        // [ [meta], val(out_prefix), path(bai) ]
+        ch_bam = BWA_MEM.out.bam_bai
+        // [ [meta], val(out_prefix), path(bam), path(bai) ]
         ch_versions = ch_versions.mix(BWA_MEM.out.versions.first())
 
-    }
+        }
 
-    INFER_EXPERIMENT(
-        ch_bam
-            .map{ it -> [ [ it[0], it[1] ], it[2] ]}
-            .join (
-                ch_bai
-                    .map{ it -> [ [ it[0], it[1] ], it[2] ]}
-            ) 
-            .map { it -> [ it[0][0], it[0][1], it[1], it[2] ]}
-            .first(),
+        INFER_EXPERIMENT(
+        ch_bam_bai,
         tx_bed
-    )
-    csv = INFER_EXPERIMENT.out.csv
-    ch_versions = ch_versions.mix(INFER_EXPERIMENT.out.versions)
+        )
+        csv = INFER_EXPERIMENT.out.csv
+        ch_versions = ch_versions.mix(INFER_EXPERIMENT.out.versions)
+
+    }
 
     emit:
     csv

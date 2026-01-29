@@ -14,11 +14,15 @@ process MULTIQC {
     path ( 'cutadapt/*' )
     path ( 'fastp/*' )
     path ( 'fastqc_trimmed/*' )
-    path ( 'rseqc/*' )
-    path ( 'rnaseqc/*' )
-    path ( 'gatk/*' )
     path ( 'star_log/*' )
+    path ( 'rnaseqc/*' )
+    path ( 'rseqc/*' )
+    path ( 'samtools/*' )
+    path ( 'samtools_host/*' )
+    path ( 'samtools_xeno/*' )
+    path ( 'gatk/*' )
     path ( 'star_count/*' )
+    path ( 'featureCounts/*' )
     path ( 'salmon/*' )
 
     output:
@@ -30,6 +34,7 @@ process MULTIQC {
     script:
     def args = task.ext.args ?: ''
     """
+    [[ ${params.workflow} == 'pdx' ]] && mv samtools/ samtools_graft/
     multiqc -f --ignore _STARpass1/ --config $multiqc_config .
 
     cat <<-END_VERSIONS > versions.yml
