@@ -3,7 +3,7 @@ process RENDER_REPORT {
 
     label "process_single"
 
-    tag "Make plots of read and peak metrics "
+    tag "Render a report"
 
     input:
     path ( "sample_sheet.csv" )

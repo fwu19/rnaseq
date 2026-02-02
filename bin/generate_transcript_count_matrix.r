@@ -116,8 +116,7 @@ ss <- read.csv(input) %>%
 ## generate count matrix ####
 count.dirs <- list.dirs(count.dir, full.names = T, recursive = F)
 lst <- generate_count_matrix_salmon(tx.txt, count.dirs)
-lst  %>% 
-    bind_cols() %>% 
+cbind(lst$features, lst$counts) %>% 
     write.table('all_samples.transcript_raw_counts.txt', sep = '\t', quote = F, row.names = F)
 
 ## create DGElist ####

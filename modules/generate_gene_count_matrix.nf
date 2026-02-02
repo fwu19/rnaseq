@@ -3,7 +3,7 @@ process GENERATE_GENE_COUNT_MATRIX {
     container "docker://fwu19/r-libs:4.1.2" 
 
 
-    tag "generate count matrix"
+    tag "generate gene-level count matrix"
 
     publishDir "saved_data/", mode: 'copy'
     

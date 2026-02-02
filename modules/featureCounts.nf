@@ -9,7 +9,7 @@ process FEATURECOUNTS {
     publishDir "${params.outdir}/featureCounts/", pattern: "${meta.id}*.{txt,summary}", mode: 'copy'
 
     input:
-    tuple val(meta), val(out_prefix), path( bam )
+    tuple val(meta), val(out_prefix), path( bam ), path(bai)
     path (gtf)
     val (experiment)
     

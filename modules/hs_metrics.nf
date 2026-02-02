@@ -14,8 +14,7 @@ process HS_METRICS {
     path(target_region)
 
     output:
-    tuple val(meta), path("${out_prefix}*.hs_metrics.txt"), emit: qc
-    tuple val(meta), path("${out_prefix}*.hs_metrics.txt")
+    path("${out_prefix}*.hs_metrics.txt"), emit: qc
     path ('versions.yml'), emit: versions
 
     script:

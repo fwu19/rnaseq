@@ -2,7 +2,7 @@
 process SALMON {
     label "process_high"
 
-    container = 'community.wave.seqera.io/library/bamtools_salmon_samtools:22d508928f8d86c7'
+    container = 'quay.io/biocontainers/salmon:1.10.1--hecfa306_2'
     //module = ['Salmon/1.10.1-GCC-12.2.0', 'SAMtools/1.17-GCC-12.2.0']
 
     tag "Salmon on ${out_prefix}"

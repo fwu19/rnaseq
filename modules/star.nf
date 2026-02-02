@@ -17,13 +17,11 @@ process STAR {
     path (gtf)
     
     output:
-    tuple val(meta), val(out_prefix), path( "${out_prefix}.bam" ), emit: bam 
-    tuple val(meta), val(out_prefix), path( "${out_prefix}.bam.bai" ), emit: bai
-    tuple val(meta), val(out_prefix), path( "output/${out_prefix}.toTranscriptome.out.bam" ),emit: tx_bam 
-    tuple val(meta), val(out_prefix), path( "output/${out_prefix}.ReadsPerGene.out.tab" ), emit: counts
-    tuple val(meta), val(out_prefix), path( "output/${out_prefix}.Log.final.out" ), emit: log
+    tuple val(meta), val(out_prefix), path( "${out_prefix}.bam" ), path( "${out_prefix}.bam.bai" ), emit: bam_bai
+    tuple val(meta), val(out_prefix), path( "${out_prefix}/${out_prefix}.Aligned.toTranscriptome.out.bam" ),emit: tx_bam 
+    tuple val(meta), val(out_prefix), path( "${out_prefix}/${out_prefix}.ReadsPerGene.out.tab" ), emit: counts
+    path( "${out_prefix}.Log.final.out" ), emit: log
     path("${out_prefix}/", type: 'dir')
-    path("${out_prefix}.{bam,bam.bai}")
     path ('versions.yml'), emit: versions
 
     script:
@@ -36,14 +34,10 @@ process STAR {
 
     mv ${out_prefix}/Aligned.sortedByCoord.out.bam ${out_prefix}.bam
     mv ${out_prefix}/Aligned.sortedByCoord.out.bam.bai ${out_prefix}.bam.bai
+    mv ${out_prefix}/ReadsPerGene.out.tab ${out_prefix}/${out_prefix}.ReadsPerGene.out.tab
+    mv ${out_prefix}/Aligned.toTranscriptome.out.bam ${out_prefix}/${out_prefix}.Aligned.toTranscriptome.out.bam
+    cp ${out_prefix}/Log.final.out ${out_prefix}.Log.final.out
 
-    mkdir output
-    cd output
-    ln -s ../${out_prefix}/Aligned.toTranscriptome.out.bam ${out_prefix}.toTranscriptome.out.bam
-    ln -s ../${out_prefix}/ReadsPerGene.out.tab ${out_prefix}.ReadsPerGene.out.tab
-    ln -s ../${out_prefix}/Log.final.out ${out_prefix}.Log.final.out
-    
-    cd -
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         STAR: \$(STAR --version | head -n 1)

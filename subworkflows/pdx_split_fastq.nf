@@ -19,6 +19,9 @@ workflow PDX_SPLIT_FASTQ {
 
 
     main:
+    ch_bam_bai = Channel.empty()
+    ch_bam_bai_host = Channel.empty()
+    ch_bam_bai_xeno = Channel.empty()
     ch_versions = Channel.empty()
 
     SPLIT_FASTQ(
@@ -37,10 +40,6 @@ workflow PDX_SPLIT_FASTQ {
         .map{ it -> [ it[0][1][0], it[1][1], it[1][2], it[1][3] ]}
         .set{ ch_reads_in}
 
-    ch_bam = Channel.empty()
-    ch_bam_host = Channel.empty()
-    ch_bam_xeno = Channel.empty()
-    ch_bai_xeno = Channel.empty()
 
     if (params.aligner == 'star'){
         STAR(
@@ -49,9 +48,8 @@ workflow PDX_SPLIT_FASTQ {
             aligner_index, 
             params.gtf
         )
-        ch_bam = STAR.out.bam
-        ch_bai = STAR.out.bai
-        // [ [meta], val(out_prefix), path(bam) ]
+        ch_bam_bai = STAR.out.bam_bai
+        // [ [meta], val(out_prefix), path(bam), path(bai) ]
         ch_versions = ch_versions.mix(STAR.out.versions.first())
 
         /*
@@ -63,9 +61,8 @@ workflow PDX_SPLIT_FASTQ {
                 aligner_index_host, 
                 params.gtf_host
         )
-        ch_bam_host = STAR_HOST.out.bam
-        ch_bai_host = STAR_HOST.out.bai
-        // [ [meta], val(out_prefix), path(bam) ]
+        ch_bam_bai_host = STAR_HOST.out.bam_bai
+        // [ [meta], val(out_prefix), path(bam), path(bai) ]
         ch_versions = ch_versions.mix(STAR_HOST.out.versions.first())
     }
     
@@ -75,68 +72,55 @@ workflow PDX_SPLIT_FASTQ {
         params.genome, 
         aligner_index
         )
-        ch_bam = BWA_MEM.out.bam
-        ch_bai = BWA_MEM.out.bai
-        // [ [meta], val(out_prefix), path(bam) ]
+        ch_bam_bai = BWA_MEM.out.bam_bai
+        // [ [meta], val(out_prefix), path(bam), path(bai) ]
         ch_versions = ch_versions.mix(BWA_MEM.out.versions.first())
 
         /*
         * align to host genome for PDX samples
         */
         BWA_MEM_HOST(
-                ch_reads_in, 
-                params.genome_host, 
-                aligner_index_host
+            ch_reads_in, 
+            params.genome_host, 
+            aligner_index_host
         )
-        ch_bam_host = BWA_MEM_HOST.out.bam
-        ch_bai_host = BWA_MEM_HOST.out.bai
-        // [ [meta], val(out_prefix), path(bam) ]
+        ch_bam_bai_host = BWA_MEM_HOST.out.bam_bai
+        // [ [meta], val(out_prefix), path(bam), path(bai) ]
         ch_versions = ch_versions.mix(BWA_MEM_HOST.out.versions.first())
         
     }
 
-    ch_bam
-                .map{ it -> [ [ it[0], it[1] ], it[2] ]}
-                .join (
-                    ch_bai
-                        .map{ it -> [ [ it[0], it[1] ], it[2] ]}
-                )
-                .join (
-                    ch_bam_host
-                        .map{ it -> [ [ it[0], it[1] ], it[2] ]}
-                )
-                .join (
-                    ch_bai_host
-                        .map{ it -> [ [ it[0], it[1] ], it[2] ]}
-                )
-                .map{ it -> [ it[0][0], it[0][1], it[1], it[2], it[3], it[4] ] }
-                .set { ch_bam_bai_paired }
-    // ch_bam_bai_paired.view()
+    ch_bam_bai
+        .map{ it -> [ [ it[0], it[1] ], it[2], it[3] ]}
+        .join (
+            ch_bam_bai_host
+                .map{ it -> [ [ it[0], it[1] ], it[2], it[3] ]}
+        )
+        .map{ it -> [ it[0][0], it[0][1], it[1], it[2], it[3], it[4] ] }
+        .set { ch_bam_bai_paired }
     // [ [meta], val(out_prefix), [path/to/graft.{bam,bai}], [path/to/host.{bam,bai}]]
 
     XENOFILTER(
-                ch_bam_bai_paired, 
-                params.genome, 
-                params.mm_threshold
+        ch_bam_bai_paired, 
+        params.genome, 
+        params.mm_threshold
     )
-    ch_bam_xeno = XENOFILTER.out.bam 
-    // [ [meta], val(out_prefix), path/to/filtered.bam ]    
+    ch_bam_bai_xeno = XENOFILTER.out.bam_bai 
+    // [ [meta], val(out_prefix), path(bam), path(bai) ]    
     ch_versions = ch_versions.mix(XENOFILTER.out.versions.first())
 
     MERGE_BAM(
-                ch_bam_xeno
-                .map{ it -> [ it[0], it[2] ]}
-                .groupTuple( by: [0] )
+        ch_bam_bai_xeno
+        .map{ it -> [ it[0], it[2] ]}
+        .groupTuple( by: [0] )
     )
-    ch_bam_xeno = MERGE_BAM.out.bam
-    ch_bai_xeno = MERGE_BAM.out.bai     
+    ch_bam_bai_xeno = MERGE_BAM.out.bam_bai    
     // ch_bam_xeno.view()
     // [ [meta], val(out_prefix), path("*.{bam,bai}") ]      
     ch_versions = ch_versions.mix(MERGE_BAM.out.versions.first())    
 
     emit:
-    bam = ch_bam_xeno    
-    bai = ch_bai_xeno
+    bam_bai = ch_bam_bai_xeno    
     versions = ch_versions
     
 }

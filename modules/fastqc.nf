@@ -12,7 +12,7 @@ process FASTQC {
     tuple val(meta), val(out_prefix), path("${out_prefix}_R1.fastq.gz"), path("${out_prefix}_R2.fastq.gz")
     
     output:
-    tuple val(meta), path("*.{html,zip}"), emit: qc
+    path("*.{html,zip}"), emit: qc
     path ('versions.yml'), emit: versions
 
     script:
