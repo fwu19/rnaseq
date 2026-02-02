@@ -46,7 +46,6 @@ workflow WRITE_PARAMS {
         }
     }
 
-
     // 2) Compare with final params
     def FINAL_PARAMS     = params
     def OVERRIDDEN_PARAMS = [:]
