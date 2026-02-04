@@ -12,7 +12,6 @@ workflow QUANT_GENES {
     ch_bam_bai
     ch_star_counts
     gene_txt
-    tx_bed
     infer_experiment
     srcdir
 

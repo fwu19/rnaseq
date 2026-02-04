@@ -17,7 +17,7 @@ include { WRITE_PARAMS } from '../subworkflows/write_params.nf'
 
 include { ARRIBA  } from '../modules/arriba.nf'
 
-
+//Validate required parameters
 if ( params.genome_fa == null && params.run_build_index ){
     exit 1, "Need to provide a valid path with --genome_fa path/to/genome/fasta."
 }
@@ -25,6 +25,41 @@ if ( params.genome_fa == null && params.run_build_index ){
 if ( params.gtf == null && (params.run_gene_count || params.run_tx_count)){
     exit 1, "Need to provide a valid path with --gtf path/to/genes/gtf."
 }
+
+// Define step options
+def step_options = ["mapping","expression_quantification","differential_expression"]
+if (!(params.step in step_options)){ 
+    exit 1, "Invalid option for --step. Available options: ${step_options.join(', ')}"
+}
+
+// Define update options
+def update_options = [null, "qc_fastq", "qc_alignment", "gene_expression", "differential_genes", "transcript_expression", "differential_transcripts"]
+if(!(params.update in update_options )){ 
+    exit 1, "Invalid option for --update. Available options: ${update_options.findAll{it != null}.join(', ')}"
+}
+
+
+// Define aligner options
+def aligner_options = ["star", "bwa-mem"]
+if(!params.aligner in aligner_options){
+    exit 1, "Invalid option for --aligner. Available options: ${aligner_options.join(', ')}"
+}
+
+// Define tools to run and handle skip_tools parameter
+def tools = "cutadapt,fastp,fastqc,rnaseqc,rseqc,star,bwa-mem,salmon,arriba"
+def all_tools = tools.split(',')*.trim() 
+if ( params.skip_tools != null ) {
+    def skip_tools = params.skip_tools.split(',')*.trim()
+
+    def use_tools = all_tools.intersect(skip_tools)
+
+    if (!common) {
+        exit 1, "Invalid option for --skip_tools. Available options: ${all_tools.split(',').join(', ')}"
+    }
+}
+
+// Define a dummy file path
+dummy_file = "$projectDir/assets/dummy_file.csv"
 
 
 workflow RNASEQ {
@@ -66,9 +101,9 @@ workflow RNASEQ {
     ch_input = Channel.fromPath( params.input, checkIfExists: true )
     if (params.run_input_check){
         CHECK_INPUT(
-            file(params.input, checkIfExists: true),
-            file(params.input_dir, checkIfExists: true),
-            file(params.metadata, checkIfExists: true)
+            params.input ? file(params.input) : file(dummy_file),
+            params.input_dir ? file(params.input_dir) : file(dummy_file),
+            params.metadata ? file(params.metadata) : file(dummy_file)
         )
         samplesheet = CHECK_INPUT.out.samplesheet
         fq = CHECK_INPUT.out.fq
@@ -164,7 +199,6 @@ workflow RNASEQ {
                 params.workflow == 'pdx' ? ch_bam_bai_xeno.ifEmpty([]) : ch_bam_bai.ifEmpty([]),
                 ch_star_counts.ifEmpty([]),
                 gene_txt,
-                tx_bed,
                 infer_experiment.ifEmpty([]),
                 srcdir
             )
@@ -327,14 +361,6 @@ workflow RNASEQ {
 }
 
 ////////////////////////////////////////////////////
-/* --              COMPLETION EMAIL            -- */
+/* --              COMPLETION            -- */
 ////////////////////////////////////////////////////
 
-import groovy.json.JsonOutput
-workflow.onComplete {
-    def jsonStr = JsonOutput.toJson(params)
-    def pretty  = JsonOutput.prettyPrint(jsonStr)
-    def dir     = file(params.info_dir)
-    dir.mkdirs()
-    file("${params.info_dir}/params.json").text = pretty
-}

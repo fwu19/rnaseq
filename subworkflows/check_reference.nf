@@ -37,7 +37,7 @@ workflow CHECK_REFERENCE {
     *   Process GTF
     */
     /* generate genes.gtf */
-    if (params.run_gene_count || params.run_dt){
+    if (params.run_gtf2genes){
         File ref = new File("${srcdir}/references/${params.genome}/genes.txt")
         if (params.gene_txt){
             gene_txt = file(params.gene_txt, checkIfExists: true)
@@ -51,7 +51,7 @@ workflow CHECK_REFERENCE {
     }
 
     /* generate transcripts.fa */
-    if (params.run_salmon){
+    if (params.run_gtf2fasta){
         File ref = new File("${srcdir}/references/${params.genome}/transcripts.fa")
         if (params.tx_fa){
             tx_fa = file(params.tx_fa, checkIfExists:true)
@@ -69,7 +69,7 @@ workflow CHECK_REFERENCE {
     }
 
     /* generate transcripts.txt */
-    if (params.run_tx_count){
+    if (params.run_gtf2tx){
         File ref = new File("${srcdir}/references/${params.genome}/transcripts.txt")
         if (params.tx_txt){
             tx_txt = file(params.tx_txt, checkIfExists:true)
@@ -83,7 +83,7 @@ workflow CHECK_REFERENCE {
     }
 
     /* collapse gtf for RNA-SeQC */
-    if (params.run_rnaseqc){
+    if (params.run_collapse_gtf){
         if (params.rnaseqc_gtf){
                 collapsed_gtf = file(params.rnaseqc_gtf, checkIfExists:true)
         }else{
@@ -94,7 +94,7 @@ workflow CHECK_REFERENCE {
     }
 
     /* transcripts.bed for RSeQC */
-    if (params.run_rseqc){
+    if (params.run_gtf2bed){
         if (params.rseqc_bed){
                 tx_bed = file(params.tx_bed, checkIfExists:true)
         }else{

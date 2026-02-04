@@ -523,9 +523,19 @@ cmp <- cmp %>%
         test_group = gsub('-| +|&', '.', test_group),
         control_group = gsub('-| +|&', '.', control_group)
     ) %>% 
-    fill_column('out_prefix', paste(gsub(';','-', cmp$test_group), gsub(';','-', cmp$control_group), sep = '_vs_')) %>% 
-    fill_column('plot_title', paste(gsub(';','+', cmp$test_group), gsub(';','+', cmp$control_group), sep = ' vs ')) %>% 
-    fill_column('comparison_group', '') %>% 
+    fill_column(
+      'out_prefix', 
+      paste(gsub(';','-', cmp$test_group), gsub(';','-', cmp$control_group), sep = '_vs_'),
+      paste(gsub(';','-', cmp$test_group), gsub(';','-', cmp$control_group), sep = '_vs_'),
+      paste(gsub(';','-', cmp$test_group), gsub(';','-', cmp$control_group), sep = '_vs_')
+      ) %>% 
+    fill_column(
+      'plot_title', 
+      paste(gsub(';','+', cmp$test_group), gsub(';','+', cmp$control_group), sep = ' vs '),
+      paste(gsub(';','+', cmp$test_group), gsub(';','+', cmp$control_group), sep = ' vs '),
+      paste(gsub(';','+', cmp$test_group), gsub(';','+', cmp$control_group), sep = ' vs ')
+      ) %>% 
+    fill_column('comparison_group', '', '', '') %>% 
     fill_column('model_formula', '~0+group', '~0+group', '~0+group' ) %>% 
     fill_column('include_samples', NA, NA, NA) %>% 
     fill_column('exclude_samples', NA, NA, NA) %>% 
@@ -620,3 +630,9 @@ for (i in 1:nrow(cmp)){
 names(de.list) <- basename(dirname(cmp$file_base))
 saveRDS(de.list, ifelse(grepl('transcript', count_file), 'differential_transcripts.rds', 'differential_genes.rds'))
 
+cmp %>% 
+  dplyr::select(-c(n, file_base)) %>% 
+  write.table(
+    ifelse(grepl('transcript', count_file), 'comparisons.differential_transcripts.csv', 'comparisons.differential_genes.csv'),
+    sep = ',', quote = F, row.names = F
+    )
