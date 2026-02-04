@@ -70,7 +70,7 @@ workflow WRITE_PARAMS {
          */
         def FINAL_PARAMS      = params
         def OVERRIDDEN_PARAMS = [:]
-        def SKIP_KEYS        = [ 'info_dir' ]
+        def SKIP_KEYS        = [ 'info_dir', 'input', 'input_dir', 'comparison' ]
 
         BASE_PARAMS.each { key, defaultVal ->
             def finalVal = FINAL_PARAMS.containsKey(key) && FINAL_PARAMS[key] != null \
@@ -87,6 +87,9 @@ workflow WRITE_PARAMS {
                 OVERRIDDEN_PARAMS[key] = v
             }
         }
+
+        OVERRIDDEN_PARAMS['input'] = "${params.outdir}/csv/samplesheet.valid.csv"
+        OVERRIDDEN_PARAMS['comparison'] = "${params.outdir}/csv/comparisons.differential_genes.csv"
 
         /*
          * 3) Emit JSON

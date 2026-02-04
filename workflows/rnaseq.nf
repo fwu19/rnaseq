@@ -13,6 +13,7 @@ include { QC_FASTQ } from '../subworkflows/qc_fastq.nf'
 include { QC_ALIGNMENT } from '../subworkflows/qc_alignment.nf'
 include { GENERATE_REPORT } from '../subworkflows/generate_report.nf'
 include { WRITE_OUTPUT_CSV } from '../subworkflows/write_output_csv.nf'
+include { UPDATE_OUTPUT_CSV } from '../subworkflows/update_output_csv.nf'
 include { WRITE_PARAMS } from '../subworkflows/write_params.nf'
 
 include { ARRIBA  } from '../modules/arriba.nf'
@@ -33,7 +34,7 @@ if (!(params.step in step_options)){
 }
 
 // Define update options
-def update_options = [null, "qc_fastq", "qc_alignment", "gene_expression", "differential_genes", "transcript_expression", "differential_transcripts"]
+def update_options = [null, "qc_fastq", "qc_alignment", "gene_expression", "differential_genes", "transcript_expression", "differential_transcripts", "csv"]
 if(!(params.update in update_options )){ 
     exit 1, "Invalid option for --update. Available options: ${update_options.findAll{it != null}.join(', ')}"
 }
@@ -223,7 +224,7 @@ workflow RNASEQ {
         // not available yet
 
         /*  Collect transcript-level counts and call differential transcripts */
-        if ((params.run_quant_transcripts)){
+        if (params.run_quant_transcripts){
 
             QUANT_TRANSCRIPTS(
                 samplesheet,
@@ -339,14 +340,21 @@ workflow RNASEQ {
     /*
     * Write output file paths
     */
-    WRITE_OUTPUT_CSV(
-        ch_bam_bai.ifEmpty([]),
-        ch_bam_bai_host.ifEmpty([]),
-        ch_bam_bai_xeno.ifEmpty([]),
-        ch_star_counts.ifEmpty([]),
-        ch_fc_counts.ifEmpty([]),
-        ch_salmon.ifEmpty([])
-    )
+    if (params.update == 'csv'){
+        UPDATE_OUTPUT_CSV(
+            samplesheet
+        )
+    }else{
+        WRITE_OUTPUT_CSV(
+            ch_bam_bai.ifEmpty([]),
+            ch_bam_bai_host.ifEmpty([]),
+            ch_bam_bai_xeno.ifEmpty([]),
+            ch_star_counts.ifEmpty([]),
+            ch_fc_counts.ifEmpty([]),
+            ch_salmon.ifEmpty([])
+        )
+    }
+    
 
     /*
     * Collect software versions
