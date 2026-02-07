@@ -90,10 +90,11 @@ count2dgelist <- function(
 
 
 ## read arguments ####
+# input=$samplesheet count.dir=counts gene.txt=$gene_txt length.col=$length_col experiment=$experiment workflow=${params.workflow}
 args <- as.vector(commandArgs(T)) 
-for (arg in strsplit(args, split = "=")){
-  assign(arg[1], arg[2])
-} # read arguments: ss, count.dir, gene.txt, length.col, experiment
+for (arg in strsplit(args, split = '=')){
+  assign(trimws(arg[1]), trimws(arg[2]))
+}
 
 ss <- read.csv(input) %>% 
     mutate(id = factor(id)) %>% 

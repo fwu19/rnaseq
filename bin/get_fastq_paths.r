@@ -57,12 +57,11 @@ get_fastqs <- function(
 }
 
 ## read arguments ####
+# r1_pattern="${params.r1_pattern}" r2_pattern="${params.r2_pattern}"
 args <- as.vector(commandArgs(T))
-lst <- strsplit(args, split = '=')
-for (x in lst){
-    assign(x[1],x[2])
-} # read arguments: r1_pattern r2_pattern
-rm(lst)
+for (arg in strsplit(args, split = '=')){
+    assign(trimws(arg[1]), trimws(arg[2]))
+}
 
 if(!exists('r1_pattern')){r1_pattern <- "_S[0-9]+(_L[0-9]+)?_R1_"}
 if(!exists('r2_pattern')){r2_pattern <- "_S[0-9]+(_L[0-9]+)?_R2_"}

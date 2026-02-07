@@ -19,7 +19,7 @@ process GET_INPUT {
 
     script:
     """
-    check_input.r $samplesheet $metadata
+    get_input.r input_csv=$samplesheet meta_csv=$metadata
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

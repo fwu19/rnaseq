@@ -4,28 +4,31 @@ options(stringsAsFactor=F)
 options(scipen = 99)
 
 args <- as.vector(commandArgs(T))
+# report=${report} workflow=${params.workflow} fdr=${params.fdr} fc=${params.fc} fdr2=${params.fdr2} fc2=${params.fc2}
 for (arg in strsplit(args, split = '=')){
-    assign(arg[1], arg[2])
+    assign(trimws(arg[1]), trimws(arg[2]))
 }
+
 if (sum(c('workflow','fdr','fdr2','fc','fc2') %in% ls()) < 5){
     stop(paste('The following arguments are missing!\n', setdiff(c('workflow','fdr','fdr2','fc','fc2'), ls()), '\n'))    
 }
 
 ## copy Rmd files ####
 if (workflow == 'regular'){
-    src <- "report/rnaseq_regular.Rmd"
+    src <- ifelse(file_test('-f', report), report, "report/rnaseq_regular.Rmd")
     dst <- "00_RNAseq_analysis_report.Rmd"
     
 }else if (workflow == 'exome'){
-    src <- "report/rnaseq_exome.Rmd"
+    src <- ifelse(file_test('-f', report), report, "report/rnaseq_exome.Rmd")
     dst <- "00_RNAexome_analysis_report.Rmd"
     
 }else if (workflow == 'pdx'){
-    src <- "report/rnaseq_pdx.Rmd"
+    src <- ifelse(file_test('-f', report), report, "report/rnaseq_pdx.Rmd")
     dst <- "00_PDX_RNAseq_analysis_report.Rmd"
 }else{
     cat(workflow, ' is not recognized!')
 }
+stopifnot(grepl('rmd$', src, ignore.case = T))
 
 file.copy(src, dst)
 rmarkdown::render(

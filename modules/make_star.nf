@@ -1,6 +1,6 @@
 
 process MAKE_STAR {
-    label "process_high"
+    label "process_medium"
     module = ['STAR/2.7.10b-GCC-12.2.0', 'SAMtools/1.17-GCC-12.2.0']
 
 

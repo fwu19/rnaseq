@@ -34,7 +34,7 @@ if (!(params.step in step_options)){
 }
 
 // Define update options
-def update_options = [null, "qc_fastq", "qc_alignment", "gene_expression", "differential_genes", "transcript_expression", "differential_transcripts", "csv"]
+def update_options = [null, "qc_fastq", "qc_alignment", "gene_expression", "differential_genes", "transcript_expression", "differential_transcripts", "multiqc", "report", "csv"]
 if(!(params.update in update_options )){ 
     exit 1, "Invalid option for --update. Available options: ${update_options.findAll{it != null}.join(', ')}"
 }

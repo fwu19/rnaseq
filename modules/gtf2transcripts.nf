@@ -17,7 +17,7 @@ process GTF2TRANSCRIPTS {
 
     script:
     """
-    gtf2transcripts.r $gtf
+    gtf2transcripts.r gtf_file=$gtf
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

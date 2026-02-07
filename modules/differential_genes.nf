@@ -24,7 +24,7 @@ process DIFFERENTIAL_GENES {
     
     script:
     """
-    differential_expression.r input="\'$samplesheet\'" comparison="\'$comparison\'" gene_txt="\'${gene_txt}\'" count_file="\'${count_file}\'" fdr=${params.fdr} fc=${params.fc} fdr2=${params.fdr2} fc2=${params.fc2} gene_type="\'${params.de_gene_type}\'" length_col="\'$length_col\'"
+    differential_expression.r input=${samplesheet} comparison=${comparison} gene_txt=${gene_txt} count_file=${count_file} fdr=${params.fdr} fc=${params.fc} fdr2=${params.fdr2} fc2=${params.fc2} gene_type=${params.de_gene_type} length_col=${length_col}
     
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -33,3 +33,6 @@ process DIFFERENTIAL_GENES {
 
     """
 }
+
+//differential_expression.r input="\'$samplesheet\'" comparison="\'$comparison\'" gene_txt="\'${gene_txt}\'" count_file="\'${count_file}\'" fdr=${params.fdr} fc=${params.fc} fdr2=${params.fdr2} fc2=${params.fc2} gene_type="\'${params.de_gene_type}\'" length_col="\'$length_col\'"
+    

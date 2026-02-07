@@ -103,11 +103,11 @@ add_colv <- function(df, colv, value){
 }
 
 ## read arguments ####
+# input=${samplesheet} count.dir=counts tx.txt=${tx_txt} length.col=${length_col}
 args <- as.vector(commandArgs(T)) 
-lst <- strsplit(args, split = '=')
-for (x in lst){
-    assign(x[1],x[2])
-} # read arguments: ss, comparison, count.dir, tx.txt, length.col
+for (arg in strsplit(args, split = '=')){
+    assign(trimws(arg[1]), trimws(arg[2]))
+}
 
 ss <- read.csv(input) %>% 
     relocate(fastq_1, fastq_2, .after = last_col()) %>% 

@@ -9,7 +9,11 @@ library(dplyr)
 
 ## read arguments
 args <- as.vector(commandArgs(T)) 
-gtf_file <- args[1]
+# gtf_file=${gtf}
+for (arg in strsplit(args, split = '=')){
+    assign(trimws(arg[1]), trimws(arg[2]))
+}
+
 
 ## process gtf ####
 stopifnot(file.exists(gtf_file))

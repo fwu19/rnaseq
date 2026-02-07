@@ -1,6 +1,6 @@
 
 process STAR {
-    label "process_high"
+    label "process_medium"
 
     container = 'community.wave.seqera.io/library/bedtools_samtools_star:4c1d7f700be70377'
     //container = 'biocontainers/mulled-v2-1fa26d1ce03c295fe2fdcf85831a92fbcbd7e8c2:1df389393721fc66f3fd8778ad938ac711951107-0'

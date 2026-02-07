@@ -21,7 +21,7 @@ process XENOFILTER {
     
     script:
     """
-    xenofilteR.r graft/*.bam host/*.bam ${out_prefix} $mm_threshold ${task.cpus}
+    xenofilteR.r graft_dir=graft host_dir=host out_prefix=${out_prefix} mm_threshold=$mm_threshold nworkers=${task.cpus}
     mv Filtered_bams/XenofilteR.log ${out_prefix}.XenofilteR.log
     mv Filtered_bams/*.bam* .
 

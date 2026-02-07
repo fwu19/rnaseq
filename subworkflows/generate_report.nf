@@ -97,7 +97,7 @@ workflow GENERATE_REPORT {
         params.run_tx_count ? ch_tx_expr : Channel.fromPath("${srcdir}/expression_quantification/all_samples.transcript_raw_counts.txt").ifEmpty([]),  
         params.run_dt ? ch_dt : Channel.fromPath("${srcdir}/differential_transcripts/", type: 'dir').ifEmpty([]), 
         params.run_hs_metrics ? ch_hs_metrics : Channel.fromPath("${srcdir}/QC/gatk/*", type: 'dir').collect().ifEmpty([]), 
-        params.report_dir ? Channel.fromPath(params.report_dir, type: 'dir', checkIfExists: true) : Channel.fromPath("$projectDir/assets/report/", type: 'dir', checkIfExists: true)
+        params.report_rmd ? Channel.fromPath(params.report_rmd, checkIfExists: true) : (params.report_dir ? Channel.fromPath(params.report_dir, type: 'dir', checkIfExists: true) : Channel.fromPath("$projectDir/assets/report/", type: 'dir', checkIfExists: true))
         )
         ch_versions = ch_versions.mix(RENDER_REPORT.out.versions)
     }

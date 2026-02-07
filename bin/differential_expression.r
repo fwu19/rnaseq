@@ -478,11 +478,12 @@ fill_column <- function(df, colv, default.value, na.value = NULL, missing.value 
 }
 
 ## read arguments ####
+# input=${samplesheet} comparison=$c{omparison} gene_txt=${gene_txt} count_file=${count_file} fdr=${params.fdr} fc=${params.fc} fdr2=${params.fdr2} fc2=${params.fc2} gene_type=${params.de_gene_type} length_col=$l{ength_col}
 args <- as.vector(commandArgs(T)) 
-# for (arg in strsplit(args, split = "=")){
-#     assign(arg[1], arg[2])
-# } # read arguments: ss, comparison, count_file, fdr, fc, fdr2, fc2
-for (arg in args){eval(parse(text = arg))}
+for (arg in strsplit(args, split = '=')){
+  assign(trimws(arg[1]), trimws(arg[2]))
+}
+# for (arg in args){eval(parse(text = arg))}
 
 ss <- read.csv(input) %>% 
     unique.data.frame() # sample sheet

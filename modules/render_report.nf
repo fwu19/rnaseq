@@ -21,7 +21,7 @@ process RENDER_REPORT {
 
     script:
     """
-    render_report.r workflow=${params.workflow} fdr=${params.fdr} fc=${params.fc} fdr2=${params.fdr2} fc2=${params.fc2}
+    render_report.r report=${report} workflow=${params.workflow} fdr=${params.fdr} fc=${params.fc} fdr2=${params.fdr2} fc2=${params.fc2}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

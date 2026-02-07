@@ -17,7 +17,7 @@ process GTF2GENES {
 
     script:
     """
-    gtf2genes.r $gtf
+    gtf2genes.r gtf_file=$gtf
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

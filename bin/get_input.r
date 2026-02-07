@@ -28,7 +28,7 @@ add_metadata <- function(ss, meta_csv){
     ## update with metadata if provided
     # metadata contains a required columns id and optional columns: sample_group, sample_replicate, target, control, call_peak, call_rep_peak, call_con_peak
     
-    if (file_test('-f', meta_csv) & grepl('.csv$', meta_csv) & !grepl('dummy', meta_csv)){
+    if (file_test('-f', meta_csv) & grepl('.csv$', meta_csv) & !grepl('dummy|null', meta_csv)){
         meta <- read.csv(meta_csv) %>% 
             mutate(
                 id = gsub(' +|&', '-', id)
@@ -50,13 +50,15 @@ add_metadata <- function(ss, meta_csv){
 }
 
 ## read arguments ####
+# input_csv=$samplesheet meta_csv=$metadata
 args <- as.vector(commandArgs(T))
-in_csv <- args[1]
-meta_csv <- ifelse(length(args) > 1, args[2], '')
-
+for (arg in strsplit(args, split = '=')){
+  assign(trimws(arg[1]), trimws(arg[2]))
+}
+stopifnot(exists('input_csv') & exists('meta_csv'))
 
 ## generate sample sheet ####
-ss <- read.csv(in_csv)
+ss <- read.csv(input_csv)
 
 ## check single end fastq
 if (!'id' %in% colnames(ss)){
@@ -80,7 +82,7 @@ if(nrow(ss) == 0){
   stop(paste0('No input in the sample sheet!\nCheck ', in_csv, '\nIf ', meta_csv, ' is supplied, Column id should share at least one value with the same column in ', meta_csv, '.\n'))
 }
 
-## collapse sample sheet
+## collapse sample sheet by id
 if (sum(duplicated(ss$id)) > 0){
     ssu <- ss %>% 
         group_by(id) %>% 

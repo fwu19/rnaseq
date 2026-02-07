@@ -9,7 +9,7 @@ library(dplyr)
 ## read arguments ####
 args <- as.vector(commandArgs(T))
 for (arg in strsplit(args, split = '=')){
-    assign(arg[1], arg[2])
+    assign(trimws(arg[1]), trimws(arg[2]))
 }
 
 stopifnot(exists('csv') & exists('outdir'))

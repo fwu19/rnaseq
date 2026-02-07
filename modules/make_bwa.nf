@@ -1,6 +1,6 @@
 
 process MAKE_BWA {
-    label "process_high"
+    label "process_medium"
 
     container = 'community.wave.seqera.io/library/bwa_htslib_samtools:56c9f8d5201889a4'
     //module = ['BWA/0.7.17-GCCcore-12.2.0', 'SAMtools/1.17-GCC-12.2.0']
