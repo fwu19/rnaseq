@@ -97,16 +97,16 @@ workflow WRITE_PARAMS {
             }
         }
 
-        if (params.run_input_check){
+        if (params.run_input_check && params.input){
             OVERRIDDEN_PARAMS['input'] = "${params.outdir}/csv/samplesheet.valid.csv"
         }        
 
-        if (params.run_de){
+        if (params.run_de && params.comparison){
             def de = de_csv.first()
             OVERRIDDEN_PARAMS['comparison'] = "${params.outdir}/csv/comparisons.differential_genes.csv"
         }
 
-        if (params.run_dt){
+        if (params.run_dt && (params.comparison_transcripts || params.comparison)){
             def dt = dt_csv.first()
             OVERRIDDEN_PARAMS['comparison_transcripts'] = "${params.outdir}/csv/comparisons.differential_transcripts.csv"
         }

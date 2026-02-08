@@ -62,7 +62,7 @@ workflow QUANT_TRANSCRIPTS {
     if (params.run_dt){
         DIFFERENTIAL_TRANSCRIPTS(
             samplesheet, 
-            params.comparison_transcripts ? file(params.comparison_transcripts) : file(params.comparison),
+            params.comparison_transcripts ? file(params.comparison_transcripts) : (params.comparison ? file(params.comparison) : file("$projectDir/assets/dummy_file.csv")),
             params.run_tx_count ? ch_tx_expr : Channel.fromPath("${srcdir}/expression_quantification/all_samples.transcript_raw_counts.txt", checkIfExists: true), 
             "EffectiveLength",
             gene_txt

@@ -60,7 +60,7 @@ if ( params.skip_tools != null ) {
 }
 
 // Define a dummy file path
-dummy_file = "$projectDir/assets/dummy_file.csv"
+dummy_file = file("$projectDir/assets/dummy_file.csv")
 
 
 workflow RNASEQ {
@@ -102,9 +102,9 @@ workflow RNASEQ {
     ch_input = Channel.fromPath( params.input, checkIfExists: true )
     if (params.run_input_check){
         CHECK_INPUT(
-            params.input ? file(params.input) : file(dummy_file),
-            params.input_dir ? file(params.input_dir) : file(dummy_file),
-            params.metadata ? file(params.metadata) : file(dummy_file)
+            params.input ? file(params.input) : dummy_file,
+            params.input_dir ? file(params.input_dir) : dummy_file,
+            params.metadata ? file(params.metadata) : dummy_file
         )
         samplesheet = CHECK_INPUT.out.samplesheet
         fq = CHECK_INPUT.out.fq

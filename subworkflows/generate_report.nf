@@ -31,6 +31,7 @@ workflow GENERATE_REPORT {
     main: 
     ch_versions  = Channel.empty()
     ch_multiqc = Channel.empty()
+    rmd = Channel.empty()
 
     if (params.run_multiqc){
 

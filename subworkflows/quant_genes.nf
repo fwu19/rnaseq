@@ -65,7 +65,7 @@ workflow QUANT_GENES {
     if (params.run_de){
         DIFFERENTIAL_GENES(
             samplesheet, 
-            file(params.comparison),
+            params.comparison ? file(params.comparison) : file("$projectDir/assets/dummy_file.csv"),
             params.run_gene_count ? ch_expr : Channel.fromPath("${srcdir}/expression_quantification/all_samples.gene_raw_counts.txt"), 
             "gene_length",
             gene_txt
