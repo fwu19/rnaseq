@@ -164,6 +164,7 @@ workflow RNASEQ {
     ch_graft_reads = Channel.empty()
     ch_gene_expr = Channel.empty()
     ch_de = Channel.empty()
+    de_csv = Channel.empty()
 
     if (params.gene_level){
         /*
@@ -207,6 +208,7 @@ workflow RNASEQ {
             ch_fc_counts = QUANT_GENES.out.fc_counts
             ch_gene_expr = QUANT_GENES.out.expr 
             ch_de = QUANT_GENES.out.de
+            de_csv = QUANT_GENES.out.de_csv
             ch_software_versions = ch_software_versions.mix(QUANT_GENES.out.versions)
 
         }
@@ -219,6 +221,7 @@ workflow RNASEQ {
     ch_salmon = Channel.empty()
     ch_tx_expr = Channel.empty()
     ch_dt = Channel.empty()
+    dt_csv = Channel.empty()
     if (params.transcript_level ){
         /* Map to transcripts */
         // not available yet
@@ -237,6 +240,7 @@ workflow RNASEQ {
             ch_salmon = QUANT_TRANSCRIPTS.out.salmon
             ch_tx_expr = QUANT_TRANSCRIPTS.out.tx_expr
             ch_dt = QUANT_TRANSCRIPTS.out.dt
+            dt_csv = QUANT_TRANSCRIPTS.out.dt_csv
             ch_software_versions = ch_software_versions.mix(QUANT_TRANSCRIPTS.out.versions)
         }
     }
@@ -313,6 +317,7 @@ workflow RNASEQ {
     /*
     * generate multiqc report and analysis report
     */
+    report_rmd = Channel.empty()
     GENERATE_REPORT(
         samplesheet, 
         ch_star_counts.map{it[2]}.flatten().collect().ifEmpty([]), 
@@ -335,6 +340,7 @@ workflow RNASEQ {
         ch_dt.ifEmpty([]),
         srcdir
     )
+    report_rmd = GENERATE_REPORT.out.rmd
     ch_software_versions = ch_software_versions.mix(GENERATE_REPORT.out.versions)
 
     /*
@@ -354,18 +360,14 @@ workflow RNASEQ {
             ch_salmon.ifEmpty([])
         )
     }
-    
+       
 
     /*
-    * Collect software versions
+    * Write software versions to a yml file and overridden params to a json file
     */
-    ch_software_versions
-            .collectFile(storeDir: "${params.info_dir}/", name: 'software_versions.yml', sort: false, newLine: true)
-
-    /*
-    * Write overridden params to a json file
-    */
-    WRITE_PARAMS()
+    WRITE_PARAMS(
+        ch_software_versions
+    )
 }
 
 ////////////////////////////////////////////////////

@@ -17,6 +17,7 @@ process DIFFERENTIAL_TRANSCRIPTS {
 
     output:
     path ("differential_transcripts.rds"), emit: rds, optional: true
+    path ("comparisons.*.csv"), emit: csv
     path ('versions.yml'), emit: versions
     path ("*"), optional: true
     

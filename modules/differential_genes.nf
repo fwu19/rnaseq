@@ -19,6 +19,7 @@ process DIFFERENTIAL_GENES {
 
     output:
     path ("differential_genes.rds"), emit: rds, optional: true
+    path ("comparisons.*.csv"), emit: csv
     path ('versions.yml'), emit: versions
     path ("*"), optional: true
     

@@ -19,6 +19,7 @@ workflow QUANT_GENES {
     ch_fc_counts = Channel.empty()
     ch_expr = Channel.empty()
     ch_de = Channel.empty()
+    de_csv = Channel.empty()
     ch_versions  = Channel.empty()
 
     /*
@@ -69,6 +70,7 @@ workflow QUANT_GENES {
             "gene_length",
             gene_txt
         )
+        de_csv = DIFFERENTIAL_GENES.out.csv
         ch_de = DIFFERENTIAL_GENES.out.rds
         ch_versions = ch_versions.mix(DIFFERENTIAL_GENES.out.versions)
     }
@@ -78,6 +80,7 @@ workflow QUANT_GENES {
     expr = ch_expr
     fc_counts = ch_fc_counts
     de = ch_de
+    de_csv
     versions = ch_versions
 
 }
