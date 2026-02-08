@@ -20,6 +20,7 @@ workflow QUANT_TRANSCRIPTS {
     ch_salmon = Channel.empty()
     ch_tx_expr = Channel.empty()
     ch_dt = Channel.empty()
+    dt_csv = Channel.empty()
     ch_versions = Channel.empty()
 
     /* generate count matrix */
@@ -61,11 +62,12 @@ workflow QUANT_TRANSCRIPTS {
     if (params.run_dt){
         DIFFERENTIAL_TRANSCRIPTS(
             samplesheet, 
-            file(params.comparison),
+            params.comparison_transcripts ? file(params.comparison_transcripts) : file(params.comparison),
             params.run_tx_count ? ch_tx_expr : Channel.fromPath("${srcdir}/expression_quantification/all_samples.transcript_raw_counts.txt", checkIfExists: true), 
             "EffectiveLength",
             gene_txt
         )
+        dt_csv = DIFFERENTIAL_TRANSCRIPTS.out.csv
         ch_dt = DIFFERENTIAL_TRANSCRIPTS.out.rds
         ch_versions = ch_versions.mix(DIFFERENTIAL_TRANSCRIPTS.out.versions)
     }
@@ -75,6 +77,7 @@ workflow QUANT_TRANSCRIPTS {
     salmon = ch_salmon
     tx_expr = ch_tx_expr
     dt = ch_dt
+    dt_csv
     versions = ch_versions
 
 }

@@ -13,15 +13,16 @@ process RENDER_REPORT {
     path ( txt_counts )
     path ( dt )
     path ( "hs_metrics/" )
-    path ( "report" )
+    path ( report_rmd )
 
     output:
-    path( "*.{rds,html,Rmd}" )
+    path( "*.{Rmd,rmd}" ), emit: rmd
+    path( "*.{rds,html,Rmd,rmd}" )
     path ('versions.yml'), emit: versions
 
     script:
     """
-    render_report.r report=${report} workflow=${params.workflow} fdr=${params.fdr} fc=${params.fc} fdr2=${params.fdr2} fc2=${params.fc2}
+    render_report.r report_rmd=${report_rmd} workflow=${params.workflow} fdr=${params.fdr} fc=${params.fc} fdr2=${params.fdr2} fc2=${params.fc2}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

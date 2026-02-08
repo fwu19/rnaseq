@@ -27,7 +27,16 @@ include { WRITE_JSON as WRITE_JSON_BASE } from '../modules/write_json.nf'
 
 workflow WRITE_PARAMS {
 
+    take:
+    ch_software_versions
+
     main:
+
+    // Collect software versions
+    ch_software_versions
+            .collectFile(storeDir: "${params.info_dir}/", name: 'software_versions.yml', sort: false, newLine: true)
+
+
         /*
          * 1) Build BASE_PARAMS from config files
          */
@@ -70,7 +79,7 @@ workflow WRITE_PARAMS {
          */
         def FINAL_PARAMS      = params
         def OVERRIDDEN_PARAMS = [:]
-        def SKIP_KEYS        = [ 'info_dir', 'input', 'input_dir', 'comparison', 'report_dir' ]
+        def SKIP_KEYS        = [ 'info_dir', 'input', 'input_dir', 'comparison', 'comparison_transcripts', 'report_dir', 'report_rmd', 'max_cpus', 'max_memory', 'max_time' ]
 
         BASE_PARAMS.each { key, defaultVal ->
             def finalVal = FINAL_PARAMS.containsKey(key) && FINAL_PARAMS[key] != null \
@@ -83,15 +92,30 @@ workflow WRITE_PARAMS {
         }
 
         FINAL_PARAMS.each { key, v ->
-            if( !BASE_PARAMS.containsKey(key) ) {
+            if( !BASE_PARAMS.containsKey(key) && !(key in SKIP_KEYS) ) {
                 OVERRIDDEN_PARAMS[key] = v
             }
         }
 
-        OVERRIDDEN_PARAMS['input'] = "${params.outdir}/csv/samplesheet.valid.csv"
-        OVERRIDDEN_PARAMS['comparison'] = "${params.outdir}/csv/comparisons.differential_genes.csv"
-        def f = file("${params.outdir}/pipeline_info/*.{Rmd,rmd}")
-        OVERRIDDEN_PARAMS['report_rmd'] = f.name
+        if (params.run_input_check){
+            OVERRIDDEN_PARAMS['input'] = "${params.outdir}/csv/samplesheet.valid.csv"
+        }        
+
+        if (params.run_de){
+            def de = de_csv.first()
+            OVERRIDDEN_PARAMS['comparison'] = "${params.outdir}/csv/comparisons.differential_genes.csv"
+        }
+
+        if (params.run_dt){
+            def dt = dt_csv.first()
+            OVERRIDDEN_PARAMS['comparison_transcripts'] = "${params.outdir}/csv/comparisons.differential_transcripts.csv"
+        }
+
+        if( params.run_report ) {
+            def report = params.workflow == 'regular' ? "00_RNAseq_analysis_report.Rmd" : (params.workflow == 'exome' ? "00_RNAexome_analysis_report.Rmd" : (params.workflow == 'pdx' ? "00_PDX_RNAseq_analysis_report.Rmd" : null))
+            OVERRIDDEN_PARAMS['report_rmd'] = "${params.outdir}/pipeline_info/${report}"
+        }
+        
 
         /*
          * 3) Emit JSON
