@@ -10,20 +10,21 @@ process MULTIQC {
 
     input:
     path ( multiqc_config)
-    path ( 'fastqc/*' )
-    path ( 'cutadapt/*' )
-    path ( 'fastp/*' )
-    path ( 'fastqc_trimmed/*' )
-    path ( 'star_log/*' )
-    path ( 'rnaseqc/*' )
-    path ( 'rseqc/*' )
-    path ( 'samtools/*' )
-    path ( 'samtools_host/*' )
-    path ( 'samtools_xeno/*' )
-    path ( 'gatk/*' )
-    path ( 'star_count/*' )
-    path ( 'featureCounts/*' )
-    path ( 'salmon/*' )
+    path fastqc_files,       stageAs: 'fastqc/*'
+    path cutadapt_files,     stageAs: 'cutadapt/*'
+    path fastp_files,        stageAs: 'fastp/*'
+    path fastqc_trimmed_files, stageAs: 'fastqc_trimmed/*'
+    path star_log_files,     stageAs: 'star_log/*/*'
+    path star_log_host_files,     stageAs: 'star_log_host/*/*'
+    path rnaseqc_files,      stageAs: 'rnaseqc/*'
+    path rseqc_files,        stageAs: 'rseqc/*'
+    path bam_stat_files,     stageAs: 'samtools/*'
+    path bam_stat_host_files, stageAs: 'samtools_host/*'
+    path bam_stat_xeno_files, stageAs: 'samtools_xeno/*'
+    path hs_metrics_files,   stageAs: 'gatk/*'
+    path star_count_files,   stageAs: 'star_count/*/*'
+    path featureCounts_files, stageAs: 'featureCounts/*'
+    path salmon_files,       stageAs: 'salmon/*'
 
     output:
     path ('multiqc_data/'), emit: data
@@ -34,6 +35,7 @@ process MULTIQC {
     script:
     def args = task.ext.args ?: ''
     """
+    [[ ${params.workflow} == 'pdx' ]] && mv star_log/ star_log_graft/
     [[ ${params.workflow} == 'pdx' ]] && mv samtools/ samtools_graft/
     multiqc -f --ignore _STARpass1/ --config $multiqc_config .
 

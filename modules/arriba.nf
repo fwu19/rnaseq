@@ -23,6 +23,7 @@ process ARRIBA {
     
     output:
     path("*")
+    tuple val(meta), val(out_prefix), path("${out_prefix}.fusions.tsv"), emit: tsv
     path ('versions.yml'), emit: versions
 
     when:

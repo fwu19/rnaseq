@@ -486,7 +486,10 @@ for (arg in strsplit(args, split = '=')){
 # for (arg in args){eval(parse(text = arg))}
 
 ss <- read.csv(input) %>% 
-    unique.data.frame() # sample sheet
+    unique.data.frame() %>% 
+    mutate(
+      sample_group = gsub('-| +|&', '.', sample_group)
+  )
 
 if(grepl('dummy', comparison)){
     cat(comparison, "is a dummy file! Provide --comparison path/to/comparison_file (a comparison table in csv, txt, tsv or rds format)!")
@@ -585,11 +588,14 @@ if (length(new_meta)>0){
 ## filter gene if needed ####
 if (file.exists(gene_txt)){
     genes2keep <- read.delim(gene_txt)
+    if (!'gene_id' %in% colnames(genes2keep)){
+      stop(paste('No gene_id column is found in', gene_txt))
+    }
     y0 <- y0[y0$genes$gene_id %in% genes2keep$gene_id, ]
 }
 
 gene_types <- unlist(strsplit(gene_type, split = ','))
-if(!setequal(gene_types, 'all')){
+if(!setequal(gene_types, 'all') & 'gene_type' %in% colnames(y0$genes)){
     y0 <- y0[y0$genes$gene_type %in% gene_types, ]
 }
 
@@ -637,3 +643,18 @@ cmp %>%
     ifelse(grepl('transcript', count_file), 'comparisons.differential_transcripts.csv', 'comparisons.differential_genes.csv'),
     sep = ',', quote = F, row.names = F
     )
+
+## write out DE summary
+de_sum <- bind_rows(lapply(de.list, function(ide){ide$summary})) %>% 
+  dplyr::relocate(test_samples, control_samples, .after = last_col()) %>% 
+  mutate(output_folder = basename(output_folder))
+out.txt <- '_README.txt'
+headers <- c(
+  '# For each comparison, differentially expressed genes or transcripts are defined using two sets of FDR and fold change cutoffs, which correspond to columns is.sig and is.sig2 in [test group]_vs_[control group]/[test group]_vs_[control group].txt.', 
+  '# 1 = upregulation in test group, -1 = downregulation in test group, 0 = no significance.', 
+  '# Plots are based on the first cutoffs, i.e. column is.sig.')
+writeLines(headers, '_README.txt')
+de_sum %>% 
+  write.table(
+    out.txt, append = T,
+    sep = '\t', quote = F, row.names = F)

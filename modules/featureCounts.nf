@@ -15,6 +15,7 @@ process FEATURECOUNTS {
     
     output:
     tuple val(meta), val(out_prefix), path("${out_prefix}*.txt"), emit: counts
+    tuple val(meta), val(out_prefix), path("${out_prefix}*.txt.summary"), emit: summary
     path ('versions.yml'), emit: versions
     path("${out_prefix}*.{txt,summary}")
 

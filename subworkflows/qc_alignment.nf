@@ -39,7 +39,6 @@ workflow QC_ALIGNMENT {
             params.run_infer_experiment ? infer_experiment : file("${srcdir}/csv/infer_experiment.csv")
         )            
         ch_rnaseqc = RNASEQC.out.qc
-        // [ [meta], path("*") ]
         ch_versions = ch_versions.mix(RNASEQC.out.versions.first())
     }
 
@@ -52,7 +51,6 @@ workflow QC_ALIGNMENT {
             tx_bed
         )
         ch_rseqc = RSEQC.out.qc
-        // [ [meta], path("*") ]
         ch_versions = ch_versions.mix(RSEQC.out.versions.first())
     }
 
@@ -66,8 +64,6 @@ workflow QC_ALIGNMENT {
                 params.target_region
             )
             ch_hs_metrics = HS_METRICS.out.qc
-                .map { it[1] }
-            // [ [meta], path("*") ]
             ch_versions = ch_versions.mix(HS_METRICS.out.versions.first())
 
     }

@@ -13,7 +13,8 @@ process RENDER_REPORT {
     path ( txt_counts )
     path ( dt )
     path ( "hs_metrics/" )
-    path ( report_rmd )
+    path ( "arriba/" )
+    path ( "_report.Rmd" )
 
     output:
     path( "*.{Rmd,rmd}" ), emit: rmd
@@ -22,7 +23,7 @@ process RENDER_REPORT {
 
     script:
     """
-    render_report.r report_rmd=${report_rmd} workflow=${params.workflow} fdr=${params.fdr} fc=${params.fc} fdr2=${params.fdr2} fc2=${params.fc2}
+    render_report.r report_rmd="_report.Rmd" report_html=${params.report_html} workflow=${params.workflow} fdr=${params.fdr} fc=${params.fc} fdr2=${params.fdr2} fc2=${params.fc2} 
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

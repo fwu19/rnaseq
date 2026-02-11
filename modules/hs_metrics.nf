@@ -1,7 +1,7 @@
 process HS_METRICS {
     label "process_medium"
 
-    container = 'community.wave.seqera.io/library/angsd_gatk_pcangsd_samtools:331c7b441aa26e67'
+    container = 'community.wave.seqera.io/library/bcftools_gatk4_samtools:460fbebd289c03b4'
     //module = ['GATK/4.4.0.0-GCCcore-12.2.0-Java-17', 'SAMtools/1.17-GCC-12.2.0']
 
     tag "collect hs_metrics on ${meta.id}"
@@ -10,7 +10,7 @@ process HS_METRICS {
 
     input:
     tuple val(meta), val(out_prefix), path(bam), path(bai)
-    val(genome_fa)
+    path("genome.fa")
     path(target_region)
 
     output:
@@ -19,7 +19,7 @@ process HS_METRICS {
 
     script:
     """
-    collect_hs_metrics.sh ${out_prefix} $bam $genome_fa $target_region
+    collect_hs_metrics.sh ${out_prefix} $bam $target_region genome.fa 
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

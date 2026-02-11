@@ -13,6 +13,7 @@ run_modules:
   - fastp
   - fastqc
   - star
+  - featurecounts
   - samtools
   - picard
   - rna_seqc

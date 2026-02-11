@@ -21,7 +21,7 @@ workflow BUILD_INDEX {
     ch_versions = Channel.empty()
 
     // Init aligners
-    def aligner_index_list = ["bowtie", "bowtie2", "bwa", "salmon", "star"]
+    def aligner_index_list = ["bowtie", "bowtie2", "bwa", "bwa-mem", "salmon", "star"]
     index_list = aligner_index.split(',').collect{ it.trim().toLowerCase()}
     if ((aligner_index_list + index_list).unique().size() != aligner_index_list.size()) {
         exit 1, "Invalid aligner option found in ${aligner_index}. Valid options: ${aligner_index_list.join(', ')}"
@@ -36,7 +36,7 @@ workflow BUILD_INDEX {
         ch_versions = ch_versions.mix(MAKE_STAR.out.versions.first())
     }
 
-    if ("bwa" in index_list){
+    if ("bwa" in index_list || "bwa-mem" in index_list){
         MAKE_BWA(
             genome_fa.split(',').collect()
         )

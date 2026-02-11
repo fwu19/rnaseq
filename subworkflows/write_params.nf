@@ -23,7 +23,6 @@ nextflow.enable.dsl=2
         }
 
 include { WRITE_JSON } from '../modules/write_json.nf'
-include { WRITE_JSON as WRITE_JSON_BASE } from '../modules/write_json.nf'
 
 workflow WRITE_PARAMS {
 
@@ -34,7 +33,7 @@ workflow WRITE_PARAMS {
 
     // Collect software versions
     ch_software_versions
-            .collectFile(storeDir: "${params.info_dir}/", name: 'software_versions.yml', sort: false, newLine: true)
+            .collectFile(storeDir: "${params.outdir}/pipeline_info/${params.info_dir}/", name: 'software_versions.yml', sort: false, newLine: true)
 
 
         /*
@@ -98,22 +97,20 @@ workflow WRITE_PARAMS {
         }
 
         if (params.run_input_check && params.input){
-            OVERRIDDEN_PARAMS['input'] = "${params.outdir}/csv/samplesheet.valid.csv"
+            OVERRIDDEN_PARAMS['input'] = "${params.outdir}/pipeline_info/${params.info_dir}/samplesheet.valid.csv"
         }        
 
-        if (params.run_de && params.comparison){
-            def de = de_csv.first()
-            OVERRIDDEN_PARAMS['comparison'] = "${params.outdir}/csv/comparisons.differential_genes.csv"
+        if (params.run_quant_genes && params.run_de && params.comparison){
+            OVERRIDDEN_PARAMS['comparison'] = "${params.outdir}/pipeline_info/${params.info_dir}/comparisons.differential_genes.csv"
         }
 
-        if (params.run_dt && (params.comparison_transcripts || params.comparison)){
-            def dt = dt_csv.first()
-            OVERRIDDEN_PARAMS['comparison_transcripts'] = "${params.outdir}/csv/comparisons.differential_transcripts.csv"
+        if (params.run_quant_transcripts && params.run_dt && params.comparison_transcripts ){
+            OVERRIDDEN_PARAMS['comparison_transcripts'] = "${params.outdir}/pipeline_info/${params.info_dir}/comparisons.differential_transcripts.csv"
         }
 
         if( params.run_report ) {
-            def report = params.workflow == 'regular' ? "00_RNAseq_analysis_report.Rmd" : (params.workflow == 'exome' ? "00_RNAexome_analysis_report.Rmd" : (params.workflow == 'pdx' ? "00_PDX_RNAseq_analysis_report.Rmd" : null))
-            OVERRIDDEN_PARAMS['report_rmd'] = "${params.outdir}/pipeline_info/${report}"
+            report = file(params.report_html)
+            OVERRIDDEN_PARAMS['report_rmd'] = "${params.outdir}/pipeline_info/${params.info_dir}/${report.baseName}.Rmd"
         }
         
 
@@ -129,13 +126,4 @@ workflow WRITE_PARAMS {
             "params.json"
         )
 
-        /*write base json for reference
-        Channel
-            .value(BASE_PARAMS)
-            .set { base_params_ch } 
-        WRITE_JSON_BASE(
-            base_params_ch,
-            "base_params.json"
-        )
-        */
 }

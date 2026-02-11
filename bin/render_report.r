@@ -15,19 +15,7 @@ if (sum(c('workflow','fdr','fdr2','fc','fc2') %in% ls()) < 5){
 
 ## copy Rmd files ####
 src <- report_rmd
-if (workflow == 'regular'){
-    dst <- "00_RNAseq_analysis_report.Rmd"
-    
-}else if (workflow == 'exome'){
-    dst <- "00_RNAexome_analysis_report.Rmd"
-    
-}else if (workflow == 'pdx'){
-    dst <- "00_PDX_RNAseq_analysis_report.Rmd"
-}else{
-    cat(workflow, ' is not recognized!')
-}
-stopifnot(grepl('rmd$', src, ignore.case = T))
-
+dst <- gsub('.html$', '.Rmd', report_html)
 file.copy(src, dst)
 rmarkdown::render(
     dst, 

@@ -26,7 +26,7 @@ process STAR {
 
     script:
     def args = task.ext.args ?: ""
-    def overhang = params.sjdbOverhang ? "--sjdbOverhang ${params.sjdbOverhang}" : ""
+    def overhang = params.sjdb_overhang ? "--sjdbOverhang ${params.sjdb_overhang}" : ""
     def outSAMattributes = params.out_sam_attributes ? "--outSAMattributes ${params.out_sam_attributes}" : ""
     def rg = task.ext.rg ?: "none"
     """

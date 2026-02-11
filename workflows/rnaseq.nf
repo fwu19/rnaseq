@@ -11,12 +11,11 @@ include { QUANT_GENES } from '../subworkflows/quant_genes.nf'
 include { QUANT_TRANSCRIPTS } from '../subworkflows/quant_transcripts.nf'
 include { QC_FASTQ } from '../subworkflows/qc_fastq.nf'
 include { QC_ALIGNMENT } from '../subworkflows/qc_alignment.nf'
+include { DETECT_FUSIONS } from '../subworkflows/detect_fusions.nf'
 include { GENERATE_REPORT } from '../subworkflows/generate_report.nf'
 include { WRITE_OUTPUT_CSV } from '../subworkflows/write_output_csv.nf'
-include { UPDATE_OUTPUT_CSV } from '../subworkflows/update_output_csv.nf'
+include { UPDATE_OUTPUT } from '../subworkflows/update_output.nf'
 include { WRITE_PARAMS } from '../subworkflows/write_params.nf'
-
-include { ARRIBA  } from '../modules/arriba.nf'
 
 //Validate required parameters
 if ( params.genome_fa == null && params.run_build_index ){
@@ -28,13 +27,13 @@ if ( params.gtf == null && (params.run_gene_count || params.run_tx_count)){
 }
 
 // Define step options
-def step_options = ["mapping","expression_quantification","differential_expression"]
+def step_options = ["mapping", "expression_quantification", "differential_expression", "gene_fusion" ]
 if (!(params.step in step_options)){ 
     exit 1, "Invalid option for --step. Available options: ${step_options.join(', ')}"
 }
 
 // Define update options
-def update_options = [null, "qc_fastq", "qc_alignment", "gene_expression", "differential_genes", "transcript_expression", "differential_transcripts", "multiqc", "report", "csv"]
+def update_options = [null, "qc_fastq", "qc_alignment", "gene_level", "gene_expression", "differential_genes", "transcript_level", "transcript_expression", "differential_transcripts", "gene_fusion", "multiqc", "report", "output"]
 if(!(params.update in update_options )){ 
     exit 1, "Invalid option for --update. Available options: ${update_options.findAll{it != null}.join(', ')}"
 }
@@ -72,6 +71,7 @@ workflow RNASEQ {
     /*
     * Run reference check
     */
+    index_dir = Channel.empty()
     gene_txt = Channel.empty()
     tx_bed = Channel.empty()
     tx_txt = Channel.empty()
@@ -99,7 +99,6 @@ workflow RNASEQ {
     /*
     * Run input check
     */
-    ch_input = Channel.fromPath( params.input, checkIfExists: true )
     if (params.run_input_check){
         CHECK_INPUT(
             params.input ? file(params.input) : dummy_file,
@@ -156,6 +155,7 @@ workflow RNASEQ {
     ch_bam_bai = Channel.empty()
     ch_star_counts = Channel.empty()
     ch_fc_counts = Channel.empty()
+    ch_fc_summary = Channel.empty()
     ch_tx_bam = Channel.empty() // STAR's transcript bam, used for downstream quantification with Salmon
     ch_star_log = Channel.empty()
     ch_bam_bai_host = Channel.empty() 
@@ -166,13 +166,11 @@ workflow RNASEQ {
     ch_de = Channel.empty()
     de_csv = Channel.empty()
 
-    if (params.gene_level){
-        /*
-        * run alignment 
-        * for pdx workflow, align to both graft and host genomes 
-        * for pdx workflow, run XenofilteR to remove reads with host origin
-        */
-        if (params.run_alignment){
+    /*
+    * run alignment 
+    * for pdx workflow, align to both graft and host genomes and run XenofilteR to remove reads with host origin
+    */
+    if (params.run_alignment){
             ALIGN_FASTQ(
                 params.run_cut_adapt ? ch_reads_trimmed : ch_reads,
                 params.run_split_fastq, // if true, dont run xenofilteR
@@ -189,70 +187,61 @@ workflow RNASEQ {
             ch_graft_reads = ALIGN_FASTQ.out.graft_reads
             ch_software_versions = ch_software_versions.mix(ALIGN_FASTQ.out.versions)
     
-        }
-    
+    }
 
-        /*
-        *   collect gene-level count matrix and call differential expression
-        */
-        if ( params.run_quant_genes ){
-            QUANT_GENES(
+    /*
+    *   collect gene-level count matrix and call differential expression
+    */
+    if (params.run_quant_genes){
+        QUANT_GENES(
                 samplesheet,
                 params.workflow == 'pdx' ? ch_bam_bai_xeno.ifEmpty([]) : ch_bam_bai.ifEmpty([]),
                 ch_star_counts.ifEmpty([]),
-                gene_txt,
+                params.de_gene_txt ? file(params.de_gene_txt, checkIfExists: true) : gene_txt,
                 infer_experiment.ifEmpty([]),
                 srcdir
-            )
+        )
         
-            ch_fc_counts = QUANT_GENES.out.fc_counts
-            ch_gene_expr = QUANT_GENES.out.expr 
-            ch_de = QUANT_GENES.out.de
-            de_csv = QUANT_GENES.out.de_csv
-            ch_software_versions = ch_software_versions.mix(QUANT_GENES.out.versions)
+        ch_fc_counts = QUANT_GENES.out.fc_counts
+        ch_fc_summary = QUANT_GENES.out.fc_summary
+        ch_gene_expr = QUANT_GENES.out.expr 
+        ch_de = QUANT_GENES.out.de
+        de_csv = QUANT_GENES.out.de_csv
+        ch_software_versions = ch_software_versions.mix(QUANT_GENES.out.versions)
 
-        }
     }
 
 
     /*
-    * Transcript-level analysis
+    *  Collect transcript-level counts and call differential transcripts
     */
     ch_salmon = Channel.empty()
     ch_tx_expr = Channel.empty()
     ch_dt = Channel.empty()
     dt_csv = Channel.empty()
-    if (params.transcript_level ){
-        /* Map to transcripts */
-        // not available yet
-
-        /*  Collect transcript-level counts and call differential transcripts */
-        if (params.run_quant_transcripts){
-
-            QUANT_TRANSCRIPTS(
+    if (params.run_quant_transcripts){
+        QUANT_TRANSCRIPTS(
                 samplesheet,
                 ch_tx_bam.ifEmpty([]),
                 tx_fa,
                 tx_txt,
-                gene_txt,
+                params.de_gene_txt ? file(params.de_gene_txt, checkIfExists: true) : gene_txt,
                 srcdir
-            )
-            ch_salmon = QUANT_TRANSCRIPTS.out.salmon
-            ch_tx_expr = QUANT_TRANSCRIPTS.out.tx_expr
-            ch_dt = QUANT_TRANSCRIPTS.out.dt
-            dt_csv = QUANT_TRANSCRIPTS.out.dt_csv
-            ch_software_versions = ch_software_versions.mix(QUANT_TRANSCRIPTS.out.versions)
-        }
+        )
+        ch_salmon = QUANT_TRANSCRIPTS.out.salmon
+        ch_tx_expr = QUANT_TRANSCRIPTS.out.tx_expr
+        ch_dt = QUANT_TRANSCRIPTS.out.dt
+        dt_csv = QUANT_TRANSCRIPTS.out.dt_csv
+        ch_software_versions = ch_software_versions.mix(QUANT_TRANSCRIPTS.out.versions)
     }
 
 
     /*
     * Identify gene fusions
     */
-    if (params.gene_fusion){
-        // can build a subworkflow for gene_fusion analysis
-        if (params.run_arriba){
-            ARRIBA(
+    ch_arriba = Channel.empty()
+    if (params.run_fusion){
+        DETECT_FUSIONS(
             params.workflow == 'pdx' ? ch_graft_reads : (params.run_cut_adapt ? ch_reads_trimmed : ch_reads), 
             params.genome, 
             index_dir, 
@@ -261,9 +250,9 @@ workflow RNASEQ {
             params.blacklist,
             params.known_fusions,
             params.protein_domains
-            )
-            ch_software_versions = ch_software_versions.mix(ARRIBA.out.versions)
-        }
+        )
+        ch_arriba = DETECT_FUSIONS.out.arriba
+        ch_software_versions = ch_software_versions.mix(DETECT_FUSIONS.out.versions)
     }
 
 
@@ -321,23 +310,25 @@ workflow RNASEQ {
     GENERATE_REPORT(
         samplesheet, 
         ch_star_counts.map{it[2]}.flatten().collect().ifEmpty([]), 
-        ch_fc_counts.map{it[2]}.flatten().collect().ifEmpty([]), 
+        ch_fc_summary.map{it[2]}.flatten().collect().ifEmpty([]), 
+        ch_gene_expr.ifEmpty([]), 
+        ch_de.ifEmpty([]), 
         ch_salmon.map{it[2]}.flatten().collect().ifEmpty([]), 
+        ch_tx_expr.ifEmpty([]), 
+        ch_dt.ifEmpty([]),
+        ch_arriba.map{it[2]}.flatten().collect().ifEmpty([]),
         ch_fastqc.flatten().collect().ifEmpty([]), 
         ch_cutadapt_js.flatten().collect().ifEmpty([]),
         ch_fastp_js.flatten().collect().ifEmpty([]),
         ch_fastqc_trimmed.flatten().collect().ifEmpty([]),
         ch_star_log.flatten().collect().ifEmpty([]),
+        ch_star_log_host.flatten().collect().ifEmpty([]),
         ch_rnaseqc.flatten().collect().ifEmpty([]), 
         ch_rseqc.flatten().collect().ifEmpty([]), 
         ch_bam_stat.flatten().collect().ifEmpty([]), 
         ch_bam_stat_host.flatten().collect().ifEmpty([]), 
         ch_bam_stat_xeno.flatten().collect().ifEmpty([]), 
         ch_hs_metrics.flatten().collect().ifEmpty([]), 
-        ch_gene_expr.ifEmpty([]), 
-        ch_de.ifEmpty([]), 
-        ch_tx_expr.ifEmpty([]), 
-        ch_dt.ifEmpty([]),
         srcdir
     )
     report_rmd = GENERATE_REPORT.out.rmd
@@ -346,24 +337,28 @@ workflow RNASEQ {
     /*
     * Write output file paths
     */
-    if (params.update == 'csv'){
-        UPDATE_OUTPUT_CSV(
-            samplesheet
+    if (params.update == 'output'){
+        UPDATE_OUTPUT(
+            samplesheet,
+            srcdir,
+            outdir
         )
     }else{
         WRITE_OUTPUT_CSV(
             ch_bam_bai.ifEmpty([]),
             ch_bam_bai_host.ifEmpty([]),
             ch_bam_bai_xeno.ifEmpty([]),
+            ch_tx_bam.ifEmpty([]),
             ch_star_counts.ifEmpty([]),
             ch_fc_counts.ifEmpty([]),
-            ch_salmon.ifEmpty([])
+            ch_salmon.ifEmpty([]),
+            ch_arriba.ifEmpty([])
         )
     }
-       
+    
 
     /*
-    * Write software versions to a yml file and overridden params to a json file
+    * Write software versions to a yaml file and overridden params to a json file
     */
     WRITE_PARAMS(
         ch_software_versions

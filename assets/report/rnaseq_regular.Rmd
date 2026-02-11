@@ -14,13 +14,16 @@ output:
         code_download: FALSE
 editor_options: 
   chunk_output_type: console
+  
 params:
-  dat.dir: "./"
+  fdr: 0.05
+  fc: 1.5
+  fdr2: 0.01
+  fc2: 2
 ---
 
 ```{r setup, include=FALSE, dev='CairoPNG'}
-knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning=FALSE, dev="CairoPNG")
-knitr::opts_knit$set(root.dir = params$dat.dir)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning=FALSE, dev="CairoPNG", cache = FALSE)
 
 options(stringsAsFactors = F)
 options(scipen = 99)
@@ -28,20 +31,15 @@ library(Cairo)
 library(ggplot2)
 library(dplyr)
 library(patchwork)
-library(kableExtra)
-
-setwd(params$dat.dir)
 
 ```
 
 
 ## SUMMARY
 
-This document presents analysis results of RNAseq data.
+This report presents analysis results of RNAseq data.
 
-$$\\[0.5in]$$
-
-
+## {.unnumbered .unlisted}
 
 ```{r make_tabs}
 # Function to create multiple tabs
@@ -57,14 +55,184 @@ make_tabs <- function(title, contents){
 }
 ```
 
-```{r plot_functions}
+```{r functions}
+count2dgelist <- function(
+    counts.tsv=NULL, feature.cols=1:8, pattern2remove="^X|.bam$", counts=NULL, features = NULL, samples = NULL, group.col = 'sample_group'
+    ){
+    options(stringsAsFactors = F)
+    require(edgeR)
+    
+    if(is.null(counts)){
+        counts <- read.delim(counts.tsv)
+    }
+    if(!is.null(pattern2remove)){
+        colnames(counts) <- gsub(pattern2remove, '', colnames(counts))
+    }
+    if(is.null(features)){
+        features <- counts[feature.cols]
+        counts <- counts[-(feature.cols)]
+    }
+        
+        
+    y0 <- DGEList(counts=counts, genes=features, remove.zeros = T, samples = samples) 
+    if(!is.null(samples) & group.col %in% colnames(samples)){
+        y0$samples$group <- samples[,group.col]
+    }
+    y0 <- calcNormFactors(y0)
+    
+    return(y0)
+}
+
+parse_de_rds <- function(fname, feature_length = 'gene_length'){
+  de <- readRDS(fname)
+  de <- lapply(de, function(ide){if('error' %in% names(ide)){return(NULL)}else{ide}})
+  de[sapply(de, is.null)] <- NULL
+  de <- de[sort(names(de))]
+
+  if (length(de) == 0){return(NULL)}
+  
+  de_sum <- bind_rows(lapply(de, function(ide){ide$summary})) %>% 
+    dplyr::relocate(test_samples, control_samples, .after = last_col()) %>% 
+    mutate(output_folder = basename(output_folder))
+  
+  de_plots <- mapply(
+    function(ide, out.prefix){
+      y <- ide$y
+      df <- ide$df
+      plot.title <- paste(gsub('_vs_', ' vs ', out.prefix), '(reference)')
+      list(
+        PCA = plot_pca(
+          y, 
+          color = y$samples$sample_group, 
+          sample.label = T, 
+          plot.title = "", 
+          var.genes = 500, 
+          feature.length = feature_length),
+        MD = plot_MD(
+          df, 
+          plot.title = plot.title
+        ),
+        volcano = plot_volcano(
+          df, 
+          plot.title = plot.title
+        )
+      )
+      
+    }, de, names(de), SIMPLIFY = F
+  )
+  
+  ## return results
+  return(list(sum = de_sum, plots = de_plots))
+  
+}
+
+parse_de_dir <- function(indir, ss, y0, feature_length = "gene_length"){
+  flist <- list.files(file.path(indir, list.files(indir, pattern = '_vs_')), pattern = '.txt$', full.names = T)
+  if (length(flist) == 0){return(NULL)}
+  
+  ss <- ss %>% 
+    dplyr::select(id, sample_group) %>% 
+    unique.data.frame()
+  mid <- gsub('-', '.', ifelse(grepl('^[0-9]', ss$id), paste0('X', ss$id), ss$id))
+  
+  ## generate summary
+  sum_txt <- list.files(indir, pattern = 'summary.txt|README|readme', full.names = T)
+  if (length(sum_txt)>0){
+    de_sum <- read.delim(sum_txt[1], comment.char = '#')
+  }else{ # would fail for complicated set up, e.g. combining multiple groups
+    de_sum <- lapply(
+      flist, function(fname){
+        df <- read.delim(fname)
+        cmp <- gsub('.txt$', '', basename(fname))
+        test_group <- gsub('_vs.*', '', cmp)
+        control_group <- gsub('.*_vs_', '', cmp)
+        ksamples <- gsub('.*normalized.', '', unique(grep('normalized', colnames(df), value = T)))
+
+        data.frame(
+          output_folder = basename(dirname(fname)),
+          test_group = test_group,
+          control_group = control_group,
+          features_tested = nrow(df),
+          features_up = sum(df$is.sig %in% 1),
+          features_down = sum(df$is.sig %in% -1), 
+          FDR_cutoff = params$fdr,
+          FC_cutoff = params$fc,
+          features_up2 = sum(df$is.sig2 %in% 1),
+          features_down2 = sum(df$is.sig2 %in% -1),
+          FDR_cutoff2 = params$fdr2,
+          FC_cutoff2 = params$fc2
+        ) %>% 
+          mutate(
+            test_samples = sum(ksamples %in% gsub('-', '.',ss$id)[ss$sample_group %in% test_group]),
+            control_samples = sum(ksamples %in% gsub('-', '.',ss$id)[ss$sample_group %in% control_group])
+          )
+      }
+    ) %>% 
+      bind_rows
+  }
+  
+  
+  ## make plots
+  cts <- y0$counts
+  genes <- y0$genes
+    
+  de_plots <- lapply(
+    flist, function(fname){
+      de <- read.delim(fname)
+      kgenes <- de$gene_id
+      ksamples <- gsub('.*normalized.', '', unique(grep('normalized', colnames(de), value = T)))
+      y <- count2dgelist(
+        counts = cts[genes$gene_id %in% kgenes, match(ksamples, gsub('-', '.', colnames(cts)))], 
+        features = genes[genes$gene_id %in% kgenes, ], 
+        samples = ss[match(ksamples, gsub('-', '.',ss$id)), ],
+        group = 'sample_group'
+      )
+      
+    plist <- list(
+        PCA = plot_pca(
+            y, 
+            color = y$samples$group, 
+            sample.label = T, 
+            plot.title = "", 
+            var.genes = 500, 
+            feature.length = feature_length
+            ),
+        MD = plot_MD(
+            de, 
+            plot.title = ''
+        ),
+        volcano = plot_volcano(
+            de,
+            plot.title = ''
+        )
+    )
+    
+    return(plist)
+    }
+  ); names(de_plots) <- gsub('.txt$', '', basename(flist))
+
+  ## return results
+  return(list(sum = de_sum, plots = de_plots))
+}
+
 ## PCA
-plot_pca <- function(y, var.genes = NULL, color = NULL, plot.title = '', sample.label = T, feature.length = 'gene_length'){
+plot_pca <- function(y = NULL, cts = NULL, features = NULL, samples = NULL, var.genes = NULL, color = NULL, plot.title = '', sample.label = T, feature.length = 'gene_length'){
     options(stringsAsFactors = F)
     require(ggrepel)
     require(edgeR)
     
-
+  ## process data 
+  if(is.null(y)){
+    y <- count2dgelist(
+      counts = cts, 
+      features = features, 
+      samples = samples,
+      group.col = 'sample_group'
+    )
+    
+  }
+  
+  ## compute rpkm
     if('chrom' %in% colnames(y$genes)){
         y <- y[!y$genes$chrom %in% c('chrX', 'chrY', 'chrM'), ]
     }
@@ -202,61 +370,6 @@ recal_sig <- function(txt, col.sig, fdr, fc){
     )
 }
 
-## density plot
-density_plot <- function(df, xvar, xlab, xsf = 1){
-  require(ggplot2)
-  df <- as.data.frame(df)
-  if (xvar %in% colnames(df)){
-    df$x <- df[,xvar] * xsf
-    
-    df %>% 
-      ggplot(aes(x = x))+
-      geom_density()+
-      labs(x = xlab)+
-      theme_bw()+
-      theme(
-        plot.margin = unit(rep(10,4), units = 'pt'),
-        text = element_text(size = 12),
-        axis.text = element_text(size = 10),
-        axis.title = element_text(size = 10),
-        legend.text = element_text(size = 10),
-        legend.position = 'none'
-      )
-  }else{
-    return(NULL)
-  }
-}
-
-## dot plot
-dot_plot <- function(df, xvar, xlab, xsf = 1, yvar = 'sample_group'){
-  require(ggplot2)
-  df <- as.data.frame(df)
-  if (xvar %in% colnames(df)){
-    df$x <- df[,xvar] * xsf
-    
-    if (yvar %in% colnames(df)){
-      df$y <- df[,yvar]
-    }else{
-      df$y <- ''
-    }
-    df %>% 
-      ggplot(aes(x = x, y = y, text = text))+
-      geom_jitter(width = 0, height = 0.3, shape = 1)+
-      labs(x = xlab, y = '')+
-      theme_bw(base_size = 10)+
-      theme(
-        plot.margin = unit(rep(10,4), units = 'pt'),
-        text = element_text(size = 12),
-        axis.text.x = element_text(hjust = 1, angle = 90),
-        axis.title = element_text(size = 10),
-        legend.text = element_text(size = 10),
-        legend.position = 'none'
-      )
-  }else{
-    return(NULL)
-  }
-}
-
 ## scatter plot
 scatter_plot <- function(
   df, 
@@ -317,11 +430,15 @@ scatter_plot <- function(
       legend.text = element_text(size = 10)
     )
 }
+
 ```
 
-```{r read_input}
-dat <- readRDS('data.rds')
-ss <- dat$ss %>% 
+$$\\[0.5in]$$
+
+## SAMPLE SHEET
+```{r sample_sheet}
+ss_csv <- 'sample_sheet.csv'
+ss <- read.csv(ss_csv) %>% 
   dplyr::select(-c(single_end)) %>% 
   mutate(
     id = as.character(id),
@@ -335,241 +452,8 @@ ss <- dat$ss %>%
   relocate(fastq_dir, fastq_1, fastq_2, .after = last_col()) %>% 
   relocate(id)
 
-ms <- ss %>% 
-  mutate(
-    fastqc_id = paste0(id, ifelse(grepl(';', fastq_1), '_merged', ''), '_R1')
-    ) %>% 
-    dplyr::select(id, sample_group, fastqc_id) %>% 
-    dplyr::rename("Sample" ="id")
-
-if ('stat' %in% names(dat)){
-  stat <- dat$stat %>% 
-    mutate(Sample = as.character(Sample))
-  ms <- ms %>% 
-    left_join(
-      stat %>% 
-      filter(is.na(FastQC_mqc.generalstats.fastqc.total_sequences)) %>% 
-      dplyr::select(Sample, !contains('FastQC')), 
-      by = c('Sample')
-    ) %>% 
-    left_join(
-      stat %>% 
-        filter(!is.na(FastQC_mqc.generalstats.fastqc.total_sequences) & grepl('_R1', Sample)) %>% 
-        dplyr::select(Sample, contains('fastqc.total_sequences')),
-      by = c('fastqc_id' = 'Sample')
-    ) %>% 
-    left_join(
-      stat %>% 
-        filter(!is.na(FastQC_trimmed_mqc.generalstats.fastqc_trimmed.total_sequences) & grepl('_R1', Sample)) %>% 
-        dplyr::select(Sample, contains('fastqc_trimmed.total_sequences')),
-      by = c('fastqc_id' = 'Sample')
-    )    
-  colnames(ms) <- gsub('.*generalstats.', '', colnames(ms))
-}
-
-
-if ('rnaseqc' %in% names(dat)){
-  rnaseqc <- dat$rnaseqc %>% 
-    mutate(Sample = as.character(Sample))
-  if (nrow(ms) > 0){
-    ms <- ms %>% 
-      left_join(rnaseqc, by = 'Sample')  
-  }else{
-    ms <- rnaseqc
-  }
-  
-}
-
-if ( 'gatk' %in% names(dat) ){
-  gatk <- dat$gatk  %>% 
-    mutate(Sample = as.character(Sample))
-  if (nrow(ms) > 0){
-    ms <- left_join(ms, gatk, by = "Sample")
-  }else{
-    ms <- gatk
-  }
-  
-}
-
-ms$text <- ms$Sample
-
-```
-
-```{r read_qc}
-qc_plot <- dot_plot
-
-figs <- list()
-
-## reads ####
-df <- ms %>% 
-  mutate(
-    size = 1 - fastqc_trimmed.total_sequences/fastqc.total_sequences
-  ) %>% 
-  mutate(
-    text = paste(Sample, ':', round(size*100), '% trimmed')
-  )
-figs$reads <- scatter_plot(
-  df, 
-  xvar = 'fastqc.total_sequences', xsf = 1e-6, xlab = 'Total sequenced reads in million',
-  yvar = 'fastqc_trimmed.total_sequences', ysf = 1e-6, ylab = 'Adapter-trimmed reads in million',
-  size.var = 'size', text.var = 'text'
-)
-
-## alignment ####
-df <- ms %>% 
-  mutate(
-    text = paste(Sample, ':', round(star.uniquely_mapped_percent), '% uniquely mapped')
-  )
-
-figs$alignment <- scatter_plot(
- df,
- xvar = 'star.uniquely_mapped', xsf = 1e-6, xlab = 'Uniquely mapped reads in million',
-  yvar = 'star.uniquely_mapped_percent', ysf = 1, ylab = 'Uniquely mapped reads %',
-  size.var = NULL, text.var = 'text'
-)
-
-## genes vs intergenic regions ####
-figs$genes <- scatter_plot(
- ms,
- xvar = 'Genes.Detected', xsf = 1, xlab = 'Genes detected',
-  yvar = 'Intergenic.Rate', ysf = 1, ylab = 'Intergenic rate',
-  size.var = NULL, text.var = 'text'
-)
-
-## exonic vs intron ####
-figs$exon <- scatter_plot(
- ms,
- xvar = 'Exonic.Rate', xsf = 1, xlab = 'Exonic rate',
-  yvar = 'Intronic.Rate', ysf = 1, ylab = 'Intronic rate',
-  size.var = NULL, text.var = 'text'
-)
-
-## off-target vs zero-coverage ####
-if ('PCT_OFF_BAI' %in% colnames(ms) & 'ZERO_CVG_TARGETS_PCT' %in% colnames(ms)){
-  figs$coverage <- scatter_plot(
-    ms,
-    xvar = 'PCT_OFF_BAIT', xsf = 1, xlab = 'Off-target rate',
-    yvar = ' ZERO_CVG_TARGETS_PCT', ysf = 1, ylab = 'Zero coverage rate',
-    size.var = NULL, text.var = 'text'
-  )
-  
-}
-
-
-```
-
-```{r run_pca}
-if (file.exists('gene.y0.rds')){
-  y0 <- readRDS('gene.y0.rds')
-  gene.pca <- plot_pca(y0, var.genes = 500, color = y0$samples$group, sample.label = F)
-  if (length(unique(y0$samples$group))>30){
-    y0$samples$group <- 1
-    gene.pca <- plot_pca(y0, var.genes = 500, color = y0$samples$group, sample.label = F)
-  }
-  
-}
-
-if (file.exists('transcript.y0.rds')){
-  y0 <- readRDS('transcript.y0.rds')
-  transcript.pca <-plot_pca(y0, var.genes = 500, color = y0$samples$group, sample.label = F, feature.length = 'EffectiveLength')
-  if (length(unique(y0$samples$group))>30){
-    y0$samples$group <- 1
-    ranscript.pca <-plot_pca(y0, var.genes = 500, color = y0$samples$group, sample.label = F, feature.length = 'EffectiveLength')
-  }
-}
-```
-
-```{r run_de}
-de.rds <- 'differential_genes.rds'
-if (file.exists(de.rds)){
-  de <- readRDS(de.rds)
-  de <- lapply(de, function(ide){if('error' %in% names(ide)){return(NULL)}else{ide}})
-  de[sapply(de, is.null)] <- NULL
-  de <- de[sort(names(de))]
-}
-
-if ('de' %in% ls() & length(de) > 0){
-  de_sum <- bind_rows(lapply(de, function(ide){ide$summary})) %>% 
-    dplyr::relocate(test_samples, control_samples, .after = last_col()) %>% 
-    mutate(output_folder = basename(output_folder))
- 
-  de_plots <- mapply(
-    function(ide, out.prefix){
-        y <- ide$y
-        df <- ide$df
-        plot.title <- gsub('_vs_', ' vs ', out.prefix)
-        list(
-          PCA = plot_pca(
-            y, 
-            color = y$samples$sample_group, 
-            sample.label = T, 
-            plot.title = "", 
-            var.genes = 500, 
-            feature.length = "gene_length"),
-          MD = plot_MD(
-            df, 
-            plot.title = ""
-          ),
-          volcano = plot_volcano(
-            df, 
-            plot.title = ""
-          )
-        )
-        
-      }, de, names(de), SIMPLIFY = F
-  )
-  
-}
-```
-
-```{r run_dt}
-dt.rds <- 'differential_transcripts.rds'
-if (file.exists(dt.rds)){
-  dt <- readRDS(dt.rds)
-  dt <- lapply(dt, function(idt){if('error' %in% names(idt)){return(NULL)}else{idt}})
-  dt[sapply(dt, is.null)] <- NULL
-  dt <- dt[sort(names(dt))]
-}
-
-if ('dt' %in% ls() & length(dt) > 0){
-  dt_sum <- bind_rows(lapply(dt, function(ide){ide$summary})) %>% 
-    dplyr::relocate(test_samples, control_samples, .after = last_col()) %>% 
-    mutate(output_folder = basename(output_folder))
- 
-  dt_plots <- mapply(
-    function(ide, out.prefix){
-        y <- ide$y
-        df <- ide$df
-        plot.title <- gsub('_vs_', ' vs ', out.prefix)
-        list(
-          PCA = plot_pca(
-            y, 
-            color = y$samples$sample_group, 
-            sample.label = T, 
-            plot.title = "", 
-            var.genes = 500, 
-            feature.length = "EffectiveLength"),
-          MD = plot_MD(
-            df, 
-            plot.title = ""
-          ),
-          volcano = plot_volcano(
-            df, 
-            plot.title = ""
-          )
-        )
-        
-      }, dt, names(dt), SIMPLIFY = F
-  )
-  
-}
-
-```
-
-## SAMPLE SHEET
-```{r sample_sheet}
-
 ss %>% 
+  dplyr::rename("Sample" = "id") %>% 
   DT::datatable(
   class = 'cell-border stripe', 
   rownames = T,  
@@ -589,43 +473,170 @@ $$\\[0.5in]$$
 
 ## QC {.tabset .tabset-pills}
 
+```{r collect_qc}
+## gather multiqc ####
+indir <- 'multiqc_data'
+if (dir.exists(indir)){
+    fname <- file.path(indir, 'multiqc_general_stats.txt')
+    if(file.exists(fname)){
+        stat <- read.delim(fname )%>% 
+          mutate(Sample = as.character(Sample))
+    }
+
+    fname <- file.path(indir, 'multiqc_star.txt')
+    if(file.exists(fname)){
+        star <- read.delim(fname) %>% 
+          mutate(Sample = as.character(Sample))
+    }
+    
+    fname <- file.path(indir, 'multiqc_rna_seqc.txt')
+    if(file.exists(fname)){
+        rnaseqc <- read.delim(fname) %>% 
+          mutate(Sample = as.character(Sample))
+    }
+
+    fname <- file.path(indir, 'rseqc_gene_body_cov.txt')
+    if(file.exists(fname)){
+        rseqc_gene_body_cov <- read.delim(fname) %>% 
+          mutate(Sample = as.character(Sample))
+    }
+    
+}
+
+## collect_hs_metrics ####
+indir <- 'hs_metrics'
+if (dir.exists(indir)){
+    flist <- list.files(indir, full.names = T)
+    gatk <- data.table::rbindlist(lapply(
+        flist, function(fname){
+            read.delim(fname, comment.char = '#', nrows = 1) %>% 
+                mutate(Sample = gsub('.hs_metrics.txt', '', basename(fname)))
+        }
+    ), fill = T, use.names = T)
+    
+}
+
+## generate metrics summary table ####
+ms <- ss %>% 
+  mutate(
+    fastqc_id = paste0(id, ifelse(grepl(';', fastq_1), '_merged', ''), '_R1')
+    ) %>% 
+    dplyr::select(id, sample_group, fastqc_id) %>% 
+    dplyr::rename("Sample" ="id")
+
+if (exists('stat')){
+  ms <- ms %>% 
+    left_join(
+      stat %>% 
+        filter(is.na(FastQC_mqc.generalstats.fastqc.total_sequences)) %>% 
+        dplyr::select(Sample, !contains('FastQC')), 
+      by = c('Sample')
+    ) %>% 
+    left_join(
+      stat %>% 
+        filter(!is.na(FastQC_mqc.generalstats.fastqc.total_sequences) & grepl('_R1', Sample)) %>% 
+        dplyr::select(Sample, contains('fastqc.total_sequences')),
+      by = c('fastqc_id' = 'Sample')
+    ) %>% 
+    left_join(
+      stat %>% 
+        filter(!is.na(FastQC_trimmed_mqc.generalstats.fastqc_trimmed.total_sequences) & grepl('_R1', Sample)) %>% 
+        dplyr::select(Sample, contains('fastqc_trimmed.total_sequences')),
+      by = c('fastqc_id' = 'Sample')
+    )    
+  colnames(ms) <- gsub('.*generalstats.', '', colnames(ms))
+}
+
+
+if (exists('rnaseqc')){
+    ms <- ms %>% left_join(rnaseqc, by = 'Sample')  
+}
+
+if ( exists('gatk')){
+    ms <- ms %>% left_join(gatk, by = "Sample")
+}
+
+ms$text <- ms$Sample
+
+```
+
 ### Input reads
 ```{r}
-p <- figs$reads
+df <- ms %>% 
+  mutate(
+    size = 1 - fastqc_trimmed.total_sequences/fastqc.total_sequences
+  ) %>% 
+  mutate(
+    text = paste(Sample, ':', round(size*100), '% trimmed')
+  )
+p <- scatter_plot(
+  df, 
+  xvar = 'fastqc.total_sequences', xsf = 1e-6, xlab = 'Total sequenced reads in million',
+  yvar = 'fastqc_trimmed.total_sequences', ysf = 1e-6, ylab = 'Adapter-trimmed reads in million',
+  size.var = 'size', text.var = 'text'
+)
+
 plotly::ggplotly(p, tooltip = 'text')
+rm(p,df)
 ```
 
 $$\\[0.5in]$$
 
 ### Read alignment
 ```{r}
-p <- figs$alignment
-plotly::ggplotly(p, tooltip = 'text')
+df <- ms %>% 
+  mutate(
+    text = paste(Sample, ':', round(star.uniquely_mapped_percent), '% uniquely mapped')
+  )
 
+p <- scatter_plot(
+ df,
+ xvar = 'star.uniquely_mapped', xsf = 1e-6, xlab = 'Uniquely mapped reads in million',
+  yvar = 'star.uniquely_mapped_percent', ysf = 1, ylab = 'Uniquely mapped reads %',
+  size.var = NULL, text.var = 'text'
+)
+plotly::ggplotly(p, tooltip = 'text')
+rm(p,df)
 ```
 
 $$\\[0.5in]$$
 
 ### Gene detected and intergenic rate
 ```{r}
-p <- figs$genes
+p <- scatter_plot(
+ ms,
+ xvar = 'Genes.Detected', xsf = 1, xlab = 'Genes detected',
+  yvar = 'Intergenic.Rate', ysf = 1, ylab = 'Intergenic rate',
+  size.var = NULL, text.var = 'text'
+)
+
 plotly::ggplotly(p, tooltip = 'text')
+rm(p)
 ```
 
 $$\\[0.5in]$$
 
 ### Exonic vs intronic rates
 ```{r}
-p <- figs$exon
+p <- scatter_plot(
+ ms,
+ xvar = 'Exonic.Rate', xsf = 1, xlab = 'Exonic rate',
+  yvar = 'Intronic.Rate', ysf = 1, ylab = 'Intronic rate',
+  size.var = NULL, text.var = 'text'
+)
 plotly::ggplotly(p, tooltip = 'text')
+rm(p)
 ```
 
 $$\\[0.5in]$$
 
 ### Gene body coverage
 ```{r, fig.dim=c(10,6)}
-if ('rseqc_gene_body_cov' %in% names(dat)){
-  df <- dat$rseqc_gene_body_cov %>% 
+fname <- file.path('multiqc_data', 'rseqc_gene_body_cov.txt')
+if(file.exists(fname)){
+  rseqc_gene_body_cov <- read.delim(fname) %>% 
+    mutate(Sample = as.character(Sample))
+  df <- rseqc_gene_body_cov %>% 
     tibble::column_to_rownames(var = 'Sample') %>% 
     as.matrix() %>% 
     reshape2::melt() %>% 
@@ -633,41 +644,44 @@ if ('rseqc_gene_body_cov' %in% names(dat)){
     group_by(Sample) %>% 
     mutate(
       value = value/max(value)*100,
-      # Sample = gsub('^V', '', Sample),
       x = as.numeric(gsub('X','',x))
-    )
-  if (setequal(paste0('V', ms$Sample), df$Sample)){
-    df$Sample <- gsub('^V', '', df$Sample)
-  }
-  
-  df <- df %>% 
+    ) %>% 
+    ungroup() %>% 
+    dplyr::rename('match_id' = 'Sample') %>% 
     left_join(
       ms %>% 
-        dplyr::select(Sample, sample_group), 
-      by = 'Sample')
+        dplyr::select(Sample, sample_group) %>% 
+        mutate(
+          match_id = ifelse(grepl('^[0-9]', Sample), paste0('V',Sample), Sample)
+        ), 
+      by = 'match_id'
+    )
   
   p <- df %>% 
-    ggplot(aes(x = x, y = value, color = sample_group, group = Sample, text = Sample))+
+    mutate(text = Sample) %>% 
+    ggplot(aes(x = x, y = value, color = sample_group, group = Sample, text = text))+
     geom_line()+
-    facet_wrap(~sample_group, ncol = 1)+
     labs(
       x = "Gene body percentile (5' -> 3')", 
       y = 'Percentile of coverage',
       color = ''
     )+
-    theme_bw()+
-    theme(
-      legend.position = 'none'
-    )
-  plotly::ggplotly(p, tooltip = 'text')
+    theme_bw()
+
+}else{
+  p <- plot_spacer()
 }
 
+plotly::ggplotly(p, tooltip = 'text')
+rm(p,df)
+  
 ```
+
 
 $$\\[0.5in]$$
 
-### Metric table
-Click a button to save as csv or Excel file. \
+### Metrics summary
+Click a button to save as csv file. \
 ```{r}
 if (exists('ms')){
   v <- unlist(strsplit('Sample,fastqc.total_sequences,fastqc_trimmed.total_sequences,star.uniquely_mapped,star.uniquely_mapped_percent,PCT_OFF_BAIT, ZERO_CVG_TARGETS_PCT,Genes.Detected,Exonic.Rate,Intronic.Rate,Intergenic.Rate', split = ','))
@@ -685,7 +699,7 @@ if (exists('ms')){
       options = list(
         pageLength = 10, 
         dom = 'Bfrtip',
-        buttons = c('csv', 'excel')
+        buttons = c('csv')
       ))
 }
 
@@ -703,10 +717,36 @@ $$\\[0.5in]$$
 - See the sample name by hovering over a dot. \
 
 ```{r, fig.dim=c(6,4)}
-library(plotly)
-if(exists('gene.pca')){
-  ggplotly(gene.pca, tooltip = "text")
-  
+if (file.exists('gene.y0.rds')){
+  y0 <- readRDS('gene.y0.rds')
+}else{
+  fname <- 'all_samples.gene_raw_counts.txt'
+  if (file.exists(fname)){
+    nsamples <- nrow(ss)
+    
+    gene_expr <- read.delim(fname)
+    cts <- gene_expr[,tail(1:ncol(gene_expr), nsamples)]
+    mid <- gsub('-', '.', ifelse(grepl('^[0-9]', ss$id), paste0('X', ss$id), ss$id))
+    colnames(cts) <- ss$id[match(colnames(cts), mid)] # revert "." to "-"
+    
+    y0 <- count2dgelist(
+    counts = cts, 
+    features = gene_expr[, 1:(ncol(gene_expr)-nsamples)], 
+    samples = ss[match(colnames(cts), ss$id), ],
+    group = 'sample_group'
+    )
+    rm(gene_expr, nsamples, cts, fname)
+  }
+}
+
+if(exists('y0')){
+    gene.pca <- plot_pca(y0, var.genes = 500, color = y0$samples$group, sample.label = F)
+  if (length(unique(y0$samples$group))>30){
+    y0$samples$group <- 1
+    gene.pca <- plot_pca(y0, var.genes = 500, color = y0$samples$group, sample.label = F)
+  }
+  plotly::ggplotly(gene.pca, tooltip = "text")
+  rm(gene.pca)
 }
 
 
@@ -715,14 +755,27 @@ if(exists('gene.pca')){
 $$\\[0.2in]$$
 
 ### Differential gene expression
+```{r}
+de_rds <- 'differential_genes.rds'
+de_dir <- 'differential_genes'
+de <- NULL
+if (file.exists(de_rds)){
+  de <- parse_de_rds(de_rds)
+}else if (dir.exists(de_dir)){
+  de <- parse_de_dir(de_dir, ss, y0)
+}
+rm(de_rds, de_dir)
+if(exists('y0')){rm(y0)}
+```
 
 #### DE Summary
 - feature = gene; FDR = BH-corrected p-value; FC = fold change  \
 - Statistics of DE genes are summarized based on two thresholds -- the first set between columns *features_up* and *FC_cutoff* and the second set between columns *features_up2* and *FC_cutoff2*. \
 
 ```{r}
-if (exists('de_sum')){
-  de_sum %>% 
+
+if (!is.null(de)){
+  de$sum %>% 
     DT::datatable(
       class = 'cell-border stripe', 
       rownames = T,  
@@ -748,13 +801,13 @@ DE genes displayed in the plots below and in the delivered pdf files  were defin
 \
 
 ```{r, eval=TRUE, include=TRUE, results='asis', fig.cap=c('Fig. Differential expression analysis. (A) PCA plot. (B) MA/MD plot. (C) Volcano plot'), fig.width=12, fig.height=4}
-if (exists('de_plots')){
+if (!is.null(de)){
 
-  for (i in 1:length(de_plots)){
-    p <- wrap_plots(de_plots[[i]], nrow = 1) + plot_annotation(tag_levels = 'A')
+  for (i in 1:length(de$plots)){
+    p <- wrap_plots(de$plots[[i]], nrow = 1) + plot_annotation(tag_levels = 'A')
     
     make_tabs(
-      paste("#####", names(de_plots)[i]),
+      paste("#####", names(de$plots)[i]),
       list(p)
     )
   }
@@ -770,15 +823,49 @@ $$\\[0.5in]$$
 
 ## TRANSCRIPT-LEVEL EXPRESSION
 
+
 ### PCA plot of all samples 
 - PCA is based on top 500 variable genes (NOT on chr X, chr Y or chr M). \
 - See the sample name by hovering over a dot. \
 
 ```{r, fig.dim=c(6,4)}
-library(plotly)
-if(exists('transcript.pca')){
-  ggplotly(transcript.pca, tooltip = "text")
-  
+
+if (file.exists('transcript.y0.rds')){
+  y0 <- readRDS('transcript.y0.rds')
+}else{
+  fname <- 'all_samples.transcript_raw_counts.txt'
+  if (file.exists(fname)){
+    nsamples <- nrow(ss)
+    
+    gene_expr <- read.delim(fname)
+    cts <- gene_expr[,tail(1:ncol(gene_expr), nsamples)]
+    if (grepl('^counts', colnames(cts)[1])){
+      colnames(cts) <- gsub('^counts.', '', colnames(cts))
+      mid <- gsub('-', '.', ss$id)
+    }else{
+      mid <- gsub('-', '.', ifelse(grepl('^[0-9]', ss$id), paste0('X', ss$id), ss$id))
+    }
+    colnames(cts) <- ss$id[match(colnames(cts), mid)] # revert "." to "-"
+    
+    y0 <- count2dgelist(
+    counts = cts, 
+    features = gene_expr[, 1:(ncol(gene_expr)-nsamples)], 
+    samples = ss[match(colnames(cts), ss$id), ],
+    group = 'sample_group'
+    )
+    rm(gene_expr, nsamples, cts, fname)
+  }
+
+}
+
+if(exists('y0')){
+    transcript.pca <-plot_pca(y0, var.genes = 500, color = y0$samples$group, sample.label = F, feature.length = 'EffectiveLength')
+  if (length(unique(y0$samples$group))>30){
+    y0$samples$group <- 1
+    transcript.pca <-plot_pca(y0, var.genes = 500, color = y0$samples$group, sample.label = F, feature.length = 'EffectiveLength')
+}
+  plotly::ggplotly(transcript.pca, tooltip = "text")
+  rm(transcript.pca)
 }
 
 
@@ -790,13 +877,27 @@ $$\\[0.2in]$$
 
 ### Differential transcript expression
 
+```{r}
+de_rds <- 'differential_transcripts.rds'
+de_dir <- 'differential_transcripts'
+de <- NULL
+if (file.exists(de_rds)){
+  de <- parse_de_rds(de_rds, "EffectiveLength")
+}else if (dir.exists(de_dir)){
+  de <- parse_de_dir(de_dir, ss, y0, "EffectiveLength")
+  rm(y0)
+}
+rm(de_rds, de_dir)
+if(exists('y0')){rm(y0)}
+```
+
 #### DT Summary
 - feature = transcript; FDR = BH-corrected p-value; FC = fold change  \
 - Statistics of DT genes are summarized based on two thresholds -- the first set between columns *features_up* and *FC_cutoff* and the second set between columns *features_up2* and *FC_cutoff2*. \
 
 ```{r}
-if (exists('dt_sum')){
-  dt_sum %>% 
+if (!is.null(de)){
+  de$sum %>% 
     relocate(control_samples, test_samples, .after = last_col()) %>% 
     DT::datatable(
       class = 'cell-border stripe', 
@@ -823,17 +924,99 @@ Differential transcripts displayed in the plots below and in the delivered pdf f
 \
 
 ```{r, eval=TRUE, include=TRUE, results='asis', fig.cap=c('Fig. Differential expression analysis. (A) PCA plot. (B) MA/MD plot. (C) Volcano plot'), fig.width=12, fig.height=4}
-if (exists('dt_plots')){
+if (!is.null(de)){
 
-  for (i in 1:length(dt_plots)){
-    p <- wrap_plots(dt_plots[[i]], nrow = 1) + plot_annotation(tag_levels = 'A')
+  for (i in 1:length(de$plots)){
+    p <- wrap_plots(de$plots[[i]], nrow = 1) + plot_annotation(tag_levels = 'A')
     
     make_tabs(
-      paste("#####", names(dt_plots)[i]),
+      paste("#####", names(de$plots)[i]),
       list(p)
     )
   }
   
+}
+```
+
+
+## {.unnumbered .unlisted}
+
+$$\\[0.5in]$$
+
+## GENE FUSIONS {.tabset .tabset-pills}
+```{r}
+if (dir.exists('arriba')){
+  flist <- list.files('arriba', pattern = 'fusions.tsv', full.names = T)
+  fusions <- lapply(
+    flist,
+    function(fname){
+      df <- read.delim(fname)
+      if (nrow(df) > 0){
+        data.frame(
+          id = gsub('.fusions.tsv', '', basename(fname)),
+          all_fusions = nrow(df),
+          low_confidence = sum(df$confidence == 'low'), 
+          medium_confidence = sum(df$confidence == 'medium'),
+          high_confidence = sum(df$confidence == 'high')
+          )
+      }else{
+        data.frame(
+          id = gsub('.fusions.tsv', '', basename(fname)),
+          all_fusions = 0,
+          low_confidence = 0, 
+          medium_confidence = 0,
+          high_confidence = 0
+        )
+      }
+    }
+  ) %>% 
+    bind_rows() %>% 
+    left_join(
+      ss %>% dplyr::select(id, sample_group),
+      by = 'id'
+    )
+}
+
+
+```
+
+### Plot
+```{r}
+if (exists('fusions')){
+  fusions %>% 
+    ggplot(aes(x = total_fusions, y = high_confidence, color = sample_group))+
+    geom_point(shape = 1)
+  
+  p <- scatter_plot(
+    fusions %>% mutate(text = id), 
+    xvar = 'all_fusions', xsf = 1, xlab = 'All fusions',
+    yvar = 'high_confidence', ysf = 1, ylab = 'Fusions of high confidence',
+    text.var = 'text'
+  )
+  
+plotly::ggplotly(p, tooltip = 'text')
+}
+```
+
+
+### Metrics summary
+Click a button to save as csv file. \
+```{r}
+if (exists('fusions')){
+  fusions %>% 
+    dplyr::rename("Sample" = "id") %>% 
+    relocate(Sample, sample_group) %>% 
+    DT::datatable(
+      class = 'cell-border stripe', 
+      rownames = T,  
+      filter = 'top', 
+      editable = F, 
+      extensions = 'Buttons', 
+      options = list(
+        pageLength = 6, 
+        dom = 'Bfrtip',
+        buttons = c('csv')
+      ))
 }
 
 ```
@@ -842,7 +1025,6 @@ if (exists('dt_plots')){
 ## {.unnumbered .unlisted}
 
 $$\\[0.5in]$$
-
 
 ## DELIVERABLES
 **The following files will be delivered if relevant analyses are performed. ** \
@@ -912,7 +1094,7 @@ $$\\[0.5in]$$
 
 ## METHODS
 
-[Cutadapt](https://journal.embnet.org/index.php/embnetjournal/article/view/200) was applied to remove adapter sequences. [STAR](https://pubmed.ncbi.nlm.nih.gov/23104886/) with 2-pass mapping was used to align reads to the reference genome and gene annotation along with quantification of gene-level expression. [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/), [RNA-SeQC](https://pubmed.ncbi.nlm.nih.gov/22539670/), [RSeQC](https://pubmed.ncbi.nlm.nih.gov/22743226/) were used to check various QC metrics including insert fragment size, read quality, read duplication rates, rRNA rates, gene body coverage and read distribution in different genomic regions. \
+[Fastp](https://onlinelibrary.wiley.com/doi/10.1002/imt2.107) or [Cutadapt](https://journal.embnet.org/index.php/embnetjournal/article/view/200) was applied to remove adapter sequences. [STAR](https://pubmed.ncbi.nlm.nih.gov/23104886/) with 2-pass mapping was used to align reads to the reference genome and gene annotation along with quantification of gene-level expression. [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/), [RNA-SeQC](https://pubmed.ncbi.nlm.nih.gov/22539670/), [RSeQC](https://pubmed.ncbi.nlm.nih.gov/22743226/) were used to check various QC metrics including insert fragment size, read quality, read duplication rates, rRNA rates, gene body coverage and read distribution in different genomic regions. \
 Bioconductor package [edgeR](https://academic.oup.com/bioinformatics/article/26/1/139/182458) was used to detect differential expression between sample groups. Genes with low expression were excluded using edgeR function filterByExpr with min.count = 10 and min.total.count = 15. The filtered expression matrix was normalized by [TMM method](https://doi.org/10.1186/gb-2010-11-3-r25). Statistical test was using quasi-likelihood pipeline implemented in edgeR. A gene was deemed differentially expressed if meeting the cutoffs of log2 fold change and Benjamini-Hochberg adjusted p-values. \
 
 $$\\[0.5in]$$

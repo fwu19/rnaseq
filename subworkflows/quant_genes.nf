@@ -17,6 +17,7 @@ workflow QUANT_GENES {
 
     main: 
     ch_fc_counts = Channel.empty()
+    ch_fc_summary = Channel.empty()
     ch_expr = Channel.empty()
     ch_de = Channel.empty()
     de_csv = Channel.empty()
@@ -29,22 +30,24 @@ workflow QUANT_GENES {
         if (!params.run_alignment){
             def my_dir = new File("${srcdir}")
             def srcdir = my_dir.absolutePath
-            ch_bam_bai = Channel.fromPath("${srcdir}/csv/mapped.${params.aligner}.csv")
+            ch_bam_bai = Channel.fromPath("${srcdir}/csv/map2genome.${params.aligner}.csv")
                 .splitCsv(header: true)
                 .map { it -> [ [ it ], it.id , "${srcdir}/${it.bam}", "${srcdir}/${it.bai}" ] }
-
         }
-        
+
         if (params.run_featurecounts){
             FEATURECOUNTS(
-                ch_bam_bai, 
-                params.gtf,
-                params.run_infer_experiment ? infer_experiment : file("${srcdir}/csv/infer_experiment.csv")
+                    ch_bam_bai, 
+                    params.gtf,
+                    params.run_infer_experiment ? infer_experiment : file("${srcdir}/csv/infer_experiment.csv")
             )     
-            ch_fc_counts = FEATURECOUNTS.out.counts
-            // [ [meta], val(out_prefix), path("count.txt") ]
-            ch_versions = ch_versions.mix(FEATURECOUNTS.out.versions)
-            
+            ch_fc_counts = FEATURECOUNTS.out.counts // [ [meta], val(out_prefix), path("count.txt") ]
+            ch_fc_summary = FEATURECOUNTS.out.summary
+            ch_versions = ch_versions.mix(FEATURECOUNTS.out.versions)            
+        }else{            
+            ch_star_counts = Channel.fromPath("${srcdir}/csv/gene_counts.${params.aligner}.csv")
+                    .splitCsv(header: true)
+                    .map { it -> [ [ it ], it.id , "${srcdir}/${it.gene_count}" ] }
         }
 
         ch_counts = params.run_featurecounts ? ch_fc_counts : ch_star_counts
@@ -66,7 +69,7 @@ workflow QUANT_GENES {
         DIFFERENTIAL_GENES(
             samplesheet, 
             params.comparison ? file(params.comparison) : file("$projectDir/assets/dummy_file.csv"),
-            params.run_gene_count ? ch_expr : Channel.fromPath("${srcdir}/expression_quantification/all_samples.gene_raw_counts.txt"), 
+            params.run_gene_count ? ch_expr : Channel.fromPath("${srcdir}/${params.gene_expr_dir}/all_samples.gene_raw_counts.txt"), 
             "gene_length",
             gene_txt
         )
@@ -79,6 +82,7 @@ workflow QUANT_GENES {
     emit:
     expr = ch_expr
     fc_counts = ch_fc_counts
+    fc_summary = ch_fc_summary
     de = ch_de
     de_csv
     versions = ch_versions

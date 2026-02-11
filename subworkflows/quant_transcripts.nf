@@ -28,7 +28,7 @@ workflow QUANT_TRANSCRIPTS {
         if (!params.run_alignment ){
             def my_dir = new File("${srcdir}")
             def srcdir = my_dir.absolutePath
-            ch_tx_bam = Channel.fromPath("${srcdir}/csv/mapped.${params.aligner}.csv")
+            ch_tx_bam = Channel.fromPath("${srcdir}/csv/map2transcriptome.${params.aligner}.csv")
                 .splitCsv(header: true)
                 .map { it -> [ [ it ], it.id, "${srcdir}/${it.tx_bam}" ] }
         }
@@ -41,9 +41,9 @@ workflow QUANT_TRANSCRIPTS {
                     ch_tx_bam,
                     tx_fa
                 )
+                ch_salmon = SALMON.out.sf
+                ch_versions = ch_versions.mix(SALMON.out.versions.first())
             }
-            ch_salmon = SALMON.out.sf
-            ch_versions = ch_versions.mix(SALMON.out.versions.first())
 
         }
 
@@ -63,7 +63,7 @@ workflow QUANT_TRANSCRIPTS {
         DIFFERENTIAL_TRANSCRIPTS(
             samplesheet, 
             params.comparison_transcripts ? file(params.comparison_transcripts) : (params.comparison ? file(params.comparison) : file("$projectDir/assets/dummy_file.csv")),
-            params.run_tx_count ? ch_tx_expr : Channel.fromPath("${srcdir}/expression_quantification/all_samples.transcript_raw_counts.txt", checkIfExists: true), 
+            params.run_tx_count ? ch_tx_expr : Channel.fromPath("${srcdir}/${params.tx_expr_dir}/all_samples.transcript_raw_counts.txt", checkIfExists: true), 
             "EffectiveLength",
             gene_txt
         )

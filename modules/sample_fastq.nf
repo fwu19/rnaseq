@@ -4,7 +4,7 @@
 
 
 process SAMPLE_FASTQ {
-    label "process_single"
+    label "process_low"
 
     tag "Sample reads from ${out_prefix}"
 
@@ -18,8 +18,8 @@ process SAMPLE_FASTQ {
     script:
     def n_lines = n_reads * 4
     """
-    zcat ${fq1} | head -n ${n_lines} | gzip -c > ${out_prefix}_R1.head_${n_reads}.fastq.gz
-    zcat ${fq2} | head -n ${n_lines} | gzip -c > ${out_prefix}_R2.head_${n_reads}.fastq.gz
+    sample_fastq.sh $fq1 $fq2 $out_prefix $n_reads
+
     """
 }
 

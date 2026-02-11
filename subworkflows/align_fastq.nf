@@ -160,7 +160,7 @@ workflow ALIGN_FASTQ {
                 ch_bam_bai_xeno
             )
             ch_graft_reads = BAM_TO_FASTQ.out.fq
-            ch_software_versions = ch_software_versions.mix(BAM_TO_FASTQ.out.versions)
+            ch_versions = ch_versions.mix(BAM_TO_FASTQ.out.versions)
         }
 
     }

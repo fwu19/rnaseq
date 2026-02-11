@@ -11,14 +11,14 @@ for (arg in strsplit(args, split = '=')){
   assign(trimws(arg[1]), trimws(arg[2]))
 }
 
-graft_bams <- list.files(graft, pattern = 'bam', full.names = T)
-host_bams <- list.files(host, pattern = 'bam', full.names = T)
+graft_bams <- sort(list.files(graft_dir, pattern = 'bam$', full.names = T))
+host_bams <- sort(list.files(host_dir, pattern = 'bam$', full.names = T))
 
 XenofilteR(
   sample.list = cbind(graft_bams, host_bams),
   destination.folder = './',
-  bp.param = SnowParam(workers = nworkers, type = 'SOCK'),
+  bp.param = SnowParam(workers = as.integer(nworkers), type = 'SOCK'),
   output.names = out_prefix,
-  MM_threshold = mm_threshold
+  MM_threshold = as.integer(mm_threshold)
 )
 
