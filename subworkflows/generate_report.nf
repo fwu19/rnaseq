@@ -79,7 +79,7 @@ workflow GENERATE_REPORT {
         bam_stat_xeno = stat_xeno_dir.exists() ? Channel.fromPath("${stat_xeno_dir}/*").collect().ifEmpty([]) : []
             
         File star_log_dir = new File("${srcdir}/${params.star_log_dir}")
-        star_log = star_log_dir.exists() ?  Channel.fromPath("${star_log_dir}/*").collect().ifEmpty([]) : []
+        star_log = star_log_dir.exists() ?  Channel.fromPath("${star_log_dir}/**.final.out").collect().ifEmpty([]) : []
 
         File star_log_host_dir = new File("${srcdir}/${params.star_log_host_dir}")
         star_log_host = star_log_host_dir.exists() ?  Channel.fromPath("${star_log_host_dir}/*").collect().ifEmpty([]) : []

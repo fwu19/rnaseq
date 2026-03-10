@@ -14,12 +14,12 @@ output:
         code_download: FALSE
 editor_options: 
   chunk_output_type: console
-  
 params:
   fdr: 0.05
   fc: 1.5
   fdr2: 0.01
   fc2: 2
+  min_samples: 15
 ---
 
 ```{r setup, include=FALSE, dev='CairoPNG'}
@@ -83,7 +83,7 @@ count2dgelist <- function(
     return(y0)
 }
 
-parse_de_rds <- function(fname, feature_length = 'gene_length'){
+parse_de_rds <- function(fname, min_samples = 15, feature_length = 'gene_length'){
   de <- readRDS(fname)
   de <- lapply(de, function(ide){if('error' %in% names(ide)){return(NULL)}else{ide}})
   de[sapply(de, is.null)] <- NULL
@@ -107,6 +107,7 @@ parse_de_rds <- function(fname, feature_length = 'gene_length'){
           sample.label = T, 
           plot.title = "", 
           var.genes = 500, 
+          min.samples = min_samples, 
           feature.length = feature_length),
         MD = plot_MD(
           df, 
@@ -126,7 +127,7 @@ parse_de_rds <- function(fname, feature_length = 'gene_length'){
   
 }
 
-parse_de_dir <- function(indir, ss, y0, feature_length = "gene_length"){
+parse_de_dir <- function(indir, ss, y0, min_samples = 15, feature_length = "gene_length"){
   flist <- list.files(file.path(indir, list.files(indir, pattern = '_vs_')), pattern = '.txt$', full.names = T)
   if (length(flist) == 0){return(NULL)}
   
@@ -139,7 +140,7 @@ parse_de_dir <- function(indir, ss, y0, feature_length = "gene_length"){
   sum_txt <- list.files(indir, pattern = 'summary.txt|README|readme', full.names = T)
   if (length(sum_txt)>0){
     de_sum <- read.delim(sum_txt[1], comment.char = '#')
-  }else{ # would fail for complicated set up, e.g. combining multiple groups
+  }else{ # may fail for complicated set up, e.g. combining multiple groups
     de_sum <- lapply(
       flist, function(fname){
         df <- read.delim(fname)
@@ -195,6 +196,7 @@ parse_de_dir <- function(indir, ss, y0, feature_length = "gene_length"){
             sample.label = T, 
             plot.title = "", 
             var.genes = 500, 
+            min.samples = min_samples,
             feature.length = feature_length
             ),
         MD = plot_MD(
@@ -216,7 +218,7 @@ parse_de_dir <- function(indir, ss, y0, feature_length = "gene_length"){
 }
 
 ## PCA
-plot_pca <- function(y = NULL, cts = NULL, features = NULL, samples = NULL, var.genes = NULL, color = NULL, plot.title = '', sample.label = T, feature.length = 'gene_length'){
+plot_pca <- function(y = NULL, cts = NULL, features = NULL, samples = NULL, var.genes = NULL, color = NULL, plot.title = '', sample.label = T, min.samples = 15, feature.length = 'gene_length'){
     options(stringsAsFactors = F)
     require(ggrepel)
     require(edgeR)
@@ -266,7 +268,7 @@ plot_pca <- function(y = NULL, cts = NULL, features = NULL, samples = NULL, var.
     p <- p +
         geom_point(shape = 1)
     
-    if(sample.label){
+    if(sample.label & nrow(df) <= min.samples){
         p <- p +
             geom_text_repel(size = 2.4, color = 'black', position = 'jitter',max.overlaps = 80)
     }
@@ -762,15 +764,13 @@ if (file.exists('gene.y0.rds')){
 }
 
 if(exists('y0')){
-    gene.pca <- plot_pca(y0, var.genes = 500, color = y0$samples$group, sample.label = F)
-  if (length(unique(y0$samples$group))>30){
-    y0$samples$group <- 1
-    gene.pca <- plot_pca(y0, var.genes = 500, color = y0$samples$group, sample.label = F)
-  }
-  plotly::ggplotly(gene.pca, tooltip = "text")
-  rm(gene.pca)
+  gene.pca <- plot_pca(y0, var.genes = 500, color = y0$samples$group, sample.label = F)
+}else{
+  gene.pca <- plot_spacer()
 }
 
+plotly::ggplotly(gene.pca, tooltip = "text")
+rm(gene.pca)
 
 ```
 
@@ -782,9 +782,9 @@ de_rds <- 'differential_genes.rds'
 de_dir <- 'differential_genes'
 de <- NULL
 if (file.exists(de_rds)){
-  de <- parse_de_rds(de_rds)
+  de <- parse_de_rds(de_rds, min_samples = params$min_samples)
 }else if (dir.exists(de_dir)){
-  de <- parse_de_dir(de_dir, ss, y0)
+  de <- parse_de_dir(de_dir, ss, y0, min_samples = params$min_samples)
 }
 rm(de_rds, de_dir)
 if(exists('y0')){rm(y0)}
@@ -867,7 +867,7 @@ if (file.exists('transcript.y0.rds')){
     }else{
       mid <- gsub('-', '.', ifelse(grepl('^[0-9]', ss$id), paste0('X', ss$id), ss$id))
     }
-     colnames(cts) <- ss$id[match(colnames(cts), mid)] # revert "." to "-"
+    colnames(cts) <- ss$id[match(colnames(cts), mid)] # revert "." to "-"
     
     y0 <- count2dgelist(
     counts = cts, 
@@ -881,18 +881,17 @@ if (file.exists('transcript.y0.rds')){
 }
 
 if(exists('y0')){
-    transcript.pca <-plot_pca(y0, var.genes = 500, color = y0$samples$group, sample.label = F, feature.length = 'EffectiveLength')
-  if (length(unique(y0$samples$group))>30){
-    y0$samples$group <- 1
-    transcript.pca <-plot_pca(y0, var.genes = 500, color = y0$samples$group, sample.label = F, feature.length = 'EffectiveLength')
-}
-  plotly::ggplotly(transcript.pca, tooltip = "text")
-  rm(transcript.pca)
+  transcript.pca <-plot_pca(y0, var.genes = 500, color = y0$samples$group, sample.label = F, feature.length = 'EffectiveLength')
+}else{
+  transcript.pca <- plot_spacer()
 }
 
+plotly::ggplotly(transcript.pca, tooltip = "text")
+rm(transcript.pca)
 
 
 ```
+
 
 
 $$\\[0.2in]$$
@@ -904,9 +903,9 @@ de_rds <- 'differential_transcripts.rds'
 de_dir <- 'differential_transcripts'
 de <- NULL
 if (file.exists(de_rds)){
-  de <- parse_de_rds(de_rds, "EffectiveLength")
+  de <- parse_de_rds(de_rds, feature_length = "EffectiveLength", min_samples = params$min_samples)
 }else if (dir.exists(de_dir)){
-  de <- parse_de_dir(de_dir, ss, y0, "EffectiveLength")
+  de <- parse_de_dir(de_dir, ss, y0, feature_length = "EffectiveLength", min_samples = params$min_samples)
   rm(y0)
 }
 rm(de_rds, de_dir)
