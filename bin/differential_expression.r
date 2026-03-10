@@ -39,7 +39,7 @@ count2dgelist <- function(
 
 ## for all
 run_da <- function(
-    y0, out_prefix, 
+    y0, file_base, 
     control_group, test_group, group=NULL, 
     exclude_samples = NULL, include_samples = NULL,
     fdr=0.01, fc=2, fdr2=NULL, fc2=NULL, 
@@ -52,7 +52,7 @@ run_da <- function(
     require(edgeR)
     
     ## create output directory ####
-    out.dir <- dirname(out_prefix)
+    out.dir <- dirname(file_base)
     if(!dir.exists(out.dir)){dir.create(out.dir, recursive = T)}
     
     ## retrieve and process data ####
@@ -159,7 +159,7 @@ run_da <- function(
         colnames(rpkm) <- paste('FPKM.TMMnormalized', colnames(rpkm), sep = '.')
         df <- cbind(df, rpkm)
     }  
-    write.table(df,paste(out_prefix,'txt',sep = '.'), sep = '\t',quote = F,row.names = F)
+    write.table(df,paste(file_base,'txt',sep = '.'), sep = '\t',quote = F,row.names = F)
     
     ## return results ####
     df_sum <- data.frame(
@@ -255,10 +255,10 @@ plot_pca <- function(y, out_prefix, var.genes = NULL, color = NULL, plot_title =
     p <- p +
         geom_point(shape = 1)
     
-    if(sample.label){
-        p <- p +
-            geom_text_repel(size = 2.4, color = 'black', position = 'jitter',max.overlaps = 80)
-    }
+    # if(sample.label){
+    #     p <- p +
+    #         geom_text_repel(size = 2.4, color = 'black', position = 'jitter',max.overlaps = 80)
+    # }
     
     p <- p +
         labs(
@@ -271,7 +271,13 @@ plot_pca <- function(y, out_prefix, var.genes = NULL, color = NULL, plot_title =
         theme(
             legend.position = 'top'
         )
-    ggsave(paste(out_prefix,'PCA.pdf',sep='.'),width = 5,height = 5)
+    wrap_plots(
+      p, 
+      p +
+        geom_text_repel(size = 2.4, color = 'black', position = 'jitter',max.overlaps = 80),
+      nrow = 1
+    )
+    ggsave(paste(out_prefix,'PCA.pdf',sep='.'),width = 10,height = 5)
     
     ## return data
     return(p)
@@ -404,20 +410,20 @@ wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 
     if (is.na(icmp$include_samples[1])){
         include_samples <- NULL
     }else{
-        include_samples <- unlist(strsplit(icmp$include_samples[1], split = ';'))
+        include_samples <- trimws(unlist(strsplit(icmp$include_samples[1], split = ';')))
     }
     
     if (is.na(icmp$exclude_samples[1])){
         exclude_samples <- NULL
     }else{
-        exclude_samples <- unlist(strsplit(icmp$exclude_samples[1], split = ';'))
+        exclude_samples <- trimws(unlist(strsplit(icmp$exclude_samples[1], split = ';')))
     }
     
     
     ## run DGE ####
     lst <- run_da(
         y0, 
-        out_prefix = file_base,
+        file_base = file_base,
         control_group = control_group, 
         test_group = test_group, 
         group = group, 
@@ -478,7 +484,7 @@ fill_column <- function(df, colv, default.value, na.value = NULL, missing.value 
 }
 
 ## read arguments ####
-# input=${samplesheet} comparison=$c{omparison} gene_txt=${gene_txt} count_file=${count_file} fdr=${params.fdr} fc=${params.fc} fdr2=${params.fdr2} fc2=${params.fc2} gene_type=${params.de_gene_type} length_col=$l{ength_col}
+# input=${samplesheet} comparison=$c{omparison} gene_txt=${gene_txt} count_file=${count_file} fdr=${params.fdr} fc=${params.fc} fdr2=${params.fdr2} fc2=${params.fc2} gene_type=${params.de_gene_type} length_col=${length_col}
 args <- as.vector(commandArgs(T)) 
 for (arg in strsplit(args, split = '=')){
   assign(trimws(arg[1]), trimws(arg[2]))
@@ -539,17 +545,19 @@ cmp <- cmp %>%
       paste(gsub(';','+', cmp$test_group), gsub(';','+', cmp$control_group), sep = ' vs '),
       paste(gsub(';','+', cmp$test_group), gsub(';','+', cmp$control_group), sep = ' vs ')
       ) %>% 
-    fill_column('comparison_group', '', '', '') %>% 
+    fill_column('comparison_group', NA, NA, NA) %>% 
     fill_column('model_formula', '~0+group', '~0+group', '~0+group' ) %>% 
     fill_column('include_samples', NA, NA, NA) %>% 
     fill_column('exclude_samples', NA, NA, NA) %>% 
+    fill_column('run_version', "", "", "") %>% 
     arrange(out_prefix, !is.na(exclude_samples), !is.na(include_samples)) %>% 
-    group_by(out_prefix) %>% 
+    group_by(out_prefix, run_version) %>% 
     mutate(
-        n = 1:n()
-    ) %>% 
-    mutate(
-        file_base = file.path(outdir, paste0(out_prefix, ifelse(n>1, paste0('_run',n), '')), out_prefix)
+      n = 1:n(),
+      run_version = ifelse(n == 1, run_version, ifelse(run_version == "", paste0('run', n), paste0(run_version, '.run', n))),
+      file_base = file.path(outdir, paste(out_prefix, run_version, sep = '.'), out_prefix),
+      include_samples = gsub(' +', '.', include_samples),
+      exclude_samples = gsub(' +', '.', exclude_samples)
     )
 
 
@@ -637,14 +645,16 @@ for (i in 1:nrow(cmp)){
 names(de.list) <- basename(dirname(cmp$file_base))
 saveRDS(de.list, ifelse(grepl('transcript', count_file), 'differential_transcripts.rds', 'differential_genes.rds'))
 
+## write a copy of comparison table ####
 cmp %>% 
-  dplyr::select(-c(n, file_base)) %>% 
+  dplyr::select(-file_base) %>%
+  relocate(test_group, control_group, out_prefix, run_version, model_formula, comparison_group, exclude_samples, include_samples, plot_title) %>% 
   write.table(
     ifelse(grepl('transcript', count_file), 'comparisons.differential_transcripts.csv', 'comparisons.differential_genes.csv'),
     sep = ',', quote = F, row.names = F
     )
 
-## write out DE summary
+## write out DE summary ####
 de_sum <- bind_rows(lapply(de.list, function(ide){ide$summary})) %>% 
   dplyr::relocate(test_samples, control_samples, .after = last_col()) %>% 
   mutate(output_folder = basename(output_folder))
