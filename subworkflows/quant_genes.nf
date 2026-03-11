@@ -27,15 +27,15 @@ workflow QUANT_GENES {
     * Generate read count matrix
     */
     if (params.run_gene_count){
-        if (!params.run_alignment){
-            def my_dir = new File("${srcdir}")
-            def srcdir = my_dir.absolutePath
-            ch_bam_bai = Channel.fromPath("${srcdir}/csv/map2genome.${params.aligner}.csv")
-                .splitCsv(header: true)
-                .map { it -> [ [ it ], it.id , "${srcdir}/${it.bam}", "${srcdir}/${it.bai}" ] }
-        }
-
         if (params.run_featurecounts){
+            if (!params.run_alignment){
+                def my_dir = new File("${srcdir}")
+                def srcdir = my_dir.absolutePath
+                ch_bam_bai = Channel.fromPath("${srcdir}/csv/map2genome.${params.aligner}.csv")
+                    .splitCsv(header: true)
+                    .map { it -> [ [ it ], it.id , "${srcdir}/${it.bam}", "${srcdir}/${it.bai}" ] }
+            }
+
             FEATURECOUNTS(
                     ch_bam_bai, 
                     params.gtf,
@@ -44,10 +44,12 @@ workflow QUANT_GENES {
             ch_fc_counts = FEATURECOUNTS.out.counts // [ [meta], val(out_prefix), path("count.txt") ]
             ch_fc_summary = FEATURECOUNTS.out.summary
             ch_versions = ch_versions.mix(FEATURECOUNTS.out.versions)            
-        }else{            
-            ch_star_counts = Channel.fromPath("${srcdir}/csv/gene_counts.${params.aligner}.csv")
+        }else{      
+            if (!params.run_alignment){      
+                ch_star_counts = Channel.fromPath("${srcdir}/csv/gene_counts.${params.aligner}.csv")
                     .splitCsv(header: true)
                     .map { it -> [ [ it ], it.id , "${srcdir}/${it.gene_count}" ] }
+            }
         }
 
         ch_counts = params.run_featurecounts ? ch_fc_counts : ch_star_counts

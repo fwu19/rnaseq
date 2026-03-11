@@ -37,7 +37,8 @@ process MULTIQC {
     """
     [[ ${params.workflow} == 'pdx' ]] && mv star_log/ star_log_graft/
     [[ ${params.workflow} == 'pdx' ]] && mv samtools/ samtools_graft/
-    multiqc -f --ignore _STARpass1/ --config $multiqc_config .
+
+    TMPDIR=./ multiqc -f --ignore _STARpass1/ --config $multiqc_config .
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

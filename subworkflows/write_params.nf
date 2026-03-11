@@ -1,10 +1,10 @@
 nextflow.enable.dsl=2
 
-        /*
-         * Helper to normalize config values
-         */
+/*
+ * Helper to normalize config values
+ */
         
-        def parseConfigValue(String raw) {
+def parseConfigValue(String raw) {
             if( raw == null ) {return null}
 
             def v = raw.trim()
@@ -20,22 +20,13 @@ nextflow.enable.dsl=2
             if( v == 'null' )      {return null}
 
             return v
-        }
+}
 
 include { WRITE_JSON } from '../modules/write_json.nf'
 
 workflow WRITE_PARAMS {
 
-    take:
-    ch_software_versions
-
     main:
-
-    // Collect software versions
-    ch_software_versions
-            .collectFile(storeDir: "${params.outdir}/pipeline_info/${params.info_dir}/", name: 'software_versions.yml', sort: false, newLine: true)
-
-
         /*
          * 1) Build BASE_PARAMS from config files
          */

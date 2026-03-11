@@ -64,6 +64,11 @@ dummy_file = file("$projectDir/assets/dummy_file.csv")
 
 workflow RNASEQ {
 
+    /*
+    * Write software versions to a yaml file and overridden params to a json file
+    */
+    WRITE_PARAMS()
+
     def outdir  = new File("${params.outdir}").absolutePath
     def srcdir  = params.srcdir ? new File("${params.srcdir}").absolutePath : outdir
 
@@ -311,11 +316,11 @@ workflow RNASEQ {
         samplesheet, 
         ch_star_counts.map{it[2]}.flatten().collect().ifEmpty([]), 
         ch_fc_summary.map{it[2]}.flatten().collect().ifEmpty([]), 
-        ch_gene_expr.ifEmpty([]), 
-        ch_de.ifEmpty([]), 
+        ch_gene_expr.collect().ifEmpty([]), 
+        ch_de.collect().ifEmpty([]), 
         ch_salmon.map{it[2]}.flatten().collect().ifEmpty([]), 
-        ch_tx_expr.ifEmpty([]), 
-        ch_dt.ifEmpty([]),
+        ch_tx_expr.collect().ifEmpty([]), 
+        ch_dt.collect().ifEmpty([]),
         ch_arriba.map{it[2]}.flatten().collect().ifEmpty([]),
         ch_fastqc.flatten().collect().ifEmpty([]), 
         ch_cutadapt_js.flatten().collect().ifEmpty([]),
@@ -344,25 +349,24 @@ workflow RNASEQ {
             outdir
         )
     }else{
+        /*
         WRITE_OUTPUT_CSV(
-            ch_bam_bai.ifEmpty([]),
-            ch_bam_bai_host.ifEmpty([]),
-            ch_bam_bai_xeno.ifEmpty([]),
-            ch_tx_bam.ifEmpty([]),
-            ch_star_counts.ifEmpty([]),
-            ch_fc_counts.ifEmpty([]),
-            ch_salmon.ifEmpty([]),
-            ch_arriba.ifEmpty([])
+            ch_bam_bai.collect().ifEmpty([]),
+            ch_bam_bai_host.collect().ifEmpty([]),
+            ch_bam_bai_xeno.collect().ifEmpty([]),
+            ch_tx_bam.collect().ifEmpty([]),
+            ch_star_counts.collect().ifEmpty([]),
+            ch_fc_counts.collect().ifEmpty([]),
+            ch_salmon.collect().ifEmpty([]),
+            ch_arriba.collect().ifEmpty([]),
         )
+        */
     }
     
+    /* Collect software versions */
+    ch_software_versions
+        .collectFile(storeDir: "${params.outdir}/pipeline_info/${params.info_dir}/", name: 'software_versions.yml', sort: false, newLine: true)
 
-    /*
-    * Write software versions to a yaml file and overridden params to a json file
-    */
-    WRITE_PARAMS(
-        ch_software_versions
-    )
 }
 
 ////////////////////////////////////////////////////

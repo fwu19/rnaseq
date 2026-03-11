@@ -491,7 +491,7 @@ for (arg in strsplit(args, split = '=')){
 }
 # for (arg in args){eval(parse(text = arg))}
 
-ss <- read.csv(input) %>% 
+ss <- read.csv(input, colClasses = 'character', comment.char = '#') %>% 
     unique.data.frame() %>% 
     mutate(
       sample_group = gsub('-| +|&', '.', sample_group)
@@ -501,13 +501,13 @@ if(grepl('dummy', comparison)){
     cat(comparison, "is a dummy file! Provide --comparison path/to/comparison_file (a comparison table in csv, txt, tsv or rds format)!")
     quit()
 }else if(grepl('.csv$', comparison)){
-    cmp <- read.csv(comparison, comment.char = '#')
+    cmp <- read.csv(comparison, colClasses = 'character', comment.char = '#')
 }else if(grepl('.tsv$|.txt$', comparison)){
-    cmp <- read.delim(comparison, comment.char = '#')
+    cmp <- read.delim(comparison, colClasses = 'character', comment.char = '#')
 }else if (grepl('.rds$', comparison)){
     cmp <- readRDS(comparison)
 }else {
-    stop(paste(comparison, 'should be either csv or rds file!'))
+    stop('--comparison only takes csv, txt, tsv or rds file.')
 }
 
 fdr <- as.numeric(fdr)
@@ -555,7 +555,7 @@ cmp <- cmp %>%
     mutate(
       n = 1:n(),
       run_version = ifelse(n == 1, run_version, ifelse(run_version == "", paste0('run', n), paste0(run_version, '.run', n))),
-      file_base = file.path(outdir, paste(out_prefix, run_version, sep = '.'), out_prefix),
+      file_base = file.path(outdir, ifelse(run_version == '', out_prefix, paste(out_prefix, run_version, sep = '.')), out_prefix),
       include_samples = gsub(' +', '.', include_samples),
       exclude_samples = gsub(' +', '.', exclude_samples)
     )

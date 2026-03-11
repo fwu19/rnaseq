@@ -120,7 +120,7 @@ workflow GENERATE_REPORT {
     if (params.run_report){
         File multiqc_dir = new File("${srcdir}/${params.multiqc_dir}")
         multiqc = multiqc_dir.exists() ? Channel.fromPath("${multiqc_dir}/multiqc_data/", type: 'dir').ifEmpty([]) : []   
-        println "multiqc: ${multiqc.collect().flatten()}"
+        //println "multiqc: ${multiqc.collect().flatten()}"
         
         File arriba_csv = new File("${srcdir}/csv/arriba.csv")
         arriba = arriba_csv.exists() ? Channel.fromPath( arriba_csv )
