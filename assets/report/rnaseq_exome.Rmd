@@ -1050,7 +1050,7 @@ $$\\[0.5in]$$
 ## DELIVERABLES
 **The following files will be delivered if relevant analyses are performed. ** \
 
-### Arriba/
+### arriba/
 
 Genomic alignment bam files, bam index files and detected fusions.  _work/ contains other output files by Arriba.
 
@@ -1083,7 +1083,7 @@ $$\\[0.1in]$$
 
 $$\\[0.1in]$$
 
-### MultiQC/
+### multiqc/
 multiqc_report.html is a QC summary report generated using [MultiQC](https://multiqc.info). \
 
 ### {.unnumbered .unlisted}
@@ -1092,13 +1092,13 @@ $$\\[0.1in]$$
 
 ### QC/
 
-QC by [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) for raw fastq files and adapter-trimmed fastq files, [RSeQC](http://doi.org/10.1093/bioinformatics/bts356) and [RNA-SeQC](https://pubmed.ncbi.nlm.nih.gov/22539670/). \
+QC by multiple tools. \
 
 ### {.unnumbered .unlisted}
 
 $$\\[0.5in]$$
 
-### Salmon/
+### salmon/
 Transcript-level analysis by Salmon. \
 
 ### {.unnumbered .unlisted}
