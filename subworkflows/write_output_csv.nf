@@ -14,28 +14,27 @@ include { WRITE_CSV as WRITE_CSV_ARRIBA } from '../modules/write_csv.nf'
 workflow WRITE_OUTPUT_CSV {
     take:
     bam_bai
-    bam_bai_host
-    bam_bai_xeno
     tx_bam
     star_counts
     fc_counts
     salmon
     arriba
 
-    main: 
+    main:     
 
     /* regular or exome workflow, map2genome.csv and map2transcriptome.csv */
     if (params.run_alignment && params.workflow != 'pdx' ){
+        //bam_bai.view()
         if (params.aligner == 'star'){
             WRITE_CSV_ALIGN_FASTQ(
                 bam_bai
-                .map { 
+                .map {
                     it -> [id: it[0].id] + [sample_group: it[0].sample_group] + [bam: "${params.star_dir}/${it[2].name}"] + [bai: "${params.star_dir}/${it[3].name}"]
                 }
                 .collect(),
                 "map2genome.${params.aligner}.csv"        
             )
-        
+            
             WRITE_CSV_MAP_TX(
                 tx_bam
                 .map { 
@@ -44,6 +43,7 @@ workflow WRITE_OUTPUT_CSV {
                 .collect(),
                 "map2transcriptome.${params.aligner}.csv"        
             )
+            
         }
 
         if (params.aligner == 'bwa-mem'){
@@ -59,26 +59,34 @@ workflow WRITE_OUTPUT_CSV {
 
     }
 
-    /* pdx workflow, map2genome.csv */
+    /* pdx workflow, map2genome.csv  */ 
+
     if(params.run_alignment && params.workflow == 'pdx'){
-        if (params.aligner == 'star'){
+        bam_bai
+            .map { 
+                    it -> [
+                        id: it[0].id,
+                        sample_group: it[0].sample_group,
+                        bam: "${params.star_dir}/${it[2].name}",
+                        bai: "${params.star_dir}/${it[3].name}"
+                        ]
+                }
+                .set{ch_bam_bai_pdx}
+        if (params.aligner == 'star'){            
             WRITE_CSV_ALIGN_FASTQ(
-                Channel.fromList(bam_bai)
-                .join(Channel.fromList(bam_bai_host))
-                .join(Channel.fromList(bam_bai_xeno))
+                bam_bai
                 .map { 
                     it -> [id: it[0].id] + [sample_group: it[0].sample_group] + [graft_bam: "${params.star_dir}/${it[2].name}" ] + [graft_bai: "${params.star_dir}/${it[3].name}" ] + [host_bam: "${params.star_host_dir}/${it[5].name}" ] + [host_bai: "${params.star_host_dir}/${it[6].name}" ] + [bam: "${params.star_xeno_dir}/${it[8].name}" ] + [bai: "${params.star_xeno_dir}/${it[9].name}" ]
                     }
                 .collect(),
                 "map2genome.${params.aligner}.csv"        
             )
+            
         }
 
         if (params.aligner == 'bwa-mem'){
             WRITE_CSV_ALIGN_FASTQ(
-                Channel.fromList(bam_bai)
-                .join(Channel.fromList(bam_bai_host))
-                .join(Channel.fromList(bam_bai_xeno))
+                bam_bai
                 .map { 
                     it -> [id: it[0].id] + [sample_group: it[0].sample_group] + [graft_bam: "${params.bwa_dir}/${it[2].name}" ] + [graft_bai: "${params.bwa_dir}/${it[3].name}" ] + [host_bam: "${params.bwa_host_dir}/${it[5].name}" ] + [host_bai: "${params.bwa_host_dir}/${it[6].name}" ] + [bam: "${params.bwa_xeno_dir}/${it[8].name}" ] + [bai: "${params.bwa_xeno_dir}/${it[9].name}" ]
                     }
@@ -87,6 +95,7 @@ workflow WRITE_OUTPUT_CSV {
             )
         }
     }     
+
 
     /* gene_counts.csv */
     if (params.run_quant_genes && params.run_gene_count && params.run_featurecounts ){
@@ -101,7 +110,6 @@ workflow WRITE_OUTPUT_CSV {
         
     }
     
-    /*
     if (params.run_alignment && params.workflow != 'pdx' && params.aligner == 'star'){
         WRITE_CSV_STAR_COUNTS(
             star_counts
@@ -113,10 +121,10 @@ workflow WRITE_OUTPUT_CSV {
         )
 
     }
-    */
+
 
     /* salmon.csv */
-    if (params.run_quant_transcripts && params.run_salmon && params.workflow != 'pdx'){
+    if (params.run_quant_transcripts && params.run_tx_count && params.run_salmon && params.workflow != 'pdx'){
         WRITE_CSV_SALMON(
             salmon
                 .map { 

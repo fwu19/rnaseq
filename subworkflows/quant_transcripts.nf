@@ -65,7 +65,8 @@ workflow QUANT_TRANSCRIPTS {
             params.comparison_transcripts ? file(params.comparison_transcripts) : (params.comparison ? file(params.comparison) : file("$projectDir/assets/dummy_file.csv")),
             params.run_tx_count ? ch_tx_expr : Channel.fromPath("${srcdir}/${params.tx_expr_dir}/all_samples.transcript_raw_counts.txt", checkIfExists: true), 
             "EffectiveLength",
-            gene_txt
+            gene_txt,
+            params.de_method
         )
         dt_csv = DIFFERENTIAL_TRANSCRIPTS.out.csv
         ch_dt = DIFFERENTIAL_TRANSCRIPTS.out.rds

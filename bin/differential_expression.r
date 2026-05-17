@@ -51,6 +51,10 @@ run_da <- function(
 ){
     require(edgeR)
     
+  if (!method %in% c('QL', 'LRT')){
+    stop("--de_method should be QL or LRT.")
+  }
+    
     ## create output directory ####
     out.dir <- dirname(file_base)
     if(!dir.exists(out.dir)){dir.create(out.dir, recursive = T)}
@@ -128,7 +132,7 @@ run_da <- function(
         # pdf(paste(out.dir,'qldisp.pdf',sep = '/'),width = 4, height = 4); plotQLDisp(fit); dev.off()
         
         test <- glmQLFTest(fit, contrast = contrasts)
-    }else{
+    }else if (method == 'LRT'){
         fit <- glmFit(y, design=design, dispersion = y$trended.dispersion, robust = T)
         test <- glmLRT(fit, contrast = contrasts)
     }
@@ -391,7 +395,7 @@ normalize_counts <- function(y, out_prefix, return = c('rpkm','cpm'), gene.lengt
 }
 
 ## wrapper
-wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2, outdir = './'){
+wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 2, outdir = './', de_method = 'QL'){
     
     file_base <- icmp$file_base[1]
     control_group <- unlist(strsplit(as.character(icmp$control_group[[1]]), split = ';'))
@@ -404,7 +408,7 @@ wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 
     }else{
         group <- NULL
     }
-    model_formula <- as.formula(icmp$model_formula[1])
+    model_formula <- as.formula(sub(icmp$comparison_group[1], 'group', icmp$model_formula[1]))
     
     ## filter samples ####
     if (is.na(icmp$include_samples[1])){
@@ -430,7 +434,7 @@ wrap_one_cmp <- function(y0, icmp, ss, fdr = 0.05, fc = 1.5, fdr2 = 0.01, fc2 = 
         include_samples = include_samples,
         exclude_samples = exclude_samples,
         feature_length = length_col,
-        fdr = fdr, fc = fc, fdr2 = fdr2, fc2 = fc2,
+        fdr = fdr, fc = fc, fdr2 = fdr2, fc2 = fc2, method = de_method,
         model_formula = model_formula
     )
     
@@ -484,7 +488,7 @@ fill_column <- function(df, colv, default.value, na.value = NULL, missing.value 
 }
 
 ## read arguments ####
-# input=${samplesheet} comparison=$c{omparison} gene_txt=${gene_txt} count_file=${count_file} fdr=${params.fdr} fc=${params.fc} fdr2=${params.fdr2} fc2=${params.fc2} gene_type=${params.de_gene_type} length_col=${length_col}
+# input=${samplesheet} comparison=$c{omparison} gene_txt=${gene_txt} count_file=${count_file} fdr=${params.fdr} fc=${params.fc} fdr2=${params.fdr2} fc2=${params.fc2} gene_type=${params.de_gene_type} length_col=${length_col} de_method=${de_method}
 args <- as.vector(commandArgs(T)) 
 for (arg in strsplit(args, split = '=')){
   assign(trimws(arg[1]), trimws(arg[2]))
@@ -510,10 +514,10 @@ if(grepl('dummy', comparison)){
     stop('--comparison only takes csv, txt, tsv or rds file.')
 }
 
-fdr <- as.numeric(fdr)
-fc <- as.numeric(fc)
-fdr2 <- as.numeric(fdr2)
-fc2 <- as.numeric(fc2)
+if (exists('fdr')){fdr <- as.numeric(fdr)}else{fdr <- 0.05}
+if(exists('fc')){fc <- as.numeric(fc)}else{fc <- 1.5}
+if(exists('fdr2')){fdr2 <- as.numeric(fdr2)}else{fdr2 <- 0.01}
+if(exists('fc2')){fc2 <- as.numeric(fc2)}else{fc2 <- 2}
 if (!exists('length_col')){
     if (grepl('transcript', count_file)){
         length_col <- 'EffectiveLength'
@@ -523,6 +527,9 @@ if (!exists('length_col')){
 }
 if (!exists('outdir')){
     outdir <- '.'
+}
+if (!exists('de_method')){
+  de_method <- 'QL'
 }
 
 ## parse comparison table ####
@@ -545,7 +552,7 @@ cmp <- cmp %>%
       paste(gsub(';','+', cmp$test_group), gsub(';','+', cmp$control_group), sep = ' vs '),
       paste(gsub(';','+', cmp$test_group), gsub(';','+', cmp$control_group), sep = ' vs ')
       ) %>% 
-    fill_column('comparison_group', NA, NA, NA) %>% 
+    fill_column('comparison_group', 'sample_group', 'sample_group', 'sample_group') %>% 
     fill_column('model_formula', '~0+group', '~0+group', '~0+group' ) %>% 
     fill_column('include_samples', NA, NA, NA) %>% 
     fill_column('exclude_samples', NA, NA, NA) %>% 
@@ -639,7 +646,7 @@ cbind(y0$genes, tpm) %>%
 de.list <- list()
 for (i in 1:nrow(cmp)){
     de.list[[i]] <- wrap_one_cmp(
-        y0, cmp[i,], ss, fdr, fc, fdr2, fc2, outdir = outdir
+        y0, cmp[i,], ss, fdr, fc, fdr2, fc2, outdir = outdir, de_method = de_method
     )
 }
 names(de.list) <- basename(dirname(cmp$file_base))

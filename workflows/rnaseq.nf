@@ -240,7 +240,6 @@ workflow RNASEQ {
         ch_software_versions = ch_software_versions.mix(QUANT_TRANSCRIPTS.out.versions)
     }
 
-
     /*
     * Identify gene fusions
     */
@@ -349,18 +348,20 @@ workflow RNASEQ {
             outdir
         )
     }else{
-        /*
+        ch_bam_bai
+            .join(ch_bam_bai_host)
+            .join(ch_bam_bai_xeno)
+            .set{ch_bam_bai_pdx}
+
         WRITE_OUTPUT_CSV(
-            ch_bam_bai.collect().ifEmpty([]),
-            ch_bam_bai_host.collect().ifEmpty([]),
-            ch_bam_bai_xeno.collect().ifEmpty([]),
-            ch_tx_bam.collect().ifEmpty([]),
-            ch_star_counts.collect().ifEmpty([]),
-            ch_fc_counts.collect().ifEmpty([]),
-            ch_salmon.collect().ifEmpty([]),
-            ch_arriba.collect().ifEmpty([]),
+            params.workflow == 'pdx' ? ch_bam_bai.join(ch_bam_bai_host).join(ch_bam_bai_xeno).ifEmpty([]) : ch_bam_bai.ifEmpty([]),
+            ch_tx_bam.ifEmpty([]),
+            ch_star_counts.ifEmpty([]),
+            ch_fc_counts.ifEmpty([]),
+            ch_salmon.ifEmpty([]),
+            ch_arriba.ifEmpty([]),
         )
-        */
+
     }
     
     /* Collect software versions */

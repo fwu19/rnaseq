@@ -73,7 +73,8 @@ workflow QUANT_GENES {
             params.comparison ? file(params.comparison) : file("$projectDir/assets/dummy_file.csv"),
             params.run_gene_count ? ch_expr : Channel.fromPath("${srcdir}/${params.gene_expr_dir}/all_samples.gene_raw_counts.txt"), 
             "gene_length",
-            gene_txt
+            gene_txt,
+            params.de_method
         )
         de_csv = DIFFERENTIAL_GENES.out.csv
         ch_de = DIFFERENTIAL_GENES.out.rds
