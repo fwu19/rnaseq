@@ -33,7 +33,7 @@ if (!(params.step in step_options)){
 }
 
 // Define update options
-def update_options = [null, "qc_fastq", "qc_alignment", "gene_level", "gene_expression", "differential_genes", "transcript_level", "transcript_expression", "differential_transcripts", "gene_fusion", "multiqc", "report", "output"]
+def update_options = [null, "qc_alignment", "gene_level", "gene_expression", "differential_genes", "transcript_level", "transcript_expression", "differential_transcripts", "gene_fusion", "multiqc", "report", "output"]
 if(!(params.update in update_options )){ 
     exit 1, "Invalid option for --update. Available options: ${update_options.findAll{it != null}.join(', ')}"
 }
@@ -104,6 +104,7 @@ workflow RNASEQ {
     /*
     * Run input check
     */
+    samplesheet = Channel.empty()
     if (params.run_input_check){
         CHECK_INPUT(
             params.input ? file(params.input) : dummy_file,
@@ -288,9 +289,9 @@ workflow RNASEQ {
     if (params.run_qc_alignment){
         // need to add a parser to align_fastq.csv
         QC_ALIGNMENT(
-            ch_bam_bai,
-            ch_bam_bai_host,
-            ch_bam_bai_xeno,
+            ch_bam_bai.ifEmpty([]),
+            ch_bam_bai_host.ifEmpty([]),
+            ch_bam_bai_xeno.ifEmpty([]),
             collapsed_gtf,
             tx_bed,
             infer_experiment.ifEmpty([]),

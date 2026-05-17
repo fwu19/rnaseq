@@ -29,6 +29,28 @@ workflow QC_ALIGNMENT {
     ch_bam_stat_xeno = Channel.empty()
     ch_versions = Channel.empty()
     
+    if (!params.run_alignment){
+        def my_dir = new File("${srcdir}")
+        def srcdir = my_dir.absolutePath
+        ch_bam_bai = Channel.fromPath("${srcdir}/csv/map2genome.${params.aligner}.csv")
+            .splitCsv(header: true)
+            .map { it -> [ [ it ], it.id , "${srcdir}/${it.bam}", "${srcdir}/${it.bai}" ] }
+
+        if (params.workflow == 'pdx'){
+            ch_bam_bai = Channel.fromPath("${srcdir}/csv/map2genome.${params.aligner}.csv")
+                .splitCsv(header: true)
+                .map { it -> [ [ it ], it.id , "${srcdir}/${it.graft_bam}", "${srcdir}/${it.graft_bai}" ] }
+
+            ch_bam_bai_host = Channel.fromPath("${srcdir}/csv/map2genome.${params.aligner}.csv")
+                .splitCsv(header: true)
+                .map { it -> [ [ it ], it.id , "${srcdir}/${it.host_bam}", "${srcdir}/${it.host_qbai}" ] }
+
+            ch_bam_bai_xeno = Channel.fromPath("${srcdir}/csv/map2genome.${params.aligner}.csv")
+                .splitCsv(header: true)
+                .map { it -> [ [ it ], it.id , "${srcdir}/${it.bam}", "${srcdir}/${it.bai}" ] }
+        }
+    }
+
     /*
     * RNASeQC
     */

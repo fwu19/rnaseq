@@ -92,14 +92,12 @@ workflow PROCESS_FASTQ {
     // ch_reads.view()
     // [ [meta], meta.id, path("R1.fastq.gz"), path("R2.fastq.gz") ]
 
-    /* Write trimmed fastq paths to csv */
+    /* Write trimmed fastq paths to csv 
     if (params.only_trim_fastq){
-        def my_dir = new File("${srcdir}")
-        def srcdir = my_dir.absolutePath
         WRITE_CSV_TRIM_FASTQ(
                 ch_reads_trimmed
                     .map { 
-                        it -> it[0] + [ trimmed_fastq_1: "${srcdir}/trimmed_fastq/${it[2].name}" ] + [ trimmed_fastq_2: "${srcdir}/trimmed_fastq/${it[3].name}" ] 
+                        it -> [id: it[0].id] + [sample_group: it[0].sample_group] + [ trimmed_fastq_1: "trimmed_fastq/${it[2].name}" ] + [ trimmed_fastq_2: "trimmed_fastq/${it[3].name}" ] 
                     }
                     .collect(),
                 "trim_fastq.csv"        
@@ -107,6 +105,7 @@ workflow PROCESS_FASTQ {
         ch_versions = ch_versions.mix(WRITE_CSV_TRIM_FASTQ.out.versions.first())
 
     }
+    */
 
     emit:
     reads = ch_reads
