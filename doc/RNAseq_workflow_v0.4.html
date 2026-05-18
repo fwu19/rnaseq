@@ -257,7 +257,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">RNAseq analysis workflow v0.4</h1>
 <h4 class="author"></h4>
-<h4 class="date">March 09 , 2026</h4>
+<h4 class="date">May 17 , 2026</h4>
 
 </div>
 
@@ -333,7 +333,7 @@ bash run.sh \
 </div>
 <div id="input_dir-pathtofastqdirectory" class="section level4">
 <h4><code>--input_dir path/to/fastq/directory</code></h4>
-<p>This retrieves fastq files from a directory and create a sample sheet with columns id, fastq_1 and fastq_2. id is obtained from fastq file names, e.g. <strong>H_1</strong>_S50_L004_R1_001.fastq.gz. The underlying codes assume that fastq file names follow the pattern <code>SampleName_S[0-9]+(_L[0-9]+)?_R[12]</code>.<br />
+<p>This retrieves fastq files from a directory and create a sample sheet with columns id, fastq_1 and fastq_2. id is obtained from fastq file names, e.g. <strong>H_1</strong>_S50_L004_R1_001.fastq.gz. The underlying codes assume that fastq file names follow the pattern <code>SampleName_S[0-9]+(_L[0-9]+)?_R[12]</code>.<br />
 - If fastq files are located in different folders, can point to a text file listing <strong>absolute</strong> paths, one path per line.<br />
 - If fastq file names follow a different pattern, can set it with <code>--r1_pattern</code> and <code>--r1_pattern</code>. If the matching patterns have “()”, add a backslash when providing them as command line arguments, i.e. <code>\(</code> and <code>\)</code>.<br />
 </p>
@@ -353,21 +353,21 @@ Additional columns are kept but will be overwritten if the same column names als
 <p>An example below:<br />
 <br />
 </p>
-<div class="datatables html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-e04cd960025ee4d97db3" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-e04cd960025ee4d97db3">{"x":{"filter":"none","vertical":false,"extensions":["Buttons"],"data":[["H1048_EV_1","H1048_EV_2","H1048_BMP_1","H1048_BMP_2"],["H1048_EV_1_S115_L006_R1_001.fastq.gz","H1048_EV_2_S116_L005_R1_001.fastq.gz","H1048_BMP_1_S118_L005_R1_001.fastq.gz","H1048_BMP_2_S119_L005_R1_001.fastq.gz"],["H1048_EV_1_S115_L006_R2_001.fastq.gz","H1048_EV_2_S116_L005_R2_001.fastq.gz","H1048_BMP_1_S118_L005_R2_001.fastq.gz","H1048_BMP_2_S119_L005_R2_001.fastq.gz"],["group1","group1","group2","group2"]],"container":"<table class=\"cell-border stripe\">\n  <thead>\n    <tr>\n      <th>id<\/th>\n      <th>fastq_1<\/th>\n      <th>fastq_2<\/th>\n      <th>sample_group<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"Bfrtip","buttons":["csv"],"columnDefs":[],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-46751d5a07283586927e" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-46751d5a07283586927e">{"x":{"filter":"none","vertical":false,"extensions":["Buttons"],"data":[["H1048_EV_1","H1048_EV_2","H1048_BMP_1","H1048_BMP_2"],["H1048_EV_1_S115_L006_R1_001.fastq.gz","H1048_EV_2_S116_L005_R1_001.fastq.gz","H1048_BMP_1_S118_L005_R1_001.fastq.gz","H1048_BMP_2_S119_L005_R1_001.fastq.gz"],["H1048_EV_1_S115_L006_R2_001.fastq.gz","H1048_EV_2_S116_L005_R2_001.fastq.gz","H1048_BMP_1_S118_L005_R2_001.fastq.gz","H1048_BMP_2_S119_L005_R2_001.fastq.gz"],["group1","group1","group2","group2"]],"container":"<table class=\"cell-border stripe\">\n  <thead>\n    <tr>\n      <th>id<\/th>\n      <th>fastq_1<\/th>\n      <th>fastq_2<\/th>\n      <th>sample_group<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"Bfrtip","buttons":["csv"],"columnDefs":[],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
 <p><br />
 </p>
 </div>
 <div id="metadata-pathtometadata.csv" class="section level4">
 <h4><code>--metadata path/to/metadata.csv</code></h4>
-<p>An optional comma-delimited file with <strong>.csv</strong> extension to provide metadata if not already included in “${params.input}”. Each row is one sample. It requires a minimum of 1 column: <code>id</code>. Column <code>sample_group</code>, if exists, is used to group samples in QC and differential expression analysis.<br />
-<code>sample_group</code> = condition, cell line, etc.<br />
+<p>An optional comma-delimited file with <strong>.csv</strong> extension to provide metadata if not already included in “${params.input}”. Each row is one sample. It requires a minimum of 1 column: <code>id</code>.<br />
+It’s recommend to include column <code>sample_group</code> for holding the information of conditions, cell lines, and so on, which is used to generate more interpretable QC plots.<br />
 </p>
 <p>An example below:<br />
 <br />
 </p>
-<div class="datatables html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-1431a89358016f98f5e6" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-1431a89358016f98f5e6">{"x":{"filter":"none","vertical":false,"extensions":["Buttons"],"data":[["H1048_BMP_1","H1048_BMP_2","H1048_EV_1","H1048_EV_2"],["group2","group2","group1","group1"]],"container":"<table class=\"cell-border stripe\">\n  <thead>\n    <tr>\n      <th>id<\/th>\n      <th>sample_group<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"Bfrtip","buttons":["csv"],"columnDefs":[],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-00d6d710e6933b6b58ad" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-00d6d710e6933b6b58ad">{"x":{"filter":"none","vertical":false,"extensions":["Buttons"],"data":[["H1048_BMP_1","H1048_BMP_2","H1048_EV_1","H1048_EV_2"],["group2","group2","group1","group1"]],"container":"<table class=\"cell-border stripe\">\n  <thead>\n    <tr>\n      <th>id<\/th>\n      <th>sample_group<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"Bfrtip","buttons":["csv"],"columnDefs":[],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
 <ul>
 <li>When “${params.metadata}” is provided, only samples (by column id) in both “${params.metadata}” and “${params.input}”/“${params.input_dir}” are analyzed. This is useful for analyzing only a subset of samples.<br />
 </li>
@@ -379,31 +379,29 @@ Additional columns are kept but will be overwritten if the same column names als
 <h4><code>--comparison path/to/comparison_table.{csv,txt,tsv,rds}</code></h4>
 <p>A table listing comparisons of interest. The acceptable file formats are comma-delimited (.csv) or tab-delimited (.txt, .tsv) plain text or a data.frame in R (.rds).<br />
 Each row corresponds to a comparison.<br />
-It requires a minimum of 2 columns: <code>control_group</code> and <code>test_group</code>. Both values should be taken from column <code>sample_group</code> in “${params.input}” or “${params.metadata}”, or from a column specified in <code>comparison_group</code> (see below for more details).<br />
 </p>
 <p>Here is a minimum example.<br />
 <br />
 </p>
-<div class="datatables html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-af36256ae686f154d108" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-af36256ae686f154d108">{"x":{"filter":"none","vertical":false,"extensions":["Buttons"],"data":[["group1"],["group2"]],"container":"<table class=\"cell-border stripe\">\n  <thead>\n    <tr>\n      <th>control_group<\/th>\n      <th>test_group<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"Bfrtip","buttons":["csv"],"columnDefs":[],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-1a016fcec066c183a8d3" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-1a016fcec066c183a8d3">{"x":{"filter":"none","vertical":false,"extensions":["Buttons"],"data":[["group1"],["group2"]],"container":"<table class=\"cell-border stripe\">\n  <thead>\n    <tr>\n      <th>control_group<\/th>\n      <th>test_group<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"Bfrtip","buttons":["csv"],"columnDefs":[],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
 <p>More complicated comparisons can be set up with additional columns. Set custom values to one or multiple comparisons as needed and leave the remaining comparisons with blank values (which will be set to default values by the workflow).<br />
 </p>
 <ul>
-<li><p><code>test_group</code>and <code>control_group</code> - To combine samples from multiple groups, using a semi-colon delimited string, e.g. “A;B;C”.<br />
+<li><p><code>test_group</code>, <code>control_group</code> and <code>comparison_group</code> - By default, the group assignment for each sample is listed in column <code>sample_group</code> of “${params.input}” or “${params.comparison}”. Specify test group name under <code>test_group</code> and control group name under <code>control_group</code> for each comparison in “${params.comparison}”. To pool samples from multiple groups to form one test group or one control group, using a semi-colon delimited string, e.g. “A;B;C”. If grouping information is listed in a different column, e.g. <code>new_sample_group</code> of “${params.input}”, list “new_sample_group” under <code>comparison_group</code> of “${params.comparison}”.<br />
 </p></li>
-<li><p><code>out_prefix</code> - name the output subfolder for each comparison. Default: “[test_group]_vs_[control_group]”.<br />
+<li><p><code>model_formula</code> - model formula for edgR function model.matrix(). Default: ~0+<code>comparison_group</code>. To include a blocking factor, use ~0+<code>comparison_group</code>+[column name of the block factor]. For example, data are from pre-treatment and post-treatment of the same patients, and column <code>patient</code> of “${params.input}” or “${params.comparison}” provides patient identifiers, therefore use ~0+<code>comparison_group</code>+patient.<br />
 </p></li>
 <li><p><code>exclude_samples</code> - sample IDs to be excluded. Use a semi-colon delimited string for multiple samples, e.g. “s1;s2;s3”.<br />
 </p></li>
 <li><p><code>include_samples</code> - sample IDs to be included only. Use a semi-colon delimited string for multiple samples, e.g. “s1;s2;s3”.<br />
 </p></li>
-<li><p><code>model_formula</code> - model formula for edgR function model.matrix(). Default: ~0+group. To include a blocking factor, use ~0+group+[column name of the block factor]. For example, data are from pre-treatment and post-treatment of the same patients, and <code>patient</code> is a column in “${params.input}” or “${params.comparison}” providing patient identifiers, then set model_formula = ~0+group+patient.<br />
+<li><p><code>out_prefix</code> - name the output subfolder for each comparison. Default: “[test_group]_vs_[control_group]”.<br />
 </p></li>
-<li><p><code>comparison_group</code> - If <code>test_group</code> and <code>control_group</code> are defined other than using <code>sample_group</code>, add a column to “${params.input}” or “${params.comparison}” for defining new grouping, and list the column name under <code>comparison_group</code>. For example, add column <code>new_group</code> to “${params.input}” and define ‘newA’ and ‘newB’, then set up a comparison in “${params.comparison}” as <code>test_group</code> = ‘newA’, <code>control_group</code> = ‘newB’, <code>comparison_group</code> = “new_group”.<br />
+<li><p><code>plot_title</code> - plot title. Default: “[test_group] vs [control_group]”.<br />
 </p></li>
-<li><p><code>plot_title</code> = plot title. Default: “[test_group] vs [control_group]”.<br />
+<li><p><code>run_version</code> - add a suffix to the output subfolder to distinguish multiple comparisons for the same pair of <code>test_group</code> and <code>control_group</code>, e.g. excluding some outliers. Default: additional runs will be named with run2, run3, etc. .<br />
 </p></li>
-<li><p><code>run_version</code> - add a suffix to the output subfolder to distinguish multiple comparisons for the same pair of <code>test_group</code> and <code>control_group</code>, e.g. excluding some outliers. Default: additional runs will be named with run2, run3, etc.  </p></li>
 </ul>
 <p><br />
 </p>
@@ -419,7 +417,7 @@ It requires a minimum of 2 columns: <code>control_group</code> and <code>test_gr
 <h4><code>--outdir path/to/output/dir</code>, <code>--srcdir path/to/old/output/dir</code> and subdirectories</h4>
 <p><code>--outdir</code> - Path to the output directory. Default: <code>./Analysis/</code><br />
 </p>
-<p><code>--srcdir</code> - Path to existing output directory. Default: set to the same value as <code>--outdir</code>. This options provides support to <code>--step</code> and <code>--update</code>. See “Example usage”.<br />
+<p><code>--srcdir</code> - Path to the directory of pre-existing output. Default: set to the same value as <code>--outdir</code>. This options provides support to <code>--step</code> and <code>--update</code>. See “Example usage”.<br />
 </p>
 <p>For output subdirectories, use <code>--star_dir</code> <code>--star_host_dir</code> <code>--star_exno_dir</code> <code>--bwa_dir</code> <code>--bwa_host_dir</code> <code>--bwa_xeno_dir</code> <code>--featurecounts_dir</code> <code>--salmon_dir</code> <code>--arriba_dir</code> <code>--fastqc_dir</code> <code>--cutadapt_dir</code> <code>--fastp_dir</code> <code>--star_log_dir</code> <code>--star_log_host_dir</code> <code>--rnaseqc_dir</code> <code>--rseqc_dir</code> <code>--gatk_dir</code> <code>--samtools_dir</code> <code>--samtools_host_dir</code> <code>--samtools_xeno_dir</code> <code>--multiqc_dir</code> <code>--gene_expr_dir</code> <code>--tx_expr_dir</code> <code>--de_dir</code> <code>--dt_dir</code>. These options provide support for customized naming and backward compatibility (See “Example usage”).</p>
 <p><br />
@@ -430,7 +428,7 @@ It requires a minimum of 2 columns: <code>control_group</code> and <code>test_gr
 <p><code>--report_dir</code> - path to a directory containing <code>rnaseq_${params.workflow}.Rmd</code><br />
 <code>--report_rmd</code> - path to the R markdown file<br />
 <code>--report_html</code> - File name of the html report<br />
-Default: <code>${projectDir}/assets/report/rnaseq_${params.workflow}.Rmd</code> is used to compile the analysis report named with 00_RNAseq_analysis_report.html, 00_RNAexome_analysis_report.html or 00_PDX_RNAseq_analysis_report.html.</p>
+By default, <code>${projectDir}/assets/report/rnaseq_${params.workflow}.Rmd</code> is used to compile the analysis report named with 00_RNAseq_analysis_report.html, 00_RNAexome_analysis_report.html or 00_PDX_RNAseq_analysis_report.html. A custom R markdown file can be provided to <code>--report_rmd</code> (Caution: modifications may not work). <code>--report_html</code> can be used to set a custom name for the report.</p>
 <p><br />
 </p>
 </div>
@@ -452,7 +450,7 @@ Default: regular.</p>
 <div id="r1_pattern-and---r2_pattern" class="section level4">
 <h4><code>--r1_pattern</code> and <code>--r2_pattern</code></h4>
 <p>Regular expression to recognize read1 and read2 and extract sample names from fastq file names.<br />
-Default: <code>--r1_pattern</code> &quot;_S[0-9]+(_L[0-9]+)?<em>R1</em>&quot; <code>--r2_pattern</code> &quot;_S[0-9]+(_L[0-9]+)?<em>R2</em>&quot;</p>
+Default: <code>--r1_pattern</code> “_S[0-9]+(_L[0-9]+)?<em>R1</em>” <code>--r2_pattern</code> “_S[0-9]+(_L[0-9]+)?<em>R2</em>”</p>
 <p><br />
 </p>
 </div>
@@ -511,6 +509,12 @@ The number of reads to split a fastq file by. Default: 50000000</p>
 <h4><code>--de_gene_type</code></h4>
 <p>A comma-delimited string listing gene types, e.g. “protein_coding,lncRNA”. If indicated types are among those under column <code>gene_type</code> of <code>--gene_text</code>, genes/transcripts will be filtered and tested for differential expression.<br />
 </p>
+<p><br />
+</p>
+</div>
+<div id="de_method" class="section level4">
+<h4><code>--de_method</code></h4>
+<p>edgeR method. Possible values: QC, LRT. Default: “QL”.</p>
 <p><br />
 </p>
 </div>
@@ -683,7 +687,7 @@ report - compile an analysis report.<br />
 </div>
 <div id="step-expression_quantification" class="section level5">
 <h5><code>--step expression_quantification</code></h5>
-<p>Start from step “expression quantification”, and continue with “differential expression”, “multiqc” and “reports”. if <code>--transcript_level true</code> and/or <code>--gene_fusion true</code>, will run the analysis accordingly. Note that “qc fastq” and “qc alignment” are assumed to be complete so will not be run by default, but can be turn on with <code>--run_qc_fastq --run_qc_alignment</code>.</p>
+<p>Start from step “expression quantification”, and continue with “differential expression”, “multiqc” and “reports”. if <code>--transcript_level true</code> and/or <code>--gene_fusion true</code>, will run the analysis accordingly. Note that “qc fastq” and “qc alignment” are assumed to be complete so will not be run.</p>
 <p><br />
 </p>
 </div>
@@ -702,12 +706,6 @@ report - compile an analysis report.<br />
 </div>
 <div id="update-options" class="section level4">
 <h4><code>--update</code> options</h4>
-<div id="update-qc_fastq" class="section level5">
-<h5><code>--update qc_fastq</code></h5>
-<p>Run QC tools on fastq reads.</p>
-<p><br />
-</p>
-</div>
 <div id="update-qc_alignment" class="section level5">
 <h5><code>--update qc_alignment</code></h5>
 <p>Run QC tools on aligned reads.</p>
@@ -807,7 +805,7 @@ $sh --update report --report_rmd path/to/modified_report.rmd</code></pre>
 <h3>Work with read-only source directory and/or new destination directory</h3>
 <p>In cases we want to try different parameters and don’t want to overwrite old results, or previous results have been delivered and the local copy is no longer available, we can take advantage of <code>--srcdir</code> and <code>--outdir</code> as follows.</p>
 <pre class="bash"><code>$sh --srcdir path/to/old/output/dir --outdir path/to/new/output/dir --step gene_fusion</code></pre>
-<p>We can also use the same <code>--oudir</code> and designate a new subdirectory for a specific step. For example, DE results by default are saved to <code>${params.outdir}/differential_genes/</code>, but we can use <code>--de_dir differential_genes_v2/</code>, which will write new results to <code>${params.outdir}/differential_genes_v2/</code>. <strong>CAUTION</strong>: the subsequent steps, such as generating report, will then take results from the later subdirectory.</p>
+<p>We can also use the same <code>--oudir</code> and designate a new subdirectory for a specific step. For example, DE results by default are saved to <code>${params.outdir}/differential_genes/</code>, but we can use <code>--de_dir differential_genes_v2/</code>, which will write new results to <code>${params.outdir}/differential_genes_v2/</code>. <strong>CAUTION</strong>: the subsequent steps, such as generating report, will then take results from <code>differential_genes_v2/</code>.</p>
 <p><span class="math display">\[\\[0.1in]\]</span></p>
 </div>
 <div id="reproduce-the-analysis" class="section level3">
@@ -828,10 +826,16 @@ For pdx workflow, <code>--star_log_dir STAR/${params.genome}/_unfiltered/_work/ 
 </div>
 <div id="generate-a-combined-report-for-analysis-results-in-multiple-locations" class="section level3">
 <h3>Generate a combined report for analysis results in multiple locations</h3>
-<p>To generate a combined report for data from multiple locations (without having to move or copy data to the same place), run the following commands. <strong>Note</strong> - Sample names should be unique among batches. - Check if differential expression</p>
+<p>To generate a combined report for data from multiple locations (without having to move or copy data to the same place), run the following commands. <strong>Note</strong> - Sample names should be unique among batches.<br />
+- If differential expression was done in multiple batches, each comparison should have a unique folder name under differential_genes/ and/or differential_transcripts/.<br />
+</p>
 <pre class="bash"><code># make symlinks to output files of each batch to a new location
 $sh --update output --srcdir path/to/output/dir1 --outdir path/to/new/output/dir
 $sh --update output --srcdir path/to/output/dir2 --outdir path/to/new/output/dir
+
+# if differential_expression was done, do not copy _README.txt to the new location.
+(cd path/to/new/output/dir/differential_genes/; [[ -f _README.txt ]] &amp;&amp; rm _README.txt)
+(cd path/to/new/output/dir/differential_transcripts/; [[ -f _README.txt ]] &amp;&amp; rm _README.txt)
 
 # Concatenate samplesheets. For v0.4 workflow, use ${params.outdir}/csv/samplesheet.valid.csv
 # Alternatively, manually concatenate the original samplesheets. Make sure columns are in the same order.
