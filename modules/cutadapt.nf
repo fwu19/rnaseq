@@ -13,7 +13,7 @@ process CUTADAPT {
     
     output:
     tuple val(meta), val(out_prefix), path("trimmed_fastq/${read1}"), path("trimmed_fastq/${read2}"), emit: fq
-    tuple val(meta), val(out_prefix), path( "${out_prefix}.cutadapt.json" ), emit: js
+    path( "${out_prefix}.cutadapt.json" ), emit: js
     path ('versions.yml'), emit: versions
 
     script:

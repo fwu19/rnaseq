@@ -17,7 +17,7 @@ workflow GENERATE_REPORT {
     ch_dt
     ch_arriba
     ch_fastqc
-    cutadapt_js
+    ch_cutadapt_js
     ch_fastp_js
     ch_fastqc_trimmed
     ch_star_log
