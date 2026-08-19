@@ -485,6 +485,7 @@ if (dir.exists(indir)){
     if(file.exists(fname)){
         stat <- read.delim(fname )%>% 
           mutate(Sample = as.character(Sample))
+        colnames(stat) <- gsub('.*generalstats.', '', colnames(stat))
     }
 
     fname <- file.path(indir, 'multiqc_star_1.txt')
@@ -538,19 +539,19 @@ if (exists('stat')){
   ms <- ms %>% 
     left_join(
       stat %>% 
-        filter(is.na(FastQC_mqc.generalstats.fastqc.total_sequences) & !grepl('stat$', Sample)) %>% 
+        filter(is.na(fastqc.total_sequences) & !grepl('stat$', Sample)) %>% 
         dplyr::select(Sample, !contains('FastQC') & !contains('Samtools')), 
       by = c('Sample')
     ) %>% 
     left_join(
       stat %>% 
-        filter(!is.na(FastQC_mqc.generalstats.fastqc.total_sequences) & grepl('_R1', Sample)) %>% 
+        filter(!is.na(fastqc.total_sequences) & grepl('_R1', Sample)) %>% 
         dplyr::select(Sample, contains('fastqc.total_sequences')),
       by = c('fastqc_id' = 'Sample')
     ) %>% 
     left_join(
       stat %>% 
-        filter(!is.na(FastQC_trimmed_mqc.generalstats.fastqc_trimmed.total_sequences) & grepl('_R1', Sample)) %>% 
+        filter(!is.na(fastqc_trimmed.total_sequences) & grepl('_R1', Sample)) %>% 
         dplyr::select(Sample, contains('fastqc_trimmed.total_sequences')),
       by = c('fastqc_id' = 'Sample')
     )  %>% 
@@ -561,7 +562,6 @@ if (exists('stat')){
         dplyr::select(Sample, contains('Samtools')), 
       by = 'Sample'
     )   
-  colnames(ms) <- gsub('.*generalstats.', '', colnames(ms))
   ms$estimated_host_reads_percent <- 100 - round(ms$samtools_excluding_reads_of_host_origin_stats.reads_mapped/ms$samtools_alignment_to_graft_genome_stats.reads_mapped*100,1)
 
 }

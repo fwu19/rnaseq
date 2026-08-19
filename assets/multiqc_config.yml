@@ -5,6 +5,7 @@ export_plots: true
 use_filename_as_sample_name:
   - cutadapt
   - fastp
+  - trimgalore
   - picard
 
 # Run only these modules
@@ -12,6 +13,7 @@ run_modules:
   - cutadapt
   - fastp
   - fastqc
+  - trimgalore
   - star
   - featurecounts
   - samtools
@@ -33,10 +35,18 @@ module_order:
       name: "Cutadapt"
       path_filters:
         - "cutadapt/*"  
+  - cutadapt:
+      name: "Cutadapt (Trim Galore)"
+      path_filters:
+        - "trimgalore/*"  
   - fastp:
       name: "Fastp"
       path_filters:
         - "fastp/*"  
+  - trimgalore:
+      name: "Trim Galore"
+      path_filters:
+        - "trimgalore/*"  
   - star:
       name: "STAR"
       path_filters:

@@ -32,10 +32,7 @@ process CUTADAPT {
     $args \
     -a $adapter1 -A $adapter2 \
     --json=${out_prefix}.cutadapt.json \
-		--nextseq-trim=20 \
-		-m 20 \
-		--overlap 3 \
-		-o trimmed_fastq/$read1 \
+	-o trimmed_fastq/$read1 \
     -p trimmed_fastq/$read2 \
     $read1 $read2
 

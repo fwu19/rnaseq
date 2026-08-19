@@ -3,6 +3,7 @@
 */
 
 include { CAT_FASTQ } from '../modules/cat_fastq.nf'
+include { TRIMGALORE  } from '../modules/trimgalore.nf'
 include { CUTADAPT  } from '../modules/cutadapt.nf'
 include { FASTP  } from '../modules/fastp.nf'
 include { WRITE_CSV as WRITE_CSV_TRIM_FASTQ} from '../modules/write_csv.nf'
@@ -18,6 +19,7 @@ workflow PROCESS_FASTQ {
     main: 
     ch_reads = Channel.empty()
     ch_reads_trimmed = Channel.empty()
+    ch_trimgalore_js = Channel.empty()
     ch_cutadapt_js = Channel.empty()
     ch_fastp_js = Channel.empty()
     ch_fastp_html = Channel.empty()
@@ -72,7 +74,14 @@ workflow PROCESS_FASTQ {
     /*
     * run fastp
     */
-    if (( trimmer == 'fastp' || !params.adapters ) && params.run_cut_adapt){
+    if (( trimmer == 'trimgalore' || !params.adapters ) && params.run_cut_adapt){
+        TRIMGALORE(
+            ch_reads
+        )
+        ch_reads_trimmed = TRIMGALORE.out.fq
+        ch_trimgalore_js = TRIMGALORE.out.js
+        ch_versions = ch_versions.mix(TRIMGALORE.out.versions.first())
+    } else if (trimmer == 'fastp' && params.run_cut_adapt){
         FASTP(
             ch_reads
         )
@@ -88,12 +97,12 @@ workflow PROCESS_FASTQ {
         ch_reads_trimmed = CUTADAPT.out.fq
         ch_cutadapt_js = CUTADAPT.out.js
         ch_versions = ch_versions.mix(CUTADAPT.out.versions.first())
-    }
+    } 
     // ch_reads.view()
     // [ [meta], meta.id, path("R1.fastq.gz"), path("R2.fastq.gz") ]
 
     /* Write trimmed fastq paths to csv 
-    if (params.only_trim_fastq){
+    if (params.save_trimmed_fastq){
         WRITE_CSV_TRIM_FASTQ(
                 ch_reads_trimmed
                     .map { 
@@ -110,6 +119,7 @@ workflow PROCESS_FASTQ {
     emit:
     reads = ch_reads
     reads_trimmed = ch_reads_trimmed
+    trimgalore_js = ch_trimgalore_js
     cutadapt_js = ch_cutadapt_js
     fastp_js = ch_fastp_js
     fastp_html = ch_fastp_html

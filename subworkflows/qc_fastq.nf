@@ -16,13 +16,13 @@ workflow QC_FASTQ {
     ch_fastq_trimmed = Channel.empty()
     ch_versions = Channel.empty()
 
-    if (params.run_fastqc){
-        FASTQC(
-            raw_reads
-        )
-        ch_fastqc = FASTQC.out.qc
-        ch_versions = ch_versions.mix(FASTQC.out.versions.first())
+    FASTQC(
+        raw_reads
+    )
+    ch_fastqc = FASTQC.out.qc
+    ch_versions = ch_versions.mix(FASTQC.out.versions.first())
 
+    if (params.run_cut_adapt) {
         FASTQC_TRIMMED(
             trimmed_reads
         )

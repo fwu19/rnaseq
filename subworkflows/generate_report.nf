@@ -19,6 +19,7 @@ workflow GENERATE_REPORT {
     ch_fastqc
     ch_cutadapt_js
     ch_fastp_js
+    ch_trimgalore_js
     ch_fastqc_trimmed
     ch_star_log
     ch_star_log_host
@@ -69,6 +70,9 @@ workflow GENERATE_REPORT {
         File fastp_dir = new File("${srcdir}/${params.fastp_dir}")
         fastp_js = fastp_dir.exists() ? Channel.fromPath("${fastp_dir}/*").flatten().collect().ifEmpty([]) : []
 
+        File trimgalore_dir = new File("${srcdir}/${params.trimgalore_dir}")
+        trimgalore_js = trimgalore_dir.exists() ? Channel.fromPath("${trimgalore_dir}/*").flatten().collect().ifEmpty([]) : []
+
         File stat_dir = new File("${srcdir}/${params.samtools_dir}")       
         bam_stat = stat_dir.exists() ? Channel.fromPath("${stat_dir}/*").collect().ifEmpty([]) : []
         
@@ -98,6 +102,7 @@ workflow GENERATE_REPORT {
             params.run_fastqc ? ch_fastqc : fastqc,
             params.run_cut_adapt && params.trimmer == 'cutadapt' ? ch_cutadapt_js : cutadapt_js,  
             params.run_cut_adapt && params.trimmer == 'fastp' ? ch_fastp_js : fastp_js,  
+            params.run_cut_adapt && params.trimmer == 'trimgalore' ? ch_trimgalore_js : trimgalore_js,  
             params.run_cut_adapt && params.run_fastqc ? ch_fastqc_trimmed : fastqc_trimmed,  
             params.run_alignment && params.aligner == 'star' ? ch_star_log : star_log, 
             params.run_alignment && params.aligner == 'star' ? ch_star_log_host : star_log_host, 

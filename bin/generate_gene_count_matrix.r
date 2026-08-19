@@ -26,10 +26,12 @@ generate_count_matrix_star <- function(gene.txt, length.col, ss, count.files, co
         ))
     
     colnames(cts) <- gsub('.ReadsPerGene.*', '', basename(count.files))
-    if (!setequal(colnames(cts), ss$id)){
-        warning(paste("Some samples don't have counts!"))
-    }
     
+    ## keep only samples in sample sheet
+    if (sum(!ss$id %in% colnames(cts)) > 0){
+        stop(cat("These samples don't have counts -", setdiff(ss$id, colnames(cts))))
+    }
+    cts <- cts[, intersect(ss$id, colnames(cts))]
     return(list(ann = ann, cts = cts)) 
     
 }
@@ -53,10 +55,14 @@ generate_count_matrix_featurecounts <- function(gene.txt, length.col, ss, count.
         ))
     
     colnames(cts) <- gsub('.exonic.*', '', basename(count.files))
-    if (!setequal(colnames(cts), ss$id)){
-        warning(paste("Some samples don't have counts!"))
+    
+    ## keep only samples in sample sheet
+    if (sum(!ss$id %in% colnames(cts)) > 0){
+      stop(cat("These samples don't have counts -", setdiff(ss$id, colnames(cts))))
     }
+    cts <- cts[, intersect(ss$id, colnames(cts))]
     return(list(ann = ann, cts = cts)) 
+    
 }
 
 count2dgelist <- function(

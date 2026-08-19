@@ -122,6 +122,7 @@ workflow RNASEQ {
     */
     ch_reads = Channel.empty()
     ch_reads_trimmed = Channel.empty()
+    ch_trimgalore_js = Channel.empty()
     ch_cutadapt_js = Channel.empty()
     ch_fastp_js = Channel.empty()
     if (params.run_process_fastq){
@@ -134,6 +135,7 @@ workflow RNASEQ {
         )
         ch_reads = PROCESS_FASTQ.out.reads
         ch_reads_trimmed = PROCESS_FASTQ.out.reads_trimmed
+        ch_trimgalore_js = PROCESS_FASTQ.out.trimgalore_js
         ch_cutadapt_js = PROCESS_FASTQ.out.cutadapt_js
         ch_fastp_js = PROCESS_FASTQ.out.fastp_js
         ch_software_versions = ch_software_versions.mix(PROCESS_FASTQ.out.versions)
@@ -271,8 +273,8 @@ workflow RNASEQ {
             ch_reads,
             ch_reads_trimmed
         )
-        ch_fastqc = QC_FASTQ.out.fastqc.map{it[1]}.flatten().collect()
-        ch_fastqc_trimmed = QC_FASTQ.out.fastqc_trimmed.map{it[1]}.flatten().collect()
+        ch_fastqc = QC_FASTQ.out.fastqc
+        ch_fastqc_trimmed = QC_FASTQ.out.fastqc_trimmed
         ch_software_versions = ch_software_versions.mix(QC_FASTQ.out.versions)
     }
 
@@ -325,6 +327,7 @@ workflow RNASEQ {
         ch_fastqc.flatten().collect().ifEmpty([]), 
         ch_cutadapt_js.flatten().collect().ifEmpty([]),
         ch_fastp_js.flatten().collect().ifEmpty([]),
+        ch_trimgalore_js.flatten().collect().ifEmpty([]),
         ch_fastqc_trimmed.flatten().collect().ifEmpty([]),
         ch_star_log.flatten().collect().ifEmpty([]),
         ch_star_log_host.flatten().collect().ifEmpty([]),

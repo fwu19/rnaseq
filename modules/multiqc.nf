@@ -1,8 +1,9 @@
 process MULTIQC {
     label "process_medium"
 
-    container = 'quay.io/biocontainers/multiqc:1.21--pyhdfd78af_0'
+    //container = 'quay.io/biocontainers/multiqc:1.21--pyhdfd78af_0'
     //module = ['MultiQC/1.21-foss-2023a']
+    container = 'multiqc/multiqc:v1.29'
 
     tag "MultiQC on all samples"
 
@@ -13,6 +14,7 @@ process MULTIQC {
     path fastqc_files,       stageAs: 'fastqc/*'
     path cutadapt_files,     stageAs: 'cutadapt/*'
     path fastp_files,        stageAs: 'fastp/*'
+    path trimgalore_files,    stageAs: 'trimgalore/*'
     path fastqc_trimmed_files, stageAs: 'fastqc_trimmed/*'
     path star_log_files,     stageAs: 'star_log/*/*'
     path star_log_host_files,     stageAs: 'star_log_host/*/*'
