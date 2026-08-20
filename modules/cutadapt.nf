@@ -2,6 +2,7 @@ process CUTADAPT {
     label "process_high"
 
     container = 'quay.io/biocontainers/cutadapt:4.9--py311haab0aaa_3'
+    //container = 'quay.io/biocontainers/cutadapt:4.0--py37h8902056_0' // this is to match trimgalore 2.3.0, which uses cutadapt 4.0
     //module = ['cutadapt/4.9-GCCcore-12.3.0']
 
     tag "CUTADAPT on ${meta.id}"
