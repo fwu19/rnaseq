@@ -65,7 +65,10 @@ if (!'id' %in% colnames(ss)){
     stop ( 'Missing column id!' )
 }else if ( ! 'fastq_1' %in% colnames(ss)){
     stop ( 'Missing column fastq_1!' )
+}else if ( sum(is.na(ss$id)) > 0 | sum(ss$id == '') > 0){
+  stop ('Missing values in column id!' )
 }
+
 ss <- ss %>% 
     fill_column('sample_group', ss$id, ss$id, ss$id) %>% 
     fill_column('fastq_2', "", "", "") %>% 

@@ -30,8 +30,6 @@ workflow QC_ALIGNMENT {
     ch_versions = Channel.empty()
     
     if (!params.run_alignment){
-        def my_dir = new File("${srcdir}")
-        def srcdir = my_dir.absolutePath
         ch_bam_bai = Channel.fromPath("${srcdir}/csv/map2genome.${params.aligner}.csv")
             .splitCsv(header: true)
             .map { it -> [ [ it ], it.id , "${srcdir}/${it.bam}", "${srcdir}/${it.bai}" ] }

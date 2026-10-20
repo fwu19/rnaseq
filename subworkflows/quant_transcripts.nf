@@ -26,8 +26,6 @@ workflow QUANT_TRANSCRIPTS {
     /* generate count matrix */
     if (params.run_tx_count){
         if (!params.run_alignment ){
-            def my_dir = new File("${srcdir}")
-            def srcdir = my_dir.absolutePath
             ch_tx_bam = Channel.fromPath("${srcdir}/csv/map2transcriptome.${params.aligner}.csv")
                 .splitCsv(header: true)
                 .map { it -> [ [ it ], it.id, "${srcdir}/${it.tx_bam}" ] }

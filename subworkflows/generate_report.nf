@@ -149,6 +149,18 @@ workflow GENERATE_REPORT {
         File gatk_dir = new File("${srcdir}/${params.gatk_dir}")
         gatk_hs_metrics = gatk_dir.exists() ? Channel.fromPath("${gatk_dir}/*").collect().ifEmpty([]) : []
 
+        //println "params.report_rmd: ${params.report_rmd}"
+        //println "params.report_dir: ${params.report_dir}"
+
+        def report_rmd_path 
+        if (params.report_rmd) {
+            report_rmd_path = params.report_rmd
+        } else if (params.report_dir) {
+            report_rmd_path = "${params.report_dir}/rnaseq_${params.workflow}.Rmd"
+        } else {
+            report_rmd_path = "${projectDir}/assets/report/rnaseq_${params.workflow}.Rmd"
+        }
+
         RENDER_REPORT(
             samplesheet, 
             params.run_multiqc ? ch_multiqc.ifEmpty([]) : multiqc, 
@@ -158,7 +170,7 @@ workflow GENERATE_REPORT {
             params.run_dt ? ch_dt : dt, 
             params.run_hs_metrics ? ch_hs_metrics : gatk_hs_metrics, 
             params.run_arriba ? ch_arriba : arriba,
-            params.report_rmd ? Channel.fromPath(params.report_rmd, checkIfExists: true) : (params.report_dir ? Channel.fromPath("${params.report_dir}/rnaseq_${params.workflow}.Rmd", checkIfExists: true) : Channel.fromPath("$projectDir/assets/report/rnaseq_${params.workflow}.Rmd", checkIfExists: true))
+            channel.fromPath(report_rmd_path, checkIfExists: true)
         )
         rmd = RENDER_REPORT.out.rmd
         ch_versions = ch_versions.mix(RENDER_REPORT.out.versions)
