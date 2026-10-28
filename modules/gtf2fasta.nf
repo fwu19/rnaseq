@@ -1,7 +1,7 @@
 process GTF2FASTA {
     label 'process_single'
 
-    container = 'quay.io/biocontainers/gffread:0.12.7--h077b44d_6'
+    container 'quay.io/biocontainers/gffread:0.12.7--h077b44d_6'
     //module = [ 'gffread/0.12.7-GCCcore-12.3.0' ]
 
     tag "Retrieve transcript sequences."

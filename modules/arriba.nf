@@ -2,7 +2,7 @@
 process ARRIBA {
     label "process_high"
 
-    container = 'quay.io/biocontainers/arriba:2.4.0--hdbdd923_4'
+    container 'quay.io/biocontainers/arriba:2.4.0--hdbdd923_4'
     //module = [ 'Arriba/2.4.0-GCC-12.2.0', 'SAMtools/1.17-GCC-12.2.0' ]
 
 

@@ -8,10 +8,10 @@ a=$(tail -n 2 out.txt| head -n 1| sed "s/.*: //g")
 b=$(tail -n 1 out.txt| sed "s/.*: //g")
 
 echo "strand,read_type" >infer_experiment.csv
-if [[ $a > 0.6 ]]; then
-    echo -n 1 >>infer_experiment.csv
-elif [[ $b > 0.6 ]]; then
+if [[ $b > 0.5 ]]; then
     echo -n 2 >>infer_experiment.csv
+elif [[ $a > 0.5 ]]; then
+    echo -n 1 >>infer_experiment.csv
 else
     echo -n 0 >>infer_experiment.csv
 fi

@@ -6,8 +6,11 @@ include { RNASEQC  } from '../modules/rnaseqc.nf'
 include { RSEQC  } from '../modules/rseqc.nf'
 include { HS_METRICS  } from '../modules/hs_metrics'
 include { SAMTOOLS_VIEW} from '../modules/samtools_view.nf'
-include { SAMTOOLS_VIEW as SAMTOOLS_VIEW_HOST } from '../modules/samtools_view.nf'
 include { SAMTOOLS_VIEW as SAMTOOLS_VIEW_XENO } from '../modules/samtools_view.nf'
+include { RNASEQC as RNASEQC_HOST  } from '../modules/rnaseqc.nf'
+include { RSEQC as RSEQC_HOST } from '../modules/rseqc.nf'
+include { HS_METRICS as HS_METRICS_HOST  } from '../modules/hs_metrics'
+include { SAMTOOLS_VIEW as SAMTOOLS_VIEW_HOST } from '../modules/samtools_view.nf'
 
 
 workflow QC_ALIGNMENT {
@@ -17,6 +20,8 @@ workflow QC_ALIGNMENT {
     ch_bam_bai_xeno
     collapsed_gtf
     tx_bed
+    collapsed_gtf_host
+    tx_bed_host
     infer_experiment
     srcdir
     
@@ -24,26 +29,29 @@ workflow QC_ALIGNMENT {
     ch_rnaseqc = Channel.empty()
     ch_rseqc = Channel.empty()
     ch_hs_metrics = Channel.empty()
+    ch_rnaseqc_host = Channel.empty()
+    ch_rseqc_host = Channel.empty()
+    ch_hs_metrics_host = Channel.empty()
     ch_bam_stat = Channel.empty()
     ch_bam_stat_host = Channel.empty()
     ch_bam_stat_xeno = Channel.empty()
     ch_versions = Channel.empty()
     
     if (!params.run_alignment){
-        ch_bam_bai = Channel.fromPath("${srcdir}/csv/map2genome.${params.aligner}.csv")
+        ch_bam_bai = Channel.fromPath("${srcdir}/csv/map2genome.${params.aligner}.${params.genome}.csv")
             .splitCsv(header: true)
             .map { it -> [ [ it ], it.id , "${srcdir}/${it.bam}", "${srcdir}/${it.bai}" ] }
 
         if (params.workflow == 'pdx'){
-            ch_bam_bai = Channel.fromPath("${srcdir}/csv/map2genome.${params.aligner}.csv")
+            ch_bam_bai = Channel.fromPath("${srcdir}/csv/map2genome.${params.aligner}.${params.genome}.csv")
                 .splitCsv(header: true)
                 .map { it -> [ [ it ], it.id , "${srcdir}/${it.graft_bam}", "${srcdir}/${it.graft_bai}" ] }
 
-            ch_bam_bai_host = Channel.fromPath("${srcdir}/csv/map2genome.${params.aligner}.csv")
+            ch_bam_bai_host = Channel.fromPath("${srcdir}/csv/map2genome.${params.aligner}.${params.genome_host}.csv")
                 .splitCsv(header: true)
                 .map { it -> [ [ it ], it.id , "${srcdir}/${it.host_bam}", "${srcdir}/${it.host_qbai}" ] }
 
-            ch_bam_bai_xeno = Channel.fromPath("${srcdir}/csv/map2genome.${params.aligner}.csv")
+            ch_bam_bai_xeno = Channel.fromPath("${srcdir}/csv/map2genome.${params.aligner}.${params.genome}.xenofilteR_filtered.csv")
                 .splitCsv(header: true)
                 .map { it -> [ [ it ], it.id , "${srcdir}/${it.bam}", "${srcdir}/${it.bai}" ] }
         }
@@ -54,12 +62,21 @@ workflow QC_ALIGNMENT {
     */
     if (params.run_rnaseqc){
         RNASEQC(
-            params.workflow == 'pdx' ? ch_bam_bai_xeno : ch_bam_bai,
+            params.run_xenofilter ? ch_bam_bai_xeno : ch_bam_bai,
             collapsed_gtf,
             params.run_infer_experiment ? infer_experiment : file("${srcdir}/csv/infer_experiment.csv")
         )            
         ch_rnaseqc = RNASEQC.out.qc
         ch_versions = ch_versions.mix(RNASEQC.out.versions.first())
+
+        RNASEQC_HOST(
+            params.run_xenofilter ? Channel.empty() : ch_bam_bai_host,
+            collapsed_gtf_host,
+            params.run_infer_experiment ? infer_experiment : file("${srcdir}/csv/infer_experiment.csv")
+        )            
+        ch_rnaseqc_host = RNASEQC_HOST.out.qc
+        ch_versions = ch_versions.mix(RNASEQC_HOST.out.versions.first())
+        
     }
 
     /*
@@ -67,11 +84,19 @@ workflow QC_ALIGNMENT {
     */
     if (params.run_rseqc){
         RSEQC(
-            params.workflow == 'pdx' ? ch_bam_bai_xeno : ch_bam_bai,
+            params.run_xenofilter ? ch_bam_bai_xeno : ch_bam_bai,
             tx_bed
         )
         ch_rseqc = RSEQC.out.qc
         ch_versions = ch_versions.mix(RSEQC.out.versions.first())
+
+        RSEQC_HOST(
+            params.run_xenofilter ? Channel.empty() : ch_bam_bai_host,
+            tx_bed_host
+        )
+        ch_rseqc_host = RSEQC_HOST.out.qc
+        ch_versions = ch_versions.mix(RSEQC_HOST.out.versions.first())
+
     }
 
     /*
@@ -79,13 +104,20 @@ workflow QC_ALIGNMENT {
     */
     if (params.run_hs_metrics){
             HS_METRICS(
-                params.workflow == 'pdx' ? ch_bam_bai_xeno : ch_bam_bai,
+                params.run_xenofilter ? ch_bam_bai_xeno : ch_bam_bai,
                 params.genome_fa,
                 params.target_region
             )
             ch_hs_metrics = HS_METRICS.out.qc
             ch_versions = ch_versions.mix(HS_METRICS.out.versions.first())
 
+            HS_METRICS_HOST(
+                params.run_xenofilter ? Channel.empty() : ch_bam_bai_host,
+                params.genome_fa,
+                params.target_region
+            )
+            ch_hs_metrics_host = HS_METRICS_HOST.out.qc
+            ch_versions = ch_versions.mix(HS_METRICS_HOST.out.versions.first())
     }
         
 
@@ -120,6 +152,9 @@ workflow QC_ALIGNMENT {
     rnaseqc = ch_rnaseqc
     rseqc = ch_rseqc
     hs_metrics = ch_hs_metrics
+    rnaseqc_host = ch_rnaseqc_host
+    rseqc_host = ch_rseqc_host
+    hs_metrics_host = ch_hs_metrics_host
     bam_stat = ch_bam_stat
     bam_stat_host  = ch_bam_stat_host
     bam_stat_xeno = ch_bam_stat_xeno

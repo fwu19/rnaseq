@@ -2,7 +2,7 @@
 process SALMON {
     label "process_high"
 
-    container = 'quay.io/biocontainers/salmon:1.10.1--hecfa306_2'
+    container 'quay.io/biocontainers/salmon:1.10.1--hecfa306_2'
     //module = ['Salmon/1.10.1-GCC-12.2.0', 'SAMtools/1.17-GCC-12.2.0']
 
     tag "Salmon on ${out_prefix}"

@@ -1,7 +1,7 @@
 process RSEQC {
     label "process_high"
 
-    container = 'community.wave.seqera.io/library/rseqc_r-base:2e29d2dfda9cef15'
+    container 'community.wave.seqera.io/library/rseqc_r-base:2e29d2dfda9cef15'
     //module = ['RSeQC/5.0.1-foss-2021b', 'SAMtools/1.17-GCC-12.2.0', 'R/4.1.2-foss-2021b']
 
     tag "RSeQC on ${meta.id}"

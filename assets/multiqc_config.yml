@@ -21,6 +21,7 @@ run_modules:
   - rna_seqc
   - rseqc
   - salmon
+  - xengsort
 
 module_order:
   - fastqc:
@@ -47,6 +48,12 @@ module_order:
       name: "Trim Galore"
       path_filters:
         - "trimgalore/*"  
+  - xengsort:
+      name: "Xengsort classify"
+      contents: "# Xengsort classify"
+      num_lines: 2
+      path_filters:
+        - "xengsort/*"  
   - star:
       name: "STAR"
       path_filters:
@@ -55,19 +62,37 @@ module_order:
   - star:
       name: "STAR (graft)"
       path_filters:
+        - "star_count_graft/*"
         - "star_log_graft/*"
   - star:
       name: "STAR (host)"
       path_filters:
+        - "star_count_host/*"
         - "star_log_host/*"
   - featurecounts:
       name: "featureCounts"
       path_filters:
         - "featureCounts/*"
+  - featurecounts:
+      name: "featureCounts_graft"
+      path_filters:
+        - "featureCounts_graft/*"
+  - featurecounts:
+      name: "featureCounts_host"
+      path_filters:
+        - "featureCounts_host/*"
   - salmon:
       name: "Salmon"
       path_filters:
         - "salmon/*"
+  - salmon:
+      name: "Salmon_host"
+      path_filters:
+        - "salmon_host/*"
+  - salmon:
+      name: "Salmon_graft"
+      path_filters:
+        - "salmon_graft/*"
   - samtools:
       name: "Samtools"
       path_filters:
@@ -77,7 +102,7 @@ module_order:
       path_filters:
         - "samtools_graft/*"
   - samtools:
-      name: "Samtools (excluding reads of host origin)"
+      name: "Samtools (filtered alignment to graft genome with graft reads only)"
       path_filters:
         - "samtools_xeno/*"
   - samtools:
@@ -88,12 +113,35 @@ module_order:
       name: "Picard"
       path_filters:
         - "gatk/*"
+  - picard:
+      name: "Picard (graft)"
+      path_filters:
+        - "gatk_graft/*"
+  - picard:
+      name: "Picard (host)"
+      path_filters:
+        - "gatk_host/*"
   - rna_seqc:
       name: "RNA-SeQC"
       path_filters:
         - "rnaseqc/*"
+  - rna_seqc:
+      name: "RNA-SeQC (graft)"
+      path_filters:
+        - "rnaseqc_graft/*"
+  - rna_seqc:
+      name: "RNA-SeQC (host)"
+      path_filters:
+        - "rnaseqc_host/*"
   - rseqc:
       name: "RSeQC"
       path_filters:
         - "rseqc/*"
-        
+  - rseqc:
+      name: "RSeQC (graft)"
+      path_filters:
+        - "rseqc_graft/*"
+  - rseqc:
+      name: "RSeQC (host)"
+      path_filters:
+        - "rseqc_host/*"

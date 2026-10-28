@@ -2,11 +2,15 @@
 
 nextflow.enable.dsl=2
 
+include { BUILD_INDEX } from '../subworkflows/build_index.nf'
 include { CHECK_REFERENCE } from '../subworkflows/check_reference.nf'
+include { CHECK_REFERENCE as CHECK_REFERENCE_HOST } from '../subworkflows/check_reference.nf'
 include { CHECK_INPUT } from '../subworkflows/check_input.nf'
 include { PROCESS_FASTQ } from '../subworkflows/process_fastq.nf'
-include { ALIGN_FASTQ } from '../subworkflows/align_fastq.nf'
 include { CHECK_EXPERIMENT } from '../subworkflows/check_experiment.nf'
+include { ALIGN_FASTQ } from '../subworkflows/align_fastq.nf'
+include { ALIGN_FASTQ as ALIGN_FASTQ_HOST } from '../subworkflows/align_fastq.nf'
+include { PDX_XENOFILTER } from '../subworkflows/pdx_xenofilter.nf'
 include { QUANT_GENES } from '../subworkflows/quant_genes.nf'
 include { QUANT_TRANSCRIPTS } from '../subworkflows/quant_transcripts.nf'
 include { QC_FASTQ } from '../subworkflows/qc_fastq.nf'
@@ -16,6 +20,8 @@ include { GENERATE_REPORT } from '../subworkflows/generate_report.nf'
 include { WRITE_OUTPUT_CSV } from '../subworkflows/write_output_csv.nf'
 include { UPDATE_OUTPUT } from '../subworkflows/update_output.nf'
 include { WRITE_PARAMS } from '../subworkflows/write_params.nf'
+
+include { XENGSORT_CLASSIFY } from '../modules/xengsort_classify.nf'
 
 //Validate required parameters
 if ( params.genome_fa == null && params.run_build_index ){
@@ -27,13 +33,13 @@ if ( params.gtf == null && (params.run_gene_count || params.run_tx_count)){
 }
 
 // Define step options
-def step_options = ["mapping", "expression_quantification", "differential_expression", "gene_fusion" ]
+def step_options = ["mapping", "expression_quantification", "differential_expression", "gene_fusion", "multiqc" ]
 if (!(params.step in step_options)){ 
     exit 1, "Invalid option for --step. Available options: ${step_options.join(', ')}"
 }
 
 // Define update options
-def update_options = [null, "qc_alignment", "gene_level", "gene_expression", "differential_genes", "transcript_level", "transcript_expression", "differential_transcripts", "gene_fusion", "multiqc", "report", "output"]
+def update_options = [null, "qc_alignment", "gene_level", "gene_expression", "differential_genes", "transcript_level", "transcript_expression", "differential_transcripts", "gene_fusion", "multiqc", "report"]
 if(!(params.update in update_options )){ 
     exit 1, "Invalid option for --update. Available options: ${update_options.findAll{it != null}.join(', ')}"
 }
@@ -46,7 +52,7 @@ if(!params.aligner in aligner_options){
 }
 
 // Define tools to run and handle skip_tools parameter
-def tools = "cutadapt,fastp,fastqc,rnaseqc,rseqc,star,bwa-mem,salmon,arriba"
+def tools = "cutadapt,fastp,fastqc,rnaseqc,rseqc,star,bwa-mem,salmon,arriba,xengsort,xenofilter"
 def all_tools = tools.split(',')*.trim() 
 if ( params.skip_tools != null ) {
     def skip_tools = params.skip_tools.split(',')*.trim()
@@ -73,6 +79,21 @@ workflow RNASEQ {
     def srcdir  = params.srcdir ? new File("${params.srcdir}").absolutePath : outdir
 
     ch_software_versions = Channel.empty()
+
+    /*
+    * Build index only
+    */
+    if (params.run_build_index){
+        BUILD_INDEX(
+            params.genome_fa,
+            params.gtf,
+            params.genome_fa_host,
+            params.gtf_host,
+            params.reference_index ?: params.aligner
+        )
+        ch_software_versions = ch_software_versions.mix(BUILD_INDEX.out.versions)
+    }
+
     /*
     * Run reference check
     */
@@ -82,13 +103,28 @@ workflow RNASEQ {
     tx_txt = Channel.empty()
     tx_fa = Channel.empty()
     collapsed_gtf = Channel.empty()
+    index_host_dir = Channel.empty()
+    gene_txt_host = Channel.empty()
+    tx_bed_host = Channel.empty()
+    tx_txt_host = Channel.empty()
+    tx_fa_host = Channel.empty()
+    collapsed_gtf_host = Channel.empty()
+    xengsort_dir = Channel.empty()
 
     if (params.run_reference_check) {
         CHECK_REFERENCE(
+            params.genome,
             params.genome_fa,
             params.gtf,
             params.aligner,
-            params.aligner_index ?: params.aligner,
+            params.star,
+            params.bwa,
+            params.rnaseqc_gtf,
+            params.rseqc_bed,
+            params.gene_txt,
+            params.tx_bed,
+            params.tx_fa,
+            params.tx_txt,
             srcdir
         )
         index_dir = CHECK_REFERENCE.out.index_dir // match params.aligner
@@ -98,6 +134,33 @@ workflow RNASEQ {
         tx_fa = CHECK_REFERENCE.out.tx_fa
         collapsed_gtf = CHECK_REFERENCE.out.collapsed_gtf
         ch_software_versions = ch_software_versions.mix(CHECK_REFERENCE.out.versions)
+
+        if (params.workflow == 'pdx'){
+            CHECK_REFERENCE_HOST(
+                params.genome_host,
+                params.genome_fa_host,
+                params.gtf_host,
+                params.aligner,
+                params.star_host,
+                params.bwa_host,
+                params.rnaseqc_gtf_host,
+                params.rseqc_bed_host,
+                params.gene_txt_host,
+                params.tx_bed_host,
+                params.tx_fa_host,
+                params.tx_txt_host,
+                srcdir
+            )
+            index_host_dir = CHECK_REFERENCE_HOST.out.index_dir
+            gene_txt_host = CHECK_REFERENCE_HOST.out.gene_txt
+            tx_txt_host = CHECK_REFERENCE_HOST.out.tx_txt
+            tx_bed_host = CHECK_REFERENCE_HOST.out.tx_bed
+            tx_fa_host = CHECK_REFERENCE_HOST.out.tx_fa
+            collapsed_gtf_host = CHECK_REFERENCE_HOST.out.collapsed_gtf
+            xengsort_dir = CHECK_REFERENCE_HOST.out.xengsort_dir
+            ch_software_versions = ch_software_versions.mix(CHECK_REFERENCE_HOST.out.versions)
+
+        }
     }
 
 
@@ -142,6 +205,22 @@ workflow RNASEQ {
     }
 
     /*
+    * For PDX samples, classify graft and host reads
+    */
+    ch_reads_xengsort = Channel.empty()
+    ch_reads_xengsort_host = Channel.empty()
+    ch_xengsort_log = Channel.empty()
+    if (params.run_classify_fastq && params.run_xengsort){
+        XENGSORT_CLASSIFY(
+            params.run_cut_adapt ? ch_reads_trimmed : ch_reads,
+            xengsort_dir
+        )
+        ch_reads_xengsort = XENGSORT_CLASSIFY.out.graft_fq
+        ch_reads_xengsort_host = XENGSORT_CLASSIFY.out.host_fq
+        ch_xengsort_log = XENGSORT_CLASSIFY.out.log
+    }
+
+    /*
     * Infer strandedness and read type
     */
     infer_experiment = Channel.empty()
@@ -157,32 +236,31 @@ workflow RNASEQ {
         
     }  
 
-    /*
-    * Gene-level analysis
-    */
-    ch_bam_bai = Channel.empty()
-    ch_star_counts = Channel.empty()
-    ch_fc_counts = Channel.empty()
-    ch_fc_summary = Channel.empty()
-    ch_tx_bam = Channel.empty() // STAR's transcript bam, used for downstream quantification with Salmon
-    ch_star_log = Channel.empty()
-    ch_bam_bai_host = Channel.empty() 
-    ch_star_log_host = Channel.empty() 
-    ch_bam_bai_xeno = Channel.empty()
-    ch_graft_reads = Channel.empty()
-    ch_gene_expr = Channel.empty()
-    ch_de = Channel.empty()
-    de_csv = Channel.empty()
 
     /*
     * run alignment 
     * for pdx workflow, align to both graft and host genomes and run XenofilteR to remove reads with host origin
     */
+    ch_bam_bai = Channel.empty()
+    ch_star_counts = Channel.empty()
+    ch_tx_bam = Channel.empty() // STAR's transcript bam, used for downstream quantification with Salmon
+    ch_star_log = Channel.empty()
+
+    ch_bam_bai_host = Channel.empty() 
+    ch_bam_bai_xeno = Channel.empty()
+    ch_star_counts_host = Channel.empty()
+    ch_tx_bam_host = Channel.empty()
+    ch_star_log_host = Channel.empty() 
+    ch_graft_reads = Channel.empty()
+
     if (params.run_alignment){
             ALIGN_FASTQ(
-                params.run_cut_adapt ? ch_reads_trimmed : ch_reads,
-                params.run_split_fastq, // if true, dont run xenofilteR
+                params.workflow == 'pdx' && params.pdx_tool == 'xengsort' ? ch_reads_xengsort : (params.run_cut_adapt ? ch_reads_trimmed : ch_reads),
                 index_dir,
+                params.gtf,
+                params.workflow == 'pdx' && params.pdx_tool == 'xengsort' ? ch_reads_xengsort_host : (params.run_cut_adapt ? ch_reads_trimmed : ch_reads),
+                index_host_dir,
+                params.gtf_host
             )
         
             ch_bam_bai = ALIGN_FASTQ.out.bam_bai
@@ -190,24 +268,53 @@ workflow RNASEQ {
             ch_tx_bam = ALIGN_FASTQ.out.tx_bam
             ch_star_log = ALIGN_FASTQ.out.star_log
             ch_bam_bai_host = ALIGN_FASTQ.out.bam_bai_host
+            ch_star_counts_host = ALIGN_FASTQ.out.counts_host
+            ch_tx_bam_host = ALIGN_FASTQ.out.tx_bam_host
             ch_star_log_host = ALIGN_FASTQ.out.star_log_host
-            ch_bam_bai_xeno = ALIGN_FASTQ.out.bam_bai_xeno 
-            ch_graft_reads = ALIGN_FASTQ.out.graft_reads
             ch_software_versions = ch_software_versions.mix(ALIGN_FASTQ.out.versions)
+
+            if (params.workflow == 'pdx' && params.run_filter_fastq && params.run_xenofilter){
+                PDX_XENOFILTER(
+                        params.run_cut_adapt ? ch_reads_trimmed : ch_reads,
+                        index_dir,
+                        index_host_dir,
+                        ch_bam_bai,
+                        ch_bam_bai_host
+                )
+                ch_bam_bai_xeno = PDX_XENOFILTER.out.bam_bai_xeno
+                ch_graft_reads = PDX_XENOFILTER.out.graft_reads
+                ch_software_versions = ch_software_versions.mix(PDX_XENOFILTER.out.versions)
+
+            }
     
     }
 
     /*
     *   collect gene-level count matrix and call differential expression
     */
+    ch_fc_counts = Channel.empty()
+    ch_fc_summary = Channel.empty()
+    ch_gene_expr = Channel.empty()
+    ch_de = Channel.empty()
+    de_csv = Channel.empty()
+
+    ch_fc_counts_host = Channel.empty()
+    ch_fc_summary_host = Channel.empty()
+    ch_gene_expr_host = Channel.empty()
+    ch_de_host = Channel.empty()
+    de_csv_host = Channel.empty()
+
     if (params.run_quant_genes){
         QUANT_GENES(
                 samplesheet,
-                params.workflow == 'pdx' ? ch_bam_bai_xeno.ifEmpty([]) : ch_bam_bai.ifEmpty([]),
-                ch_star_counts.ifEmpty([]),
+                params.run_xenofilter ? ch_bam_bai_xeno : ch_bam_bai,
+                ch_star_counts,
                 params.de_gene_txt ? file(params.de_gene_txt, checkIfExists: true) : gene_txt,
-                infer_experiment.ifEmpty([]),
-                srcdir
+                ch_bam_bai_host,
+                ch_star_counts_host,
+                params.de_gene_txt_host ? file(params.de_gene_txt_host, checkIfExists: true) : gene_txt_host,
+                srcdir,
+                infer_experiment
         )
         
         ch_fc_counts = QUANT_GENES.out.fc_counts
@@ -215,7 +322,12 @@ workflow RNASEQ {
         ch_gene_expr = QUANT_GENES.out.expr 
         ch_de = QUANT_GENES.out.de
         de_csv = QUANT_GENES.out.de_csv
-        ch_software_versions = ch_software_versions.mix(QUANT_GENES.out.versions)
+        ch_fc_counts_host = QUANT_GENES.out.fc_counts_host
+        ch_fc_summary_host = QUANT_GENES.out.fc_summary_host
+        ch_gene_expr_host = QUANT_GENES.out.expr_host
+        ch_de_host = QUANT_GENES.out.de_host
+        de_csv_host = QUANT_GENES.out.de_csv_host
+        ch_software_versions = ch_software_versions.mix(QUANT_GENES.out.versions)        
 
     }
 
@@ -227,20 +339,35 @@ workflow RNASEQ {
     ch_tx_expr = Channel.empty()
     ch_dt = Channel.empty()
     dt_csv = Channel.empty()
+
+    ch_salmon_host = Channel.empty()
+    ch_tx_expr_host = Channel.empty()
+    ch_dt_host = Channel.empty()
+    dt_csv_host = Channel.empty()
+
     if (params.run_quant_transcripts){
         QUANT_TRANSCRIPTS(
                 samplesheet,
-                ch_tx_bam.ifEmpty([]),
+                ch_tx_bam,
                 tx_fa,
                 tx_txt,
                 params.de_gene_txt ? file(params.de_gene_txt, checkIfExists: true) : gene_txt,
+                ch_tx_bam_host,
+                tx_fa_host,
+                tx_txt_host,
+                params.de_gene_txt_host ? file(params.de_gene_txt_host, checkIfExists: true) : gene_txt_host,
                 srcdir
         )
         ch_salmon = QUANT_TRANSCRIPTS.out.salmon
         ch_tx_expr = QUANT_TRANSCRIPTS.out.tx_expr
         ch_dt = QUANT_TRANSCRIPTS.out.dt
         dt_csv = QUANT_TRANSCRIPTS.out.dt_csv
+        ch_salmon_host = QUANT_TRANSCRIPTS.out.salmon_host
+        ch_tx_expr_host = QUANT_TRANSCRIPTS.out.tx_expr_host
+        ch_dt_host = QUANT_TRANSCRIPTS.out.dt_host
+        dt_csv_host = QUANT_TRANSCRIPTS.out.dt_csv_host
         ch_software_versions = ch_software_versions.mix(QUANT_TRANSCRIPTS.out.versions)
+
     }
 
     /*
@@ -249,7 +376,7 @@ workflow RNASEQ {
     ch_arriba = Channel.empty()
     if (params.run_fusion){
         DETECT_FUSIONS(
-            params.workflow == 'pdx' ? ch_graft_reads : (params.run_cut_adapt ? ch_reads_trimmed : ch_reads), 
+            params.run_xenofilter ? ch_graft_reads : (params.run_xengsort ? ch_reads_xengsort : (params.run_cut_adapt ? ch_reads_trimmed : ch_reads)), 
             params.genome, 
             index_dir, 
             params.gtf,
@@ -285,27 +412,38 @@ workflow RNASEQ {
     ch_rseqc = Channel.empty()
     ch_hs_metrics = Channel.empty()
     ch_bam_stat = Channel.empty()
+
+    ch_rnaseqc_host = Channel.empty()
+    ch_rseqc_host = Channel.empty()
+    ch_hs_metrics_host = Channel.empty()
     ch_bam_stat_host = Channel.empty()
     ch_bam_stat_xeno = Channel.empty()
 
     if (params.run_qc_alignment){
         // need to add a parser to align_fastq.csv
         QC_ALIGNMENT(
-            ch_bam_bai.ifEmpty([]),
-            ch_bam_bai_host.ifEmpty([]),
-            ch_bam_bai_xeno.ifEmpty([]),
+            ch_bam_bai,
+            ch_bam_bai_host,
+            ch_bam_bai_xeno,
             collapsed_gtf,
             tx_bed,
-            infer_experiment.ifEmpty([]),
+            collapsed_gtf_host,
+            tx_bed_host,
+            infer_experiment,
             srcdir
         )
-        ch_rnaseqc = QC_ALIGNMENT.out.rnaseqc.flatten().collect()
-        ch_rseqc = QC_ALIGNMENT.out.rseqc.flatten().collect()
-        ch_hs_metrics = QC_ALIGNMENT.out.hs_metrics.flatten().collect()
-        ch_bam_stat = QC_ALIGNMENT.out.bam_stat.flatten().collect()
-        ch_bam_stat_host = QC_ALIGNMENT.out.bam_stat_host.flatten().collect()
-        ch_bam_stat_xeno = QC_ALIGNMENT.out.bam_stat_xeno.flatten().collect()
+        ch_rnaseqc = QC_ALIGNMENT.out.rnaseqc
+        ch_rseqc = QC_ALIGNMENT.out.rseqc
+        ch_hs_metrics = QC_ALIGNMENT.out.hs_metrics
+        ch_bam_stat = QC_ALIGNMENT.out.bam_stat
+        ch_rnaseqc_host = QC_ALIGNMENT.out.rnaseqc_host
+        ch_rseqc_host = QC_ALIGNMENT.out.rseqc_host
+        ch_hs_metrics_host = QC_ALIGNMENT.out.hs_metrics_host
+        ch_bam_stat_host = QC_ALIGNMENT.out.bam_stat_host
+        ch_bam_stat_xeno = QC_ALIGNMENT.out.bam_stat_xeno
         ch_software_versions = ch_software_versions.mix(QC_ALIGNMENT.out.versions)
+
+
         
     }
 
@@ -316,27 +454,37 @@ workflow RNASEQ {
     report_rmd = Channel.empty()
     GENERATE_REPORT(
         samplesheet, 
-        ch_star_counts.map{it[2]}.flatten().collect().ifEmpty([]), 
-        ch_fc_summary.map{it[2]}.flatten().collect().ifEmpty([]), 
-        ch_gene_expr.collect().ifEmpty([]), 
-        ch_de.collect().ifEmpty([]), 
-        ch_salmon.map{it[2]}.flatten().collect().ifEmpty([]), 
-        ch_tx_expr.collect().ifEmpty([]), 
-        ch_dt.collect().ifEmpty([]),
-        ch_arriba.map{it[2]}.flatten().collect().ifEmpty([]),
-        ch_fastqc.flatten().collect().ifEmpty([]), 
-        ch_cutadapt_js.flatten().collect().ifEmpty([]),
-        ch_fastp_js.flatten().collect().ifEmpty([]),
-        ch_trimgalore_js.flatten().collect().ifEmpty([]),
-        ch_fastqc_trimmed.flatten().collect().ifEmpty([]),
-        ch_star_log.flatten().collect().ifEmpty([]),
-        ch_star_log_host.flatten().collect().ifEmpty([]),
-        ch_rnaseqc.flatten().collect().ifEmpty([]), 
-        ch_rseqc.flatten().collect().ifEmpty([]), 
-        ch_bam_stat.flatten().collect().ifEmpty([]), 
-        ch_bam_stat_host.flatten().collect().ifEmpty([]), 
-        ch_bam_stat_xeno.flatten().collect().ifEmpty([]), 
-        ch_hs_metrics.flatten().collect().ifEmpty([]), 
+        ch_fastqc, 
+        ch_cutadapt_js,
+        ch_fastp_js,
+        ch_trimgalore_js,
+        ch_fastqc_trimmed,
+        ch_xengsort_log,
+        ch_star_log,
+        ch_star_log_host,
+        ch_rnaseqc,
+        ch_rnaseqc_host,
+        ch_rseqc,
+        ch_rseqc_host,
+        ch_bam_stat,
+        ch_bam_stat_host,
+        ch_bam_stat_xeno,
+        ch_hs_metrics, 
+        ch_star_counts, 
+        ch_star_counts_host,
+        ch_fc_summary, 
+        ch_fc_summary_host,
+        ch_gene_expr, 
+        ch_gene_expr_host,
+        ch_de, 
+        ch_de_host,
+        ch_salmon, 
+        ch_salmon_host,
+        ch_tx_expr, 
+        ch_tx_expr_host,
+        ch_dt,
+        ch_dt_host,
+        ch_arriba,
         srcdir
     )
     report_rmd = GENERATE_REPORT.out.rmd
@@ -352,18 +500,20 @@ workflow RNASEQ {
             outdir
         )
     }else{
-        ch_bam_bai
-            .join(ch_bam_bai_host)
-            .join(ch_bam_bai_xeno)
-            .set{ch_bam_bai_pdx}
 
         WRITE_OUTPUT_CSV(
-            params.workflow == 'pdx' ? ch_bam_bai.join(ch_bam_bai_host).join(ch_bam_bai_xeno).ifEmpty([]) : ch_bam_bai.ifEmpty([]),
-            ch_tx_bam.ifEmpty([]),
-            ch_star_counts.ifEmpty([]),
-            ch_fc_counts.ifEmpty([]),
-            ch_salmon.ifEmpty([]),
-            ch_arriba.ifEmpty([]),
+            ch_bam_bai,
+            ch_bam_bai_host,
+            ch_bam_bai_xeno,
+            ch_tx_bam,
+            ch_tx_bam_host,
+            ch_star_counts,
+            ch_star_counts_host,
+            ch_fc_counts,
+            ch_fc_counts_host,
+            ch_salmon,
+            ch_salmon_host,
+            ch_arriba
         )
 
     }

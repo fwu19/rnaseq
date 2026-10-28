@@ -1,7 +1,7 @@
 process TRIMGALORE {
     label "process_high"
 
-    container = 'ghcr.io/felixkrueger/trimgalore:v2.3.0'
+    container 'ghcr.io/felixkrueger/trimgalore:v2.3.0'
 
     tag "TRIMGALORE on ${meta.id}"
 

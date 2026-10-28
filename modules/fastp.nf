@@ -1,7 +1,7 @@
 process FASTP {
     label "process_high"
 
-    container = 'quay.io/biocontainers/fastp:0.23.4--h125f33a_4'
+    container 'quay.io/biocontainers/fastp:0.23.4--h125f33a_4'
     //module = ['fastp/0.23.4-GCC-13.2.0']
 
     tag "FASTP on ${meta.id}"

@@ -6,11 +6,10 @@ process XENOFILTER {
 
     tag "Filter bam on ${out_prefix}"
 
-    publishDir "${params.outdir}/STAR/${genome}_filtered", mode: 'copy'
+    publishDir "${params.outdir}/STAR/${params.genome}_filtered", mode: 'copy'
     
     input:
     tuple val(meta), val(out_prefix), path(graft_bam, stageAs: "graft/*"), path(graft_bai, stageAs: "graft/*"), path(host_bam, stageAs: "host/*"), path(host_bai, stageAs: "host/*")
-    val (genome)
     val (mm_threshold)
 
 

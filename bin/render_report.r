@@ -4,13 +4,23 @@ options(stringsAsFactor=F)
 options(scipen = 99)
 
 args <- as.vector(commandArgs(T))
-# report_rmd=${report_rmd} workflow=${params.workflow} fdr=${params.fdr} fc=${params.fc} fdr2=${params.fdr2} fc2=${params.fc2}
+
+lst <- list()
 for (arg in strsplit(args, split = '=')){
-    assign(trimws(arg[1]), trimws(arg[2]))
+    key <- trimws(arg[1])
+    value <- trimws(arg[2])
+    
+    if (key %in% c('report_rmd', 'report_html')){
+        assign(key, value)
+    }else{
+        lst[[key]] <- value 
+    }
+    
 }
 
-if (sum(c('workflow','fdr','fdr2','fc','fc2') %in% ls()) < 5){
-    stop(paste('The following arguments are missing!\n', setdiff(c('workflow','fdr','fdr2','fc','fc2'), ls()), '\n'))    
+
+for (i in c('fdr', 'fdr2', 'fc', 'fc2', 'min_samples')){
+    if(i %in% names(lst)){lst[[i]] <- as.numeric(lst[[i]])}
 }
 
 ## copy Rmd files ####
@@ -19,7 +29,5 @@ dst <- gsub('.html$', '.Rmd', report_html)
 file.copy(src, dst)
 rmarkdown::render(
     dst, 
-    params = list(
-        fdr = as.numeric(fdr), fc = as.numeric(fc), fdr2 = as.numeric(fdr2), fc2 = as.numeric(fc2)
-    )
+    params = lst
 )

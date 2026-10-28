@@ -26,3 +26,5 @@ This pipeline can analyze RNAseq data derived from mRNA-seq, total RNA-seq and R
 -   Generate an analysis report including QC metrics, differential expression, description of deliverables and analytical methods.
 
 
+## User manual
+See [here](doc/RNAseq_workflow_v0.5.html).

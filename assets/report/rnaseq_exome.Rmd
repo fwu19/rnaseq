@@ -15,6 +15,10 @@ output:
 editor_options: 
   chunk_output_type: console
 params:
+  workflow: "pdx"
+  genome: 'target'
+  genome_host: ''
+  pdx_tool: "null"
   fdr: 0.05
   fc: 1.5
   fdr2: 0.01
@@ -574,8 +578,8 @@ df <- ms %>%
   )
 p <- scatter_plot(
   df, 
-  xvar = 'fastqc.total_sequences', xsf = 1e-6, xlab = 'Total sequenced reads in million',
-  yvar = 'fastqc_trimmed.total_sequences', ysf = 1e-6, ylab = 'Adapter-trimmed reads in million',
+  xvar = 'fastqc.total_sequences', xsf = 1, xlab = 'Total sequenced reads in million',
+  yvar = 'fastqc_trimmed.total_sequences', ysf = 1, ylab = 'Adapter-trimmed reads in million',
   size.var = 'size', text.var = 'text'
 )
 
@@ -594,7 +598,7 @@ df <- ms %>%
 
 p <- scatter_plot(
  df,
- xvar = 'star.uniquely_mapped', xsf = 1e-6, xlab = 'Uniquely mapped reads in million',
+ xvar = 'star.uniquely_mapped', xsf = 1, xlab = 'Uniquely mapped reads in million',
   yvar = 'star.uniquely_mapped_percent', ysf = 1, ylab = 'Uniquely mapped reads %',
   size.var = NULL, text.var = 'text'
 )
@@ -731,9 +735,36 @@ if (exists('ms')){
 ```
 
 ## {.unnumbered .unlisted}
+```{r check_gex}
+show_gex <- FALSE
+
+if (file.exists('gene_counts/gene.y0.rds')){
+  show_gex <- TRUE
+  y0 <- readRDS('gene_counts/gene.y0.rds')
+}else if (file.exists('gene_counts/all_samples.gene_raw_counts.txt')){
+  show_gex <- TRUE
+  nsamples <- nrow(ss)
+  gene_expr <- read.delim('gene_counts/all_samples.gene_raw_counts.txt')
+  cts <- gene_expr[,tail(1:ncol(gene_expr), nsamples)]
+  mid <- gsub('-', '.', ifelse(grepl('^[0-9]', ss$id), paste0('X', ss$id), ss$id))
+  colnames(cts) <- ss$id[match(colnames(cts), mid)] # revert "." to "-"
+  
+  y0 <- count2dgelist(
+    counts = cts, 
+    features = gene_expr[, 1:(ncol(gene_expr)-nsamples)], 
+    samples = ss[match(colnames(cts), ss$id), ],
+    group = 'sample_group'
+  )
+  rm(gene_expr, nsamples, cts)
+  
+}
+
+```
+
+```{asis gex_count_text, echo = show_gex}
+## {.unnumbered .unlisted}
 
 $$\\[0.5in]$$
-
 
 ## GENE-LEVEL EXPRESSION
 
@@ -741,29 +772,9 @@ $$\\[0.5in]$$
 - PCA is based on top 500 variable genes (NOT on chr X, chr Y or chr M). \
 - See the sample name by hovering over a dot. \
 
-```{r, fig.dim=c(6,4)}
-if (file.exists('gene.y0.rds')){
-  y0 <- readRDS('gene.y0.rds')
-}else{
-  fname <- 'all_samples.gene_raw_counts.txt'
-  if (file.exists(fname)){
-    nsamples <- nrow(ss)
-    
-    gene_expr <- read.delim(fname)
-    cts <- gene_expr[,tail(1:ncol(gene_expr), nsamples)]
-    mid <- gsub('-', '.', ifelse(grepl('^[0-9]', ss$id), paste0('X', ss$id), ss$id))
-    colnames(cts) <- ss$id[match(colnames(cts), mid)] # revert "." to "-"
-    
-    y0 <- count2dgelist(
-    counts = cts, 
-    features = gene_expr[, 1:(ncol(gene_expr)-nsamples)], 
-    samples = ss[match(colnames(cts), ss$id), ],
-    group = 'sample_group'
-    )
-    rm(gene_expr, nsamples, cts, fname)
-  }
-}
+```
 
+```{r gex_pca, eval=show_gex, fig.width=6, fig.height=4}
 if(exists('y0')){
   gene.pca <- plot_pca(y0, var.genes = 500, color = y0$samples$group, sample.label = F)
 }else{
@@ -775,27 +786,35 @@ rm(gene.pca)
 
 ```
 
-$$\\[0.2in]$$
-
-### Differential gene expression
-```{r}
-de_rds <- 'differential_genes.rds'
-de_dir <- 'differential_genes'
+```{r check_de}
+show_de <- F
+de_rds <- 'de/differential_genes.rds'
+de_dir <- 'de/differential_genes'
 de <- NULL
 if (file.exists(de_rds)){
   de <- parse_de_rds(de_rds, min_samples = params$min_samples)
+  show_de <- T
 }else if (dir.exists(de_dir)){
   de <- parse_de_dir(de_dir, ss, y0, min_samples = params$min_samples)
+  show_de <- T
 }
 rm(de_rds, de_dir)
 if(exists('y0')){rm(y0)}
 ```
 
+```{asis de_text, echo = show_de}
+
+$$\\[0.2in]$$
+
+### Differential gene expression
+
 #### DE Summary
 - feature = gene; FDR = BH-corrected p-value; FC = fold change  \
 - Statistics of DE genes are summarized based on two thresholds -- the first set between columns *features_up* and *FC_cutoff* and the second set between columns *features_up2* and *FC_cutoff2*. \
 
-```{r}
+```
+
+```{r de_sum, eval = show_de}
 
 if (!is.null(de)){
   de$sum %>% 
@@ -813,6 +832,8 @@ if (!is.null(de)){
 }
 ```
 
+```{asis de_plots_text, echo = show_de}
+
 $$\\[0.2in]$$
 
 #### DE plots {.tabset .tabset-pills}
@@ -823,7 +844,9 @@ DE genes displayed in the plots below and in the delivered pdf files  were defin
 - PCA is based on top 500 variable genes (NOT on chr X, chr Y or chr M). \
 \
 
-```{r, eval=TRUE, include=TRUE, results='asis', fig.cap=c('Fig. Differential expression analysis. (A) PCA plot. (B) MA/MD plot. (C) Volcano plot'), fig.width=12, fig.height=4}
+```
+
+```{r de_plots, eval = show_de, results='asis', fig.cap=c('Fig. Differential expression analysis. (A) PCA plot. (B) MA/MD plot. (C) Volcano plot'), fig.width=12, fig.height=4}
 if (!is.null(de)){
 
   for (i in 1:length(de$plots)){
@@ -839,28 +862,19 @@ if (!is.null(de)){
 
 ```
 
+
 ## {.unnumbered .unlisted}
 
-$$\\[0.5in]$$
-
-
-## TRANSCRIPT-LEVEL EXPRESSION
-
-
-### PCA plot of all samples 
-- PCA is based on top 500 variable genes (NOT on chr X, chr Y or chr M). \
-- See the sample name by hovering over a dot. \
-
-```{r, fig.dim=c(6,4)}
-
-if (file.exists('transcript.y0.rds')){
-  y0 <- readRDS('transcript.y0.rds')
-}else{
-  fname <- 'all_samples.transcript_raw_counts.txt'
-  if (file.exists(fname)){
+```{r check_tx}
+show_tx <- F
+if (file.exists('tx_counts/transcript.y0.rds')){
+  show_tx <- T
+  y0 <- readRDS('tx_counts/transcript.y0.rds')
+}else if (file.exists('tx_counts/all_samples.transcript_raw_counts.txt')){
+  show_tx <- T
     nsamples <- nrow(ss)
     
-    gene_expr <- read.delim(fname)
+    gene_expr <- read.delim('tx_counts/all_samples.transcript_raw_counts.txt')
     cts <- gene_expr[,tail(1:ncol(gene_expr), nsamples)]
     if (grepl('^counts', colnames(cts)[1])){
       colnames(cts) <- gsub('^counts.', '', colnames(cts))
@@ -876,11 +890,26 @@ if (file.exists('transcript.y0.rds')){
     samples = ss[match(colnames(cts), ss$id), ],
     group = 'sample_group'
     )
-    rm(gene_expr, nsamples, cts, fname)
-  }
+    rm(gene_expr, nsamples, cts)
+
 
 }
 
+```
+
+```{asis tx_text, echo=show_tx}
+
+$$\\[0.5in]$$
+  
+## TRANSCRIPT-LEVEL EXPRESSION
+
+
+### PCA plot of all samples 
+- PCA is based on top 500 variable genes (NOT on chr X, chr Y or chr M). \
+- See the sample name by hovering over a dot. \
+```
+
+```{r tx_pca, eval=show_tx, fig.width=6, fig.height=4}
 if(exists('y0')){
   transcript.pca <-plot_pca(y0, var.genes = 500, color = y0$samples$group, sample.label = F, feature.length = 'EffectiveLength')
 }else{
@@ -890,22 +919,18 @@ if(exists('y0')){
 plotly::ggplotly(transcript.pca, tooltip = "text")
 rm(transcript.pca)
 
-
 ```
 
-
-
-$$\\[0.2in]$$
-
-### Differential transcript expression
-
-```{r}
-de_rds <- 'differential_transcripts.rds'
-de_dir <- 'differential_transcripts'
+```{r check_dt}
+show_dt <- F
+de_rds <- 'dt/differential_transcripts.rds'
+de_dir <- 'dt/differential_transcripts'
 de <- NULL
 if (file.exists(de_rds)){
+  show_dt <- T
   de <- parse_de_rds(de_rds, feature_length = "EffectiveLength", min_samples = params$min_samples)
 }else if (dir.exists(de_dir)){
+  show_dt <- T
   de <- parse_de_dir(de_dir, ss, y0, feature_length = "EffectiveLength", min_samples = params$min_samples)
   rm(y0)
 }
@@ -913,11 +938,18 @@ rm(de_rds, de_dir)
 if(exists('y0')){rm(y0)}
 ```
 
+```{asis dt_text, echo=show_dt}
+
+$$\\[0.2in]$$
+  
+### Differential transcript expression
+
 #### DT Summary
 - feature = transcript; FDR = BH-corrected p-value; FC = fold change  \
 - Statistics of DT genes are summarized based on two thresholds -- the first set between columns *features_up* and *FC_cutoff* and the second set between columns *features_up2* and *FC_cutoff2*. \
+```
 
-```{r}
+```{r dt_sum, echo=F, eval=show_dt}
 if (!is.null(de)){
   de$sum %>% 
     relocate(control_samples, test_samples, .after = last_col()) %>% 
@@ -935,8 +967,10 @@ if (!is.null(de)){
 }
 ```
 
-$$\\[0.2in]$$
+```{asis dt_plots_text, echo=show_dt}
 
+$$\\[0.2in]$$
+  
 #### DT plots {.tabset .tabset-pills}
 
 Differential transcripts displayed in the plots below and in the delivered pdf files  were defined by the first threshold in section *DT Summary* (between columns *features.up* and *FC.cutoff*) .  \
@@ -945,7 +979,9 @@ Differential transcripts displayed in the plots below and in the delivered pdf f
 - PCA is based on top 500 variable genes (NOT on chr X, chr Y or chr M). \
 \
 
-```{r, eval=TRUE, include=TRUE, results='asis', fig.cap=c('Fig. Differential expression analysis. (A) PCA plot. (B) MA/MD plot. (C) Volcano plot'), fig.width=12, fig.height=4}
+```
+
+```{r dt_plots, echo=F, eval=show_dt, results='asis', fig.cap=c('Fig. Differential expression analysis. (A) PCA plot. (B) MA/MD plot. (C) Volcano plot'), fig.width=12, fig.height=4}
 if (!is.null(de)){
 
   for (i in 1:length(de$plots)){
@@ -963,11 +999,10 @@ if (!is.null(de)){
 
 ## {.unnumbered .unlisted}
 
-$$\\[0.5in]$$
-
-## GENE FUSIONS {.tabset .tabset-pills}
-```{r}
+```{r check_fusion}
+show_fusion <- F
 if (dir.exists('arriba')){
+  show_fusion <- T
   flist <- list.files('arriba', pattern = 'fusions.tsv', full.names = T)
   fusions <- lapply(
     flist,
@@ -1002,8 +1037,17 @@ if (dir.exists('arriba')){
 
 ```
 
+```{asis fusion_text, echo = show_fusion}
+
+$$\\[0.5in]$$
+
+## GENE FUSIONS {.tabset .tabset-pills}
+  
 ### Plot
-```{r}
+  
+```
+
+```{r fusion_plots, echo=F, eval=show_fusion}
 if (exists('fusions')){
   fusions %>% 
     ggplot(aes(x = total_fusions, y = high_confidence, color = sample_group))+
@@ -1020,10 +1064,14 @@ plotly::ggplotly(p, tooltip = 'text')
 }
 ```
 
+```{asis fusion_sum_text, echo = show_fusion}
 
 ### Metrics summary
 Click a button to save as csv file. \
-```{r}
+
+```
+
+```{r fusion_sum, echo = F, eval = show_fusion}
 if (exists('fusions')){
   fusions %>% 
     dplyr::rename("Sample" = "id") %>% 
@@ -1051,60 +1099,58 @@ $$\\[0.5in]$$
 ## DELIVERABLES
 **The following files will be delivered if relevant analyses are performed. ** \
 
+```{asis, echo=show_fusion}
 ### arriba/
 
 Genomic alignment bam files, bam index files and detected fusions.  _work/ contains other output files by Arriba.
 
-### {.unnumbered .unlisted}
+$$\\[0.05in]$$
 
-$$\\[0.1in]$$
+```
 
-
+```{asis, echo=show_de}
 ### differential_genes/
 Differential expression at the gene level. Each comparison has a subfolder (see section *DE summary* for more details). The text file has edgeR output (logFC, logCPM, p-value, BH-adjusted FDR), normalized expression in RPKM and CPM. In column is.sig (and is.sig2) of the text file, each gene is assigned 1 for up-regulation, -1 for down-regulation and 0 for no significant difference based on FDR and log2FC cutoffs (see "**DE summary**" for cutoffs used). PCA, MD/MA and volcano plots are in the same subfolder and also included in this report under section *DE plots*.\
 
+$$\\[0.05in]$$
 
-### {.unnumbered .unlisted}
+```
 
-$$\\[0.1in]$$
-
+```{asis, echo=show_dt}
 ### differential_transcripts/
 Differential expression at the transcript level. Each comparison has a subfolder (see section *DE summary* for more details). The text file has edgeR output (logFC, logCPM, p-value, BH-adjusted FDR), normalized expression in RPKM and CPM. In column is.sig (and is.sig2) of the text file, each transcript is assigned 1 for up-regulation, -1 for down-regulation and 0 for no significant difference based on FDR and log2FC cutoffs (see "**DE summary**" for cutoffs used). PCA, MD/MA and volcano plots are in the same subfolder and also included in this report under section *DE plots*.\
 
+$$\\[0.05in]$$
 
-### {.unnumbered .unlisted}
+```
 
-$$\\[0.1in]$$
-
+```{asis, echo=show_gex|show_tx}
 ### expression_quantification/
 *all_samples.gene_raw_counts.txt* - Raw gene-level counts of all genes in all samples. \
 *all_samples.transcript_raw_counts.txt* - Raw transcript-level counts of all genes in all samples. \
 
-### {.unnumbered .unlisted}
+$$\\[0.05in]$$
 
-$$\\[0.1in]$$
+```
 
 ### multiqc/
 multiqc_report.html is a QC summary report generated using [MultiQC](https://multiqc.info). \
 
-### {.unnumbered .unlisted}
-
-$$\\[0.1in]$$
+$$\\[0.05in]$$
 
 ### QC/
 
 QC by multiple tools. \
 
-### {.unnumbered .unlisted}
+$$\\[0.05in]$$
 
-$$\\[0.5in]$$
-
+```{asis, echo=show_tx}
 ### salmon/
 Transcript-level analysis by Salmon. \
 
-### {.unnumbered .unlisted}
+$$\\[0.05in]$$
 
-$$\\[0.1in]$$
+```
 
 ### STAR/
 
@@ -1116,8 +1162,8 @@ $$\\[0.5in]$$
 
 ## METHODS
 
-[Fastp](https://onlinelibrary.wiley.com/doi/10.1002/imt2.107) or [Cutadapt](https://journal.embnet.org/index.php/embnetjournal/article/view/200) was applied to remove adapter sequences. [STAR](https://pubmed.ncbi.nlm.nih.gov/23104886/) with 2-pass mapping was used to align reads to the reference genome and gene annotation along with quantification of gene-level expression. [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/), [RNA-SeQC](https://pubmed.ncbi.nlm.nih.gov/22539670/), [RSeQC](https://pubmed.ncbi.nlm.nih.gov/22743226/) were used to check various QC metrics including insert fragment size, read quality, read duplication rates, rRNA rates, gene body coverage and read distribution in different genomic regions. \
-Bioconductor package [edgeR](https://academic.oup.com/bioinformatics/article/26/1/139/182458) was used to detect differential expression between sample groups. Genes with low expression were excluded using edgeR function filterByExpr with min.count = 10 and min.total.count = 15. The filtered expression matrix was normalized by [TMM method](https://doi.org/10.1186/gb-2010-11-3-r25). Statistical test was using quasi-likelihood pipeline implemented in edgeR. A gene was deemed differentially expressed if meeting the cutoffs of log2 fold change and Benjamini-Hochberg adjusted p-values. \
+[Trim Galore](https://www.trimgalore.com), [Fastp](https://onlinelibrary.wiley.com/doi/10.1002/imt2.107) or [Cutadapt](https://journal.embnet.org/index.php/embnetjournal/article/view/200) is applied to remove adapter sequences. [STAR](https://pubmed.ncbi.nlm.nih.gov/23104886/) with 2-pass mapping is used to align reads to the reference genome and gene annotation along with quantification of gene-level expression. [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/), [RNA-SeQC](https://pubmed.ncbi.nlm.nih.gov/22539670/), [RSeQC](https://pubmed.ncbi.nlm.nih.gov/22743226/) are used to check various QC metrics including insert fragment size, read quality, read duplication rates, rRNA rates, gene body coverage and read distribution in different genomic regions. \
+Bioconductor package [edgeR](https://academic.oup.com/bioinformatics/article/26/1/139/182458) is used to detect differential expression between sample groups. Genes with low expression are excluded using edgeR function filterByExpr with min.count = 10 and min.total.count = 15. The filtered expression matrix is normalized by [TMM method](https://doi.org/10.1186/gb-2010-11-3-r25). Quasi-likelihood pipeline implemented in edgeR is used for detecting differential expression between test and control groups. A gene is deemed differentially expressed if meeting the cutoffs of log2 fold change and Benjamini-Hochberg adjusted p-values. \
 
 $$\\[0.5in]$$
 

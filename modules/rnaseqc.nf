@@ -1,7 +1,7 @@
 process RNASEQC {
     label "process_high"
 
-    container = 'quay.io/biocontainers/rna-seqc:2.4.2--h29c0135_1'
+    container 'quay.io/biocontainers/rna-seqc:2.4.2--h29c0135_1'
     //module = ['RNA-SeQC/2.4.2-foss-2021b', 'SAMtools/1.17-GCC-12.2.0']
 
     tag "RNA-SeQC on ${meta.id}"

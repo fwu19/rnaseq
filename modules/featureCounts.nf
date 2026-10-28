@@ -1,7 +1,7 @@
 process FEATURECOUNTS {
     label "process_high"
 
-    container = 'quay.io/biocontainers/subread:2.0.0--hed695b0_0'
+    container 'quay.io/biocontainers/subread:2.0.0--hed695b0_0'
     //module = ['Subread/2.0.0-GCC-8.3.0']
 
     tag "featureCounts on ${meta.id}"

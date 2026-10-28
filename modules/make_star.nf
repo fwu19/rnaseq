@@ -1,8 +1,8 @@
 
 process MAKE_STAR {
     label "process_medium"
-    module = ['STAR/2.7.10b-GCC-12.2.0', 'SAMtools/1.17-GCC-12.2.0']
-
+    //module = ['STAR/2.7.10b-GCC-12.2.0', 'SAMtools/1.17-GCC-12.2.0']
+    container 'community.wave.seqera.io/library/bedtools_samtools_star:4c1d7f700be70377'
 
     tag "Make STAR index"
 

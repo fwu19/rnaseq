@@ -1,7 +1,7 @@
 process HS_METRICS {
     label "process_medium"
 
-    container = 'community.wave.seqera.io/library/bcftools_gatk4_samtools:460fbebd289c03b4'
+    container 'community.wave.seqera.io/library/bcftools_gatk4_samtools:460fbebd289c03b4'
     //module = ['GATK/4.4.0.0-GCCcore-12.2.0-Java-17', 'SAMtools/1.17-GCC-12.2.0']
 
     tag "collect hs_metrics on ${meta.id}"

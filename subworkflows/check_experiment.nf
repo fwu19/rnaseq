@@ -11,7 +11,7 @@ include { INFER_EXPERIMENT } from '../modules/infer_experiment.nf'
 workflow CHECK_EXPERIMENT {
     take:
     fq
-    aligner_index
+    reference_index
     tx_bed
     srcdir
 
@@ -34,16 +34,15 @@ workflow CHECK_EXPERIMENT {
         }
 
         SAMPLE_FASTQ(
-        ch_reads.first(),
-        1000000
+            ch_reads.first(),
+            1000000
         )
         sub_reads = SAMPLE_FASTQ.out.fq
 
         if (params.aligner == 'star'){            
         STAR(
             sub_reads,
-            params.genome, 
-            aligner_index, 
+            reference_index, 
             params.gtf
         )
         ch_bam_bai = STAR.out.bam_bai
@@ -56,8 +55,7 @@ workflow CHECK_EXPERIMENT {
 
         BWA_MEM(
             sub_reads, 
-            params.genome, 
-            aligner_index
+            reference_index
         )
         ch_bam = BWA_MEM.out.bam_bai
         // [ [meta], val(out_prefix), path(bam), path(bai) ]
@@ -66,8 +64,8 @@ workflow CHECK_EXPERIMENT {
         }
 
         INFER_EXPERIMENT(
-        ch_bam_bai,
-        tx_bed
+            ch_bam_bai,
+            tx_bed
         )
         csv = INFER_EXPERIMENT.out.csv
         ch_versions = ch_versions.mix(INFER_EXPERIMENT.out.versions)

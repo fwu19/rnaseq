@@ -1,7 +1,7 @@
 process INFER_EXPERIMENT {
     label 'process_single'
 
-    container = 'quay.io/biocontainers/rseqc:5.0.1--py39hf95cd2a_1'
+    container 'quay.io/biocontainers/rseqc:5.0.1--py39hf95cd2a_1'
     //module = ['RSeQC/5.0.1-foss-2021b']
 
     tag "Infer strandedness and read type."
