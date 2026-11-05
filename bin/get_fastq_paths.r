@@ -9,10 +9,11 @@ library(dplyr)
 get_fastqs <- function(
     fq_dirs, 
     r1_pattern,
-    r2_pattern
+    r2_pattern,
+    fastq_ext
 ){
     ## get paths to fastq files
-    fqs <- normalizePath(grep('undetermined', list.files(fq_dirs, recursive = T, full.names = T, pattern = "fastq.gz"), invert = T, value = T, ignore.case = T))
+    fqs <- normalizePath(grep('undetermined', list.files(fq_dirs, recursive = T, full.names = T, pattern = fastq_ext), invert = T, value = T, ignore.case = T))
     fqs1 <- sort(grep(r1_pattern, fqs, value = T))
     fqs2 <- sort(grep(r2_pattern, fqs, value = T))
     
@@ -65,6 +66,7 @@ for (arg in strsplit(args, split = '=')){
 
 if(!exists('r1_pattern')){r1_pattern <- "_S[0-9]+(_L[0-9]+)?_R1_"}
 if(!exists('r2_pattern')){r2_pattern <- "_S[0-9]+(_L[0-9]+)?_R2_"}
+if(!exists('fastq_ext')){fastq_ext <- ".fastq.gz$|.fastq$|.fq.gz$|.fq$"}
 
 fqs <- list.files('fastq', full.names = T)
 if(file_test('-f', fqs[1])){
@@ -74,7 +76,7 @@ if(file_test('-f', fqs[1])){
 }else{
     stop("--input_dir takes either path/to/fastq/dir or a file containing paths/to/fastq/dir (one path in each row)")
 }
-ss <- get_fastqs(input_dirs, r1_pattern, r2_pattern)
+ss <- get_fastqs(input_dirs, r1_pattern, r2_pattern, fastq_ext)
 
 ss %>% 
     write.table('input.csv', sep = ',', quote = F, row.names = F)

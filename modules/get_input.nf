@@ -18,9 +18,10 @@ process GET_INPUT {
     task.ext.when == null || task.ext.when
 
     script:
+    def args = task.ext.args ?: ''
     """
-    get_input.r input_csv=$samplesheet meta_csv=$metadata
-
+    get_input.r input_csv=$samplesheet meta_csv=$metadata $args
+    
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         R: \$(R --version 2>&1 | head -n 1 | sed -e "s/R version //g; s/ .*//g" )

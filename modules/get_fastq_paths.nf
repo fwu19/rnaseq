@@ -16,8 +16,9 @@ process GET_FASTQ_PATHS {
     task.ext.when == null || task.ext.when
 
     script:
+    def args = task.ext.args ?: ''
     """
-    get_fastq_paths.r r1_pattern="${params.r1_pattern}" r2_pattern="${params.r2_pattern}"
+    get_fastq_paths.r r1_pattern="${params.r1_pattern}" r2_pattern="${params.r2_pattern}" fastq_ext="${params.fastq_ext}" $args
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

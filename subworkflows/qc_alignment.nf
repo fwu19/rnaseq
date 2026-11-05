@@ -38,23 +38,20 @@ workflow QC_ALIGNMENT {
     ch_versions = Channel.empty()
     
     if (!params.run_alignment){
-        ch_bam_bai = Channel.fromPath("${srcdir}/csv/map2genome.${params.aligner}.${params.genome}.csv")
+        File bam_csv = new File("${srcdir}/csv/map2genome.${params.aligner}.${params.genome}.csv")
+        ch_bam_bai = bam_csv.exists() ? Channel.fromPath(bam_csv)
             .splitCsv(header: true)
-            .map { it -> [ [ it ], it.id , "${srcdir}/${it.bam}", "${srcdir}/${it.bai}" ] }
+            .map { it -> [ [ it ], it.id , "${srcdir}/${it.bam}", "${srcdir}/${it.bai}" ] } : Channel.empty()
 
-        if (params.workflow == 'pdx'){
-            ch_bam_bai = Channel.fromPath("${srcdir}/csv/map2genome.${params.aligner}.${params.genome}.csv")
+        File bam_host_csv = new File("${srcdir}/csv/map2genome.${params.aligner}.${params.genome_host}.csv")
+        ch_bam_bai_host = bam_host_csv.exists() ? Channel.fromPath(bam_host_csv)
                 .splitCsv(header: true)
-                .map { it -> [ [ it ], it.id , "${srcdir}/${it.graft_bam}", "${srcdir}/${it.graft_bai}" ] }
+                .map { it -> [ [ it ], it.id , "${srcdir}/${it.bam}", "${srcdir}/${it.bai}" ] } : Channel.empty()
 
-            ch_bam_bai_host = Channel.fromPath("${srcdir}/csv/map2genome.${params.aligner}.${params.genome_host}.csv")
+        File bam_xeno_csv = new File("${srcdir}/csv/map2genome.${params.aligner}.${params.genome}.xenofilteR_filtered.csv")
+        ch_bam_bai_xeno = bam_xeno_csv.exists() ? Channel.fromPath(bam_xeno_csv)
                 .splitCsv(header: true)
-                .map { it -> [ [ it ], it.id , "${srcdir}/${it.host_bam}", "${srcdir}/${it.host_qbai}" ] }
-
-            ch_bam_bai_xeno = Channel.fromPath("${srcdir}/csv/map2genome.${params.aligner}.${params.genome}.xenofilteR_filtered.csv")
-                .splitCsv(header: true)
-                .map { it -> [ [ it ], it.id , "${srcdir}/${it.bam}", "${srcdir}/${it.bai}" ] }
-        }
+                .map { it -> [ [ it ], it.id , "${srcdir}/${it.bam}", "${srcdir}/${it.bai}" ] } : Channel.empty()
     }
 
     /*

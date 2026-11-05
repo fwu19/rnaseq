@@ -64,6 +64,10 @@ workflow GENERATE_REPORT {
         File trimgalore_dir = new File("${srcdir}/${params.trimgalore_dir}")
         trimgalore_js = trimgalore_dir.exists() ? Channel.fromPath("${trimgalore_dir}/*") : Channel.empty()
 
+        File xengsort_dir = new File("${srcdir}/${params.xengsort_dir}")
+        xengsort_log = xengsort_dir.exists() ? Channel.fromPath("${xengsort_dir}/*") : Channel.empty()
+        println "xengsort_log: ${xengsort_log.collect().flatten()}" 
+
         File stat_dir = new File("${srcdir}/${params.samtools_dir}")       
         bam_stat = stat_dir.exists() ? Channel.fromPath("${stat_dir}/*") : Channel.empty()
         
@@ -147,7 +151,7 @@ workflow GENERATE_REPORT {
             (params.run_cut_adapt && params.trimmer == 'fastp' ? ch_fastp_js.flatten().collect() : fastp_js.flatten().collect()).ifEmpty([]),  
             (params.run_cut_adapt && params.trimmer == 'trimgalore' ? ch_trimgalore_js.flatten().collect() : trimgalore_js.flatten().collect()).ifEmpty([]),  
             (params.run_cut_adapt && params.run_fastqc ? ch_fastqc_trimmed.flatten().collect() : fastqc_trimmed.flatten().collect()).ifEmpty([]),  
-            params.workflow == 'pdx' && params.run_xengsort ? ch_xengsort_log.collect().ifEmpty([]) : [],
+            (params.workflow == 'pdx' && params.run_xengsort ? ch_xengsort_log.collect() : xengsort_log.collect()).ifEmpty([]),
             (params.run_alignment && params.aligner == 'star' ? ch_star_log.flatten().collect() : star_log.flatten().collect()).ifEmpty([]), 
             (params.run_alignment && params.aligner == 'star' ? ch_star_log_host.flatten().collect() : star_log_host.flatten().collect()).ifEmpty([]), 
             (params.run_rnaseqc ? ch_rnaseqc.flatten().collect() : rnaseqc.flatten().collect()).ifEmpty([]),

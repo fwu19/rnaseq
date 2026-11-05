@@ -18,7 +18,6 @@ include { QC_ALIGNMENT } from '../subworkflows/qc_alignment.nf'
 include { DETECT_FUSIONS } from '../subworkflows/detect_fusions.nf'
 include { GENERATE_REPORT } from '../subworkflows/generate_report.nf'
 include { WRITE_OUTPUT_CSV } from '../subworkflows/write_output_csv.nf'
-include { UPDATE_OUTPUT } from '../subworkflows/update_output.nf'
 include { WRITE_PARAMS } from '../subworkflows/write_params.nf'
 
 include { XENGSORT_CLASSIFY } from '../modules/xengsort_classify.nf'
@@ -39,7 +38,7 @@ if (!(params.step in step_options)){
 }
 
 // Define update options
-def update_options = [null, "qc_alignment", "gene_level", "gene_expression", "differential_genes", "transcript_level", "transcript_expression", "differential_transcripts", "gene_fusion", "multiqc", "report"]
+def update_options = [null, "qc_alignment", "gene_level", "gene_expression", "differential_genes", "transcript_level", "transcript_expression", "differential_transcripts", "gene_fusion", "multiqc", "report", "output"]
 if(!(params.update in update_options )){ 
     exit 1, "Invalid option for --update. Available options: ${update_options.findAll{it != null}.join(', ')}"
 }
@@ -493,15 +492,9 @@ workflow RNASEQ {
     /*
     * Write output file paths
     */
-    if (params.update == 'output'){
-        UPDATE_OUTPUT(
+    WRITE_OUTPUT_CSV(
             samplesheet,
             srcdir,
-            outdir
-        )
-    }else{
-
-        WRITE_OUTPUT_CSV(
             ch_bam_bai,
             ch_bam_bai_host,
             ch_bam_bai_xeno,
@@ -516,7 +509,6 @@ workflow RNASEQ {
             ch_arriba
         )
 
-    }
     
     /* Collect software versions */
     ch_software_versions
